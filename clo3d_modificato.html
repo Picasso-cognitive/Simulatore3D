@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CLO3D Studio - CAD Sartoriale & Simulatore 3D</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { display: flex; height: 100vh; background-color: #121212; color: #e0e0e0; overflow: hidden; }
+    
+    /* Layout */
+    #sidebar { width: 320px; background: #1e1e24; padding: 18px; border-right: 1px solid #2d2d35; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; z-index: 100; }
+    #viewport-container { flex: 1; display: flex; height: 100%; position: relative; }
+    .view-panel { flex: 1; position: relative; border-right: 1px solid #2d2d35; background: #18181c; }
+    
+    .panel-header { position: absolute; top: 12px; left: 12px; background: rgba(0,0,0,0.75); backdrop-filter: blur(4px); padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; border: 1px solid rgba(255,255,255,0.1); z-index: 10; color: #00d2ff; }
+    
+    /* UI Typography & Controls */
+    h2 { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 2px; }
+    .subtitle { font-size: 11px; color: #888; margin-bottom: 10px; }
+    h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: #00d2ff; margin-bottom: 8px; border-bottom: 1px solid #2d2d35; padding-bottom: 4px; }
+    
+    .control-group { display: flex; flex-direction: column; gap: 8px; }
+    label { font-size: 12px; color: #aaa; display: flex; justify-content: space-between; }
+    
+    select, input[type="color"], input[type="range"], button { width: 100%; padding: 8px 10px; background: #282830; border: 1px solid #3a3a45; color: #fff; border-radius: 6px; font-size: 12px; }
+    input[type="range"] { padding: 0; height: 6px; cursor: pointer; }
+    select:focus, button:focus { outline: none; border-color: #00d2ff; }
+    
+    button { background: #0070f3; font-weight: 600; cursor: pointer; transition: all 0.2s; border: none; margin-top: 4px; }
+    button:hover { background: #0051a8; }
+    button.secondary { background: #282830; border: 1px solid #3a3a45; }
+    button.secondary:hover { background: #3a3a45; }
+
+    canvas { display: block; width: 100%; height: 100%; }
+    #canvas2d { background: #1a1a20; cursor: crosshair; }
+    
+    .legend { font-size: 10px; color: #777; display: flex; gap: 10px; flex-wrap: wrap; margin-top: 5px; }
+    .legend-item { display: flex; align-items: center; gap: 4px; }
+    .legend-color { width: 8px; height: 8px; border-radius: 2px; }
+  </style>
+
+  <!-- CDNs Stabili Three.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+  <!-- Sidebar Configurazione Sartoriale -->
+  <div id="sidebar">
+    <div>
+      <h2>CLO3D Studio CAD</h2>
+      <div class="subtitle">Modellistica Basetta & Fitting 3D</div>
+    </div>
+    
+    <div class="control-group">
+      <h3>Modello Base (Fashionpedia)</h3>
+      <select id="presetSelect">
+        <option value="tubino">Tubino con Pince Seno e Vita</option>
+        <option value="camicia_gonna">Camicia e Gonna a Matita</option>
+        <option value="tailleur">Giacca Tailleur con Revers</option>
+      </select>
+    </div>
+
+    <div class="control-group">
+      <h3>Misure & Sviluppo Taglia</h3>
+      <label>Profondità Scollo: <span id="valScollo">12 cm</span></label>
+      <input type="range" id="paramScollo" min="5" max="25" value="12">
+
+      <label>Apertura Pince Seno: <span id="valPince">4 cm</span></label>
+      <input type="range" id="paramPince" min="0" max="8" value="4">
+
+      <label>Sagomatura Fianchi: <span id="valFianco">10 cm</span></label>
+      <input type="range" id="paramFianco" min="2" max="18" value="10">
+
+      <label>Lunghezza Capo: <span id="valLunghezza">85 cm</span></label>
+      <input type="range" id="paramLunghezza" min="50" max="120" value="85">
+    </div>
+
+    <div class="control-group">
+      <h3>Materiale & Tessuto</h3>
+      <label>Colore Tessuto:</label>
+      <input type="color" id="colorPicker" value="#8b263e">
+      
+      <label>Trama / Armatura:</label>
+      <select id="patternSelect">
+        <option value="satin">Rasato / Seta (Satin)</option>
+        <option value="tartan">Tartan / Quadretti</option>
+        <option value="pinstripe">Gessato / Rigato</option>
+        <option value="dots">Pois Jacquard</option>
+      </select>
+    </div>
+
+    <div class="control-group" style="margin-top: auto;">
+      <button id="resetBtn" class="secondary">Ripristina Cartamodello Base</button>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-color" style="background:#00d2ff"></div> Taglio</div>
+        <div class="legend-item"><div class="legend-color" style="background:#ff9900"></div> Cucitura</div>
+        <div class="legend-item"><div class="legend-color" style="background:#ff4444"></div> Pince</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Area di lavoro principale -->
+  <div id="viewport-container">
+    <!-- Vista 3D Simulazione -->
+    <div class="view-panel">
+      <div class="panel-header">Fitting 3D su Manichino</div>
+      <div id="canvas3d-container" style="width:100%; height:100%;"></div>
+    </div>
+
+    <!-- Vista 2D CAD Cartamodello -->
+    <div class="view-panel">
+      <div class="panel-header">Sviluppo Cartamodello 2D (Sartoriale)</div>
+      <canvas id="canvas2d"></canvas>
+    </div>
+  </div>
+
+  <script>
+    // --- STATO APPLICAZIONE & PARAMETRI SARTORIALI ---
+    let currentPreset = 'tubino';
+    let fabricColor = '#8b263e';
+    let fabricPattern = 'satin';
+
+    let params = {
+      scollo: 12,
+      pince: 4,
+      fianco: 10,
+      lunghezza: 85
+    };
+
+    let activeDragPoint = null;
+
+    // --- INIZIALIZZAZIONE 3D (THREE.JS) ---
+    const container3D = document.getElementById('canvas3d-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x141418);
+
+    const camera = new THREE.PerspectiveCamera(45, container3D.clientWidth / container3D.clientHeight, 0.1, 100);
+    camera.position.set(0, 1.1, 2.8);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(container3D.clientWidth, container3D.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container3D.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 0.9, 0);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+
+    // Luci da Studio Sartoriale
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+
+    const keyLight = new THREE.DirectionalLight(0xffeedd, 0.9);
+    keyLight.position.set(2, 4, 3);
+    keyLight.castShadow = true;
+    scene.add(keyLight);
+
+    const fillLight = new THREE.DirectionalLight(0xccddff, 0.4);
+    fillLight.position.set(-2, 2, -2);
+    scene.add(fillLight);
+
+    // --- MANICHINO SARTORIALE ANATOMICO ---
+    const mannequinGroup = new THREE.Group();
+    const mannequinMat = new THREE.MeshStandardMaterial({
+      color: 0xd4c3b3,
+      roughness: 0.6,
+      metalness: 0.1
+    });
+
+    function buildMannequin() {
+      // Busto Sartoriale Sagomato
+      const torsoGeo = new THREE.CylinderGeometry(0.18, 0.12, 0.55, 32);
+      const torso = new THREE.Mesh(torsoGeo, mannequinMat);
+      torso.position.y = 1.25;
+      torso.scale.set(1.1, 1, 0.7); // Sagoma femminile ovalizzata
+
+      // Seno
+      const bustR = new THREE.Mesh(new THREE.SphereGeometry(0.08, 16, 16), mannequinMat);
+      bustR.position.set(0.08, 1.32, 0.07);
+      const bustL = bustR.clone();
+      bustL.position.x = -0.08;
+
+      // Fianchi / Bacino
+      const hipsGeo = new THREE.CylinderGeometry(0.12, 0.19, 0.4, 32);
+      const hips = new THREE.Mesh(hipsGeo, mannequinMat);
+      hips.position.y = 0.82;
+      hips.scale.set(1.2, 1, 0.85);
+
+      // Piedistallo & Asta Sartoriale
+      const poleGeo = new THREE.CylinderGeometry(0.015, 0.015, 1.4, 16);
+      const poleMat = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8, roughness: 0.2 });
+      const pole = new THREE.Mesh(poleGeo, poleMat);
+      pole.position.y = 0.7;
+
+      const baseGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.03, 32);
+      const base = new THREE.Mesh(baseGeo, poleMat);
+      base.position.y = 0.015;
+
+      mannequinGroup.add(torso, bustR, bustL, hips, pole, base);
+      scene.add(mannequinGroup);
+    }
+    buildMannequin();
+
+    // --- VESTITO 3D PARAMETRICO ---
+    let garmentMesh;
+    let garmentMaterial = new THREE.MeshStandardMaterial({
+      side: THREE.DoubleSide,
+      roughness: 0.35,
+      metalness: 0.05
+    });
+
+    function updateGarment3D() {
+      if (garmentMesh) scene.remove(garmentMesh);
+
+      const heightRatio = params.lunghezza / 100;
+      const waistFactor = (20 - params.fianco) / 20;
+      const bustFactor = 1 + (params.pince / 20);
+
+      // Costruzione superficie abito basata sulle sezioni reali
+      const radialSegs = 40;
+      const heightSegs = 30;
+      const geo = new THREE.CylinderGeometry(0.19, 0.22, heightRatio, radialSegs, heightSegs, true);
+
+      const pos = geo.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        let y = pos.getY(i);
+        let angle = Math.atan2(pos.getZ(i), pos.getX(i));
+
+        // Mappatura verticale e conformazione anatomica
+        let normY = (y + heightRatio / 2) / heightRatio; // 0 (orlo) -> 1 (spalle)
+
+        let radiusScale = 1.0;
+
+        if (normY > 0.7) { 
+          // Busto / Scollo
+          let neckDepth = (params.scollo / 25) * 0.15;
+          radiusScale = bustFactor * (1 - Math.sin(normY * Math.PI) * 0.1);
+          if (Math.cos(angle) > 0.5) { // Scollo anteriore
+            y -= neckDepth * Math.pow(Math.cos(angle), 2);
+          }
+        } else if (normY > 0.45 && normY <= 0.7) {
+          // Vita & Pince
+          radiusScale = 0.75 + (waistFactor * 0.25);
+        } else {
+          // Fianchi e Caduta Orlo
+          let hipShape = (params.fianco / 10);
+          radiusScale = 0.95 + (1 - normY) * 0.25 * hipShape;
+        }
+
+        pos.setX(i, pos.getX(i) * radiusScale * 1.15);
+        pos.setZ(i, pos.getZ(i) * radiusScale * 0.85);
+        pos.setY(i, y);
+      }
+
+      geo.computeVertexNormals();
+      garmentMesh = new THREE.Mesh(geo, garmentMaterial);
+      garmentMesh.position.y = 1.45 - (heightRatio / 2);
+      scene.add(garmentMesh);
+
+      updateFabricTexture();
+    }
+
+    // --- GENERATORE DI TEXTURE TESSUTO ---
+    function updateFabricTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512; canvas.height = 512;
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = fabricColor;
+      ctx.fillRect(0, 0, 512, 512);
+
+      if (fabricPattern === 'tartan') {
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        for (let i = 0; i < 512; i += 64) { ctx.fillRect(i, 0, 20, 512); ctx.fillRect(0, i, 512, 20); }
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        for (let i = 32; i < 512; i += 64) { ctx.fillRect(i, 0, 4, 512); ctx.fillRect(0, i, 512, 4); }
+      } else if (fabricPattern === 'pinstripe') {
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        for (let i = 0; i < 512; i += 32) { ctx.fillRect(i, 0, 2, 512); }
+      } else if (fabricPattern === 'dots') {
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        for (let x = 32; x < 512; x += 64) {
+          for (let y = 32; y < 512; y += 64) {
+            ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.fill();
+          }
+        }
+      }
+
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(3, 3);
+
+      garmentMaterial.map = tex;
+      garmentMaterial.needsUpdate = true;
+    }
+
+    // --- CANVAS 2D: DISEGNO E CAD SARTORIALE ---
+    const canvas2D = document.getElementById('canvas2d');
+    const ctx2D = canvas2D.getContext('2d');
+
+    function resizeCanvas2D() {
+      canvas2D.width = canvas2D.parentElement.clientWidth;
+      canvas2D.height = canvas2D.parentElement.clientHeight;
+      renderPattern2D();
+    }
+
+    function renderPattern2D() {
+      const w = canvas2D.width;
+      const h = canvas2D.height;
+
+      ctx2D.clearRect(0, 0, w, h);
+
+      // Griglia Sartoriale mm/cm
+      ctx2D.strokeStyle = '#252530';
+      ctx2D.lineWidth = 1;
+      for (let x = 0; x < w; x += 20) { ctx2D.beginPath(); ctx2D.moveTo(x, 0); ctx2D.lineTo(x, h); ctx2D.stroke(); }
+      for (let y = 0; y < h; y += 20) { ctx2D.beginPath(); ctx2D.moveTo(0, y); ctx2D.lineTo(w, y); ctx2D.stroke(); }
+
+      // Disegno Pezzi in base al Preset
+      if (currentPreset === 'tubino') {
+        drawDressPattern(w * 0.28, h * 0.15, "DAVANTI", true);
+        drawDressPattern(w * 0.72, h * 0.15, "DIETRO", false);
+      } else if (currentPreset === 'camicia_gonna') {
+        drawShirtPattern(w * 0.28, h * 0.1, "CORPETTO CAMICIA");
+        drawSkirtPattern(w * 0.72, h * 0.45, "GONNA A MATITA");
+      } else if (currentPreset === 'tailleur') {
+        drawJacketPattern(w * 0.3, h * 0.12, "GIACCA TAILLEUR");
+        drawSleevePattern(w * 0.75, h * 0.2, "MANICA A GIRO");
+      }
+    }
+
+    // Disegno Grafico del Tubino con Modellistica Classica
+    function drawDressPattern(cx, cy, label, isFront) {
+      const scale = 2.2;
+      const scolloDepth = params.scollo * scale * 1.5;
+      const pinceWidth = params.pince * scale * 1.2;
+      const waistIndent = params.fianco * scale * 1.1;
+      const len = params.lunghezza * scale * 2.2;
+
+      ctx2D.save();
+      ctx2D.translate(cx, cy);
+
+      // Margine di Cucitura (Linea Tratteggiata Esterna)
+      ctx2D.beginPath();
+      ctx2D.setLineDash([4, 4]);
+      ctx2D.strokeStyle = '#ff9900';
+      ctx2D.lineWidth = 1.5;
+      drawDressPath(ctx2D, scolloDepth + 8, pinceWidth, waistIndent + 8, len + 10, isFront);
+      ctx2D.stroke();
+
+      // Linea di Taglio Principale
+      ctx2D.setLineDash([]);
+      ctx2D.beginPath();
+      ctx2D.strokeStyle = '#00d2ff';
+      ctx2D.lineWidth = 2.5;
+      ctx2D.fillStyle = 'rgba(0, 210, 255, 0.05)';
+      drawDressPath(ctx2D, scolloDepth, pinceWidth, waistIndent, len, isFront);
+      ctx2D.fill();
+      ctx2D.stroke();
+
+      // Pince Sartoriali (Seno / Vita)
+      ctx2D.strokeStyle = '#ff4444';
+      ctx2D.lineWidth = 1.8;
+      
+      // Pince di Vita
+      ctx2D.beginPath();
+      ctx2D.moveTo(-pinceWidth, len * 0.45);
+      ctx2D.lineTo(0, len * 0.3);
+      ctx2D.lineTo(pinceWidth, len * 0.45);
+      ctx2D.lineTo(0, len * 0.6);
+      ctx2D.closePath();
+      ctx2D.stroke();
+
+      // Pince Seno (solo Davanti)
+      if (isFront) {
+        ctx2D.beginPath();
+        ctx2D.moveTo(-60 - waistIndent, len * 0.32);
+        ctx2D.lineTo(-15, len * 0.35);
+        ctx2D.lineTo(-60 - waistIndent, len * 0.38);
+        ctx2D.stroke();
+      }
+
+      // Simbolo Filo Dritto
+      ctx2D.strokeStyle = '#ffffff';
+      ctx2D.lineWidth = 1;
+      ctx2D.beginPath();
+      ctx2D.moveTo(0, len * 0.2);
+      ctx2D.lineTo(0, len * 0.8);
+      ctx2D.stroke();
+      // Frecce Filo Dritto
+      ctx2D.beginPath();
+      ctx2D.moveTo(-5, len * 0.22); ctx2D.lineTo(0, len * 0.2); ctx2D.lineTo(5, len * 0.22);
+      ctx2D.moveTo(-5, len * 0.78); ctx2D.lineTo(0, len * 0.8); ctx2D.lineTo(5, len * 0.78);
+      ctx2D.stroke();
+
+      // Testo Etichetta Sartoriale
+      ctx2D.fillStyle = '#fff';
+      ctx2D.font = '10px Inter, sans-serif';
+      ctx2D.textAlign = 'center';
+      ctx2D.fillText(label, 0, len * 0.5);
+      ctx2D.fillStyle = '#888';
+      ctx2D.fillText("Tgl 42 - Filo Dritto", 0, (len * 0.5) + 14);
+
+      ctx2D.restore();
+    }
+
+    function drawDressPath(ctx, scollo, pince, waist, len, isFront) {
+      // Metodo Sartoriale: Scollo -> Spalla -> Giromanica -> Fianco -> Orlo -> Centro
+      ctx.moveTo(0, 0);
+      // Scollo con curva Bezier
+      if (isFront) {
+        ctx.bezierCurveTo(-20, scollo, -40, scollo, -50, 10);
+      } else {
+        ctx.bezierCurveTo(-20, 10, -35, 12, -50, 10);
+      }
+      // Spalla
+      ctx.lineTo(-75, 25);
+      // Giromanica
+      ctx.bezierCurveTo(-65, 60, -70, 90, -85 - (waist*0.2), 120);
+      // Sagoma Fianco/Vita
+      ctx.bezierCurveTo(-60 - waist, len * 0.4, -55 - waist, len * 0.55, -75, len);
+      // Orlo
+      ctx.lineTo(0, len);
+      // Centro Davanti/Dietro
+      ctx.closePath();
+    }
+
+    // Cartamodello Camicia
+    function drawShirtPattern(cx, cy, label) {
+      ctx2D.save();
+      ctx2D.translate(cx, cy);
+      ctx2D.strokeStyle = '#00d2ff';
+      ctx2D.lineWidth = 2;
+      ctx2D.beginPath();
+      ctx2D.moveTo(0,0);
+      ctx2D.lineTo(-40, 0);
+      ctx2D.lineTo(-70, 30);
+      ctx2D.bezierCurveTo(-60, 80, -75, 110, -75, 140);
+      ctx2D.lineTo(-65, 220);
+      ctx2D.lineTo(0, 220);
+      ctx2D.closePath();
+      ctx2D.stroke();
+      ctx2D.fillStyle = '#fff';
+      ctx2D.font = '10px Inter';
+      ctx2D.fillText(label, -30, 120);
+      ctx2D.restore();
+    }
+
+    // Cartamodello Gonna
+    function drawSkirtPattern(cx, cy, label) {
+      ctx2D.save();
+      ctx2D.translate(cx, cy);
+      ctx2D.strokeStyle = '#00d2ff';
+      ctx2D.lineWidth = 2;
+      ctx2D.beginPath();
+      ctx2D.moveTo(0,0);
+      ctx2D.bezierCurveTo(-30, 2, -50, 10, -60, 15);
+      ctx2D.bezierCurveTo(-75, 50, -70, 100, -65, 200);
+      ctx2D.lineTo(0, 200);
+      ctx2D.closePath();
+      ctx2D.stroke();
+      ctx2D.fillStyle = '#fff';
+      ctx2D.font = '10px Inter';
+      ctx2D.fillText(label, -30, 100);
+      ctx2D.restore();
+    }
+
+    // Cartamodello Giacca Tailleur con Revers
+    function drawJacketPattern(cx, cy, label) {
+      ctx2D.save();
+      ctx2D.translate(cx, cy);
+      ctx2D.strokeStyle = '#00d2ff';
+      ctx2D.lineWidth = 2;
+      ctx2D.beginPath();
+      ctx2D.moveTo(0,0);
+      // Revers a dente sartoriale
+      ctx2D.lineTo(25, 40);
+      ctx2D.lineTo(10, 50);
+      ctx2D.lineTo(35, 90);
+      ctx2D.lineTo(-65, 90);
+      ctx2D.bezierCurveTo(-60, 140, -80, 180, -70, 260);
+      ctx2D.lineTo(0, 260);
+      ctx2D.closePath();
+      ctx2D.stroke();
+
+      ctx2D.fillStyle = '#fff';
+      ctx2D.font = '10px Inter';
+      ctx2D.fillText(label, -20, 160);
+      ctx2D.restore();
+    }
+
+    // Cartamodello Manica
+    function drawSleevePattern(cx, cy, label) {
+      ctx2D.save();
+      ctx2D.translate(cx, cy);
+      ctx2D.strokeStyle = '#00d2ff';
+      ctx2D.lineWidth = 2;
+      ctx2D.beginPath();
+      // Colmo Manica Sagomato
+      ctx2D.moveTo(-50, 60);
+      ctx2D.bezierCurveTo(-40, 0, 40, 0, 50, 60);
+      ctx2D.lineTo(35, 220);
+      ctx2D.lineTo(-35, 220);
+      ctx2D.closePath();
+      ctx2D.stroke();
+
+      ctx2D.fillStyle = '#fff';
+      ctx2D.font = '10px Inter';
+      ctx2D.textAlign = 'center';
+      ctx2D.fillText(label, 0, 120);
+      ctx2D.restore();
+    }
+
+    // --- BINDING EVENTI UI ---
+    document.getElementById('paramScollo').addEventListener('input', (e) => {
+      params.scollo = parseFloat(e.target.value);
+      document.getElementById('valScollo').innerText = params.scollo + " cm";
+      renderPattern2D(); updateGarment3D();
+    });
+
+    document.getElementById('paramPince').addEventListener('input', (e) => {
+      params.pince = parseFloat(e.target.value);
+      document.getElementById('valPince').innerText = params.pince + " cm";
+      renderPattern2D(); updateGarment3D();
+    });
+
+    document.getElementById('paramFianco').addEventListener('input', (e) => {
+      params.fianco = parseFloat(e.target.value);
+      document.getElementById('valFianco').innerText = params.fianco + " cm";
+      renderPattern2D(); updateGarment3D();
+    });
+
+    document.getElementById('paramLunghezza').addEventListener('input', (e) => {
+      params.lunghezza = parseFloat(e.target.value);
+      document.getElementById('valLunghezza').innerText = params.lunghezza + " cm";
+      renderPattern2D(); updateGarment3D();
+    });
+
+    document.getElementById('presetSelect').addEventListener('change', (e) => {
+      currentPreset = e.target.value;
+      renderPattern2D();
+      updateGarment3D();
+    });
+
+    document.getElementById('colorPicker').addEventListener('input', (e) => {
+      fabricColor = e.target.value;
+      updateFabricTexture();
+    });
+
+    document.getElementById('patternSelect').addEventListener('change', (e) => {
+      fabricPattern = e.target.value;
+      updateFabricTexture();
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      params = { scollo: 12, pince: 4, fianco: 10, lunghezza: 85 };
+      document.getElementById('paramScollo').value = 12;
+      document.getElementById('paramPince').value = 4;
+      document.getElementById('paramFianco').value = 10;
+      document.getElementById('paramLunghezza').value = 85;
+      document.getElementById('valScollo').innerText = "12 cm";
+      document.getElementById('valPince').innerText = "4 cm";
+      document.getElementById('valFianco').innerText = "10 cm";
+      document.getElementById('valLunghezza').innerText = "85 cm";
+      renderPattern2D();
+      updateGarment3D();
+    });
+
+    // Handle Window Resize
+    window.addEventListener('resize', () => {
+      const w = container3D.clientWidth;
+      const h = container3D.clientHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+      resizeCanvas2D();
+    });
+
+    // Loop Animazione 3D
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    // Avvio iniziale
+    window.onload = () => {
+      resizeCanvas2D();
+      updateGarment3D();
+      animate();
+    };
+  </script>
+</body>
+</html>

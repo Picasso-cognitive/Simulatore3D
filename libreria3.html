@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulatore 3D Libreria Curva</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { display: flex; height: 100vh; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #f4f6f8; overflow: hidden; color: #2d3748; }
+    
+    /* Pannello UI */
+    #ui { width: 380px; padding: 20px; background: #ffffff; border-right: 1px solid #e2e8f0; z-index: 10; display: flex; flex-direction: column; gap: 16px; box-shadow: 4px 0 20px rgba(0,0,0,0.06); overflow-y: auto; }
+    h2 { font-size: 1.05rem; color: #1a202c; font-weight: 700; border-bottom: 2px solid #3182ce; padding-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    
+    .section { background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; }
+    .section-title { font-size: 0.78rem; font-weight: 700; color: #64748b; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+    
+    .control-group { margin-bottom: 10px; }
+    .control-group:last-child { margin-bottom: 0; }
+    label { display: flex; justify-content: space-between; font-size: 0.82rem; font-weight: 600; color: #4a5568; margin-bottom: 3px; }
+    input[type="range"], select { width: 100%; accent-color: #3182ce; cursor: pointer; }
+    select { padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1; background: white; font-size: 0.85rem; font-weight: 500; }
+    
+    .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+    button { padding: 8px 12px; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: #334155; transition: all 0.2s ease; }
+    button:hover { background: #edf2f7; border-color: #a0aec0; }
+    .btn-danger { color: #e53e3e; border-color: #feb2b2; }
+    .btn-danger:hover { background: #fff5f5; }
+    
+    /* Viewport 3D */
+    #canvas-container { flex: 1; position: relative; width: 100%; height: 100%; background: radial-gradient(circle at center, #ffffff 0%, #e2e8f0 100%); }
+    #info-overlay { position: absolute; bottom: 20px; right: 20px; background: rgba(255,255,255,0.92); backdrop-filter: blur(4px); padding: 10px 18px; border-radius: 20px; font-size: 0.82rem; font-weight: 600; color: #3b82f6; border: 1px solid rgba(49, 130, 206, 0.2); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+  </style>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+  <div id="ui">
+    <h2>Simulatore Libreria Curva</h2>
+    
+    <!-- Finiture Legno -->
+    <div class="section">
+      <div class="section-title">Finitura Legno</div>
+      <div class="control-group">
+        <label for="woodSelect">Essenze Legno:</label>
+        <select id="woodSelect" onchange="changeWoodFinish()">
+          <option value="oak" selected>🪵 Rovere Naturale (Miele)</option>
+          <option value="walnut">🌰 Noce Scuro (Classico)</option>
+          <option value="pine">🌲 Pino Chiaro (Nordico)</option>
+          <option value="cherry">🍒 Ciliegio Caldo (Ciliegia)</option>
+          <option value="ebony">🖤 Frassino Nero (Moderno)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Forma Nicchia -->
+    <div class="section">
+      <div class="section-title">Controllo Vano Interno & Panca</div>
+      
+      <div class="control-group">
+        <label>Larghezza Panca: <span id="val-seatW">2.2</span>m</label>
+        <input type="range" id="seatW" min="1.2" max="3.2" step="0.1" value="2.2" oninput="updateAll()">
+      </div>
+
+      <div class="control-group">
+        <label>Altezza Vano: <span id="val-seatH">2.4</span>m</label>
+        <input type="range" id="seatH" min="1.6" max="3.4" step="0.1" value="2.4" oninput="updateAll()">
+      </div>
+
+      <div class="control-group">
+        <label>Inclinazione Schienale: <span id="val-backAngle">15</span>°</label>
+        <input type="range" id="backAngle" min="0" max="35" step="1" value="15" oninput="updateAll()">
+      </div>
+
+      <div class="control-group">
+        <label>Curvatura Nicchia: <span id="val-curveRadius">1.0</span></label>
+        <input type="range" id="curveRadius" min="0.4" max="1.8" step="0.1" value="1.0" oninput="updateAll()">
+      </div>
+    </div>
+
+    <!-- Ripiani Orizzontali -->
+    <div class="section">
+      <div class="section-title">Ripiani Orizzontali (<span id="h-count">0</span>)</div>
+      <div class="btn-grid">
+        <button onclick="addShelf('h')">＋ Aggiungi</button>
+        <button class="btn-danger" onclick="removeSelectedShelf('h')">－ Rimuovi</button>
+      </div>
+      <div class="control-group" style="margin-top: 10px;">
+        <label>Seleziona Ripiano H:</label>
+        <select id="h-select" onchange="onSelectDropdownChange('h')"></select>
+      </div>
+      <div class="control-group">
+        <label>Posizione Quota (Y): <span id="val-hPos">0.0</span>m</label>
+        <input type="range" id="hPos" min="-3.8" max="3.8" step="0.05" value="0" oninput="moveShelf('h')">
+      </div>
+    </div>
+
+    <!-- Divisori Verticali -->
+    <div class="section">
+      <div class="section-title">Divisori Verticali (<span id="v-count">0</span>)</div>
+      <div class="btn-grid">
+        <button onclick="addShelf('v')">＋ Aggiungi</button>
+        <button class="btn-danger" onclick="removeSelectedShelf('v')">－ Rimuovi</button>
+      </div>
+      <div class="control-group" style="margin-top: 10px;">
+        <label>Seleziona Divisore V:</label>
+        <select id="v-select" onchange="onSelectDropdownChange('v')"></select>
+      </div>
+      <div class="control-group">
+        <label>Posizione Orizzontale (X): <span id="val-vPos">0.0</span>m</label>
+        <input type="range" id="vPos" min="-3.8" max="3.8" step="0.05" value="0" oninput="moveShelf('v')">
+      </div>
+    </div>
+
+    <button style="background: #e2e8f0;" onclick="resetGrid()">🔄 Ripristina Griglia Standard</button>
+  </div>
+
+  <div id="canvas-container">
+    <div id="info-overlay">🖱️ Clicca su un ripiano per selezionarlo | Trascina per ruotare in 3D</div>
+  </div>
+
+  <script>
+    const container = document.getElementById('canvas-container');
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+    camera.position.set(0, 0, 13.5);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.shadowMap.enabled = true;
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+    scene.add(ambientLight);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.75);
+    dirLight.position.set(10, 15, 12);
+    dirLight.castShadow = true;
+    scene.add(dirLight);
+
+    // Essenze legno
+    const woodFinishes = {
+      oak: { color: 0xdfb380, roughness: 0.4 },
+      walnut: { color: 0x5c3a21, roughness: 0.35 },
+      pine: { color: 0xf5e2b3, roughness: 0.5 },
+      cherry: { color: 0x8b3a2b, roughness: 0.35 },
+      ebony: { color: 0x2d2d2d, roughness: 0.3 }
+    };
+
+    const woodMat = new THREE.MeshStandardMaterial({ 
+      color: woodFinishes.oak.color, 
+      roughness: woodFinishes.oak.roughness,
+      side: THREE.DoubleSide 
+    });
+
+    // Materiale Evidenziatore Ripiano Selezionato
+    const selectedWoodMat = new THREE.MeshStandardMaterial({
+      color: 0x3182ce,
+      emissive: 0x1d4ed8,
+      emissiveIntensity: 0.4,
+      roughness: 0.3,
+      side: THREE.DoubleSide
+    });
+
+    const seatMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.8 });
+    const controlLineMat = new THREE.LineDashedMaterial({ color: 0x3182ce, dashSize: 0.15, gapSize: 0.1 });
+
+    const R_OUTER = 4.4;
+    const Y_FLOOR = -3.8;
+    const DEPTH = 1.2;
+    const THICKNESS = 0.08;
+
+    let hShelves = [];
+    let vShelves = [];
+    let selectedShelf = { type: 'h', index: 0 };
+
+    const mainGroup = new THREE.Group();
+    scene.add(mainGroup);
+
+    // Gestione Raycasting (Selezione con un tocco del mouse)
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let pointerDownPos = { x: 0, y: 0 };
+
+    container.addEventListener('pointerdown', (e) => {
+      pointerDownPos = { x: e.clientX, y: e.clientY };
+    });
+
+    container.addEventListener('pointerup', (e) => {
+      const dist = Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y);
+      if (dist > 5) return; // Se trascina per ruotare la visuale, ignora il click
+
+      const rect = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(mainGroup.children, true);
+
+      for (let hit of intersects) {
+        if (hit.object.userData && hit.object.userData.type) {
+          selectedShelf = {
+            type: hit.object.userData.type,
+            index: hit.object.userData.index
+          };
+          
+          if (selectedShelf.type === 'h') {
+            document.getElementById('h-select').value = selectedShelf.index;
+            syncShelfSliders('h');
+          } else {
+            document.getElementById('v-select').value = selectedShelf.index;
+            syncShelfSliders('v');
+          }
+
+          updateAll();
+          break;
+        }
+      }
+    });
+
+    function changeWoodFinish() {
+      const type = document.getElementById('woodSelect').value;
+      const finish = woodFinishes[type];
+      woodMat.color.setHex(finish.color);
+      woodMat.roughness = finish.roughness;
+    }
+
+    function resetGrid() {
+      hShelves = [-3.1, -2.4, -1.7, -1.0, -0.3, 0.4, 1.1, 1.8, 2.5, 3.2];
+      vShelves = [-3.2, -2.5, -1.8, -1.1, -0.4, 0.4, 1.1, 1.8, 2.5, 3.2];
+      selectedShelf = { type: 'h', index: 0 };
+      updateAll();
+    }
+
+    function isInsideOuter(x, y) {
+      if (y < Y_FLOOR + THICKNESS*2) return false;
+      const rIn = R_OUTER - THICKNESS * 2;
+      return (x*x + y*y) <= (rIn * rIn);
+    }
+
+    function getInnerPolygonPoints() {
+      const seatW = parseFloat(document.getElementById('seatW').value);
+      const seatH = parseFloat(document.getElementById('seatH').value);
+      const backAngle = parseFloat(document.getElementById('backAngle').value) * (Math.PI / 180);
+      const curveR = parseFloat(document.getElementById('curveRadius').value);
+
+      const points = [];
+      const samples = 80;
+      const halfW = seatW / 2;
+      const yBottom = -seatH / 2 - 0.2;
+      const yTop = seatH / 2;
+
+      for (let i = 0; i <= samples / 4; i++) {
+        let t = i / (samples / 4);
+        points.push(new THREE.Vector2(-halfW + t * seatW, yBottom));
+      }
+
+      const topX_R = halfW + Math.tan(backAngle) * seatH;
+      for (let i = 0; i <= samples / 3; i++) {
+        let t = i / (samples / 3);
+        let x = halfW + t * (topX_R - halfW) + Math.sin(t * Math.PI) * curveR * 0.4;
+        let y = yBottom + t * (yTop - yBottom);
+        points.push(new THREE.Vector2(x, y));
+      }
+
+      for (let i = 0; i <= samples / 3; i++) {
+        let t = i / (samples / 3);
+        let angle = t * Math.PI;
+        let x = topX_R * Math.cos(angle);
+        let y = yTop + Math.sin(angle) * curveR * 0.6;
+        points.push(new THREE.Vector2(x, y));
+      }
+
+      for (let i = 0; i <= samples / 3; i++) {
+        let t = i / (samples / 3);
+        let x = -topX_R + t * (topX_R - halfW) - Math.sin(t * Math.PI) * curveR * 0.4;
+        let y = yTop - t * (yTop - yBottom);
+        points.push(new THREE.Vector2(x, y));
+      }
+
+      return points;
+    }
+
+    function getOffsetPolygon(poly, offset) {
+      const n = poly.length;
+      const offsetPoly = [];
+      for (let i = 0; i < n; i++) {
+        const prev = poly[(i - 1 + n) % n];
+        const curr = poly[i];
+        const next = poly[(i + 1) % n];
+
+        let dx1 = curr.x - prev.x, dy1 = curr.y - prev.y;
+        let len1 = Math.hypot(dx1, dy1) || 1;
+        dx1 /= len1; dy1 /= len1;
+
+        let dx2 = next.x - curr.x, dy2 = next.y - curr.y;
+        let len2 = Math.hypot(dx2, dy2) || 1;
+        dx2 /= len2; dy2 /= len2;
+
+        const n1x = dy1, n1y = -dx1;
+        const n2x = dy2, n2y = -dx2;
+
+        let nx = n1x + n2x, ny = n1y + n2y;
+        let nlen = Math.hypot(nx, ny) || 1;
+        nx /= nlen; ny /= nlen;
+
+        const dot = nx * n1x + ny * n1y;
+        const miter = Math.min(1.4, 1 / (dot || 1));
+
+        offsetPoly.push(new THREE.Vector2(
+          curr.x + nx * offset * miter,
+          curr.y + ny * offset * miter
+        ));
+      }
+      return offsetPoly;
+    }
+
+    function isInsidePolygon(x, y, poly) {
+      let inside = false;
+      for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        const xi = poly[i].x, yi = poly[i].y;
+        const xj = poly[j].x, yj = poly[j].y;
+        const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+      }
+      return inside;
+    }
+
+    // Verifica accurata a multi-punto per incastrare perfettamente i ripiani
+    function isValidHShelfPoint(x, y, wallPoly) {
+      const halfThick = THICKNESS / 2;
+      return (
+        isInsideOuter(x, y) && !isInsidePolygon(x, y, wallPoly) &&
+        isInsideOuter(x, y + halfThick) && !isInsidePolygon(x, y + halfThick, wallPoly) &&
+        isInsideOuter(x, y - halfThick) && !isInsidePolygon(x, y - halfThick, wallPoly)
+      );
+    }
+
+    function isValidVShelfPoint(x, y, wallPoly) {
+      const halfThick = THICKNESS / 2;
+      return (
+        isInsideOuter(x, y) && !isInsidePolygon(x, y, wallPoly) &&
+        isInsideOuter(x + halfThick, y) && !isInsidePolygon(x + halfThick, y, wallPoly) &&
+        isInsideOuter(x - halfThick, y) && !isInsidePolygon(x - halfThick, y, wallPoly)
+      );
+    }
+
+    function updateAll() {
+      document.getElementById('val-seatW').innerText = document.getElementById('seatW').value;
+      document.getElementById('val-seatH').innerText = document.getElementById('seatH').value;
+      document.getElementById('val-backAngle').innerText = document.getElementById('backAngle').value;
+      document.getElementById('val-curveRadius').innerText = document.getElementById('curveRadius').value;
+
+      while(mainGroup.children.length > 0) mainGroup.remove(mainGroup.children[0]);
+
+      const innerPoly = getInnerPolygonPoints();
+      const outerWallPoly = getOffsetPolygon(innerPoly, THICKNESS);
+
+      // 1. Telaio Esterno
+      const outerShellShape = new THREE.Shape();
+      const angleStart = Math.asin(Y_FLOOR / R_OUTER);
+      const angleEnd = Math.PI - angleStart;
+
+      outerShellShape.absarc(0, 0, R_OUTER, angleStart, angleEnd, false);
+      outerShellShape.lineTo(-R_OUTER * Math.cos(angleStart), Y_FLOOR);
+      outerShellShape.lineTo(R_OUTER * Math.cos(angleStart), Y_FLOOR);
+
+      const R_IN = R_OUTER - THICKNESS * 2;
+      const Y_IN = Y_FLOOR + THICKNESS * 2;
+      const angleStartIn = Math.asin(Math.max(-0.99, Y_IN / R_IN));
+      const angleEndIn = Math.PI - angleStartIn;
+
+      outerShellShape.lineTo(R_IN * Math.cos(angleStartIn), Y_IN);
+      outerShellShape.absarc(0, 0, R_IN, angleEndIn, angleStartIn, true);
+      outerShellShape.lineTo(-R_IN * Math.cos(angleStartIn), Y_IN);
+      outerShellShape.closePath();
+
+      const outerGeo = new THREE.ExtrudeGeometry(outerShellShape, { depth: DEPTH, bevelEnabled: false });
+      outerGeo.center();
+      const outerMesh = new THREE.Mesh(outerGeo, woodMat);
+      mainGroup.add(outerMesh);
+
+      // 2. Parete Nicchia
+      const nicheWallShape = new THREE.Shape();
+      nicheWallShape.moveTo(outerWallPoly[0].x, outerWallPoly[0].y);
+      for (let i = 1; i < outerWallPoly.length; i++) {
+        nicheWallShape.lineTo(outerWallPoly[i].x, outerWallPoly[i].y);
+      }
+      for (let i = innerPoly.length - 1; i >= 0; i--) {
+        nicheWallShape.lineTo(innerPoly[i].x, innerPoly[i].y);
+      }
+      nicheWallShape.closePath();
+
+      const nicheWallGeo = new THREE.ExtrudeGeometry(nicheWallShape, { depth: DEPTH, bevelEnabled: false });
+      nicheWallGeo.center();
+      const nicheWallMesh = new THREE.Mesh(nicheWallGeo, woodMat);
+      mainGroup.add(nicheWallMesh);
+
+      // 3. Poltrona
+      const seatW = parseFloat(document.getElementById('seatW').value);
+      const seatH = parseFloat(document.getElementById('seatH').value);
+      const armchairGroup = new THREE.Group();
+      
+      const cushion = new THREE.Mesh(new THREE.BoxGeometry(seatW * 0.8, 0.22, DEPTH * 0.85), seatMat);
+      cushion.position.set(0, -seatH/2 + 0.05, 0);
+      armchairGroup.add(cushion);
+
+      const backrest = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.9, DEPTH * 0.85), seatMat);
+      backrest.position.set(-seatW * 0.35, -seatH/2 + 0.5, 0);
+      backrest.rotation.z = -0.15;
+      armchairGroup.add(backrest);
+
+      mainGroup.add(armchairGroup);
+
+      // 4. Ripiani Orizzontali (con risoluzione di precisione a 5mm)
+      hShelves.forEach((y, idx) => {
+        let segments = [];
+        let inSegment = false;
+        let startX = 0;
+        const step = 0.005;
+
+        for (let x = -R_OUTER; x <= R_OUTER; x += step) {
+          const valid = isValidHShelfPoint(x, y, outerWallPoly);
+          if (valid && !inSegment) {
+            inSegment = true;
+            startX = x;
+          } else if (!valid && inSegment) {
+            inSegment = false;
+            segments.push({ x1: startX, x2: x - step });
+          }
+        }
+
+        const isSelected = (selectedShelf.type === 'h' && selectedShelf.index === idx);
+        const currentMat = isSelected ? selectedWoodMat : woodMat;
+
+        segments.forEach(seg => {
+          const w = seg.x2 - seg.x1;
+          if (w > 0.05) {
+            const geo = new THREE.BoxGeometry(w, THICKNESS, DEPTH * 0.96);
+            const mesh = new THREE.Mesh(geo, currentMat);
+            mesh.position.set(seg.x1 + w/2, y, 0);
+            mesh.userData = { type: 'h', index: idx };
+            mainGroup.add(mesh);
+          }
+        });
+      });
+
+      // 5. Divisori Verticali (con risoluzione di precisione a 5mm)
+      vShelves.forEach((x, idx) => {
+        let segments = [];
+        let inSegment = false;
+        let startY = 0;
+        const step = 0.005;
+
+        for (let y = Y_FLOOR; y <= R_OUTER; y += step) {
+          const valid = isValidVShelfPoint(x, y, outerWallPoly);
+          if (valid && !inSegment) {
+            inSegment = true;
+            startY = y;
+          } else if (!valid && inSegment) {
+            inSegment = false;
+            segments.push({ y1: startY, y2: y - step });
+          }
+        }
+
+        const isSelected = (selectedShelf.type === 'v' && selectedShelf.index === idx);
+        const currentMat = isSelected ? selectedWoodMat : woodMat;
+
+        segments.forEach(seg => {
+          const h = seg.y2 - seg.y1;
+          if (h > 0.05) {
+            const geo = new THREE.BoxGeometry(THICKNESS, h, DEPTH * 0.96);
+            const mesh = new THREE.Mesh(geo, currentMat);
+            mesh.position.set(x, seg.y1 + h/2, 0);
+            mesh.userData = { type: 'v', index: idx };
+            mainGroup.add(mesh);
+          }
+        });
+      });
+
+      // 6. Tratteggio Tridimensionale Bounding Box
+      drawControlBox(innerPoly);
+
+      updateSelectOptions();
+    }
+
+    function drawControlBox(poly) {
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      poly.forEach(p => {
+        if(p.x < minX) minX = p.x;
+        if(p.x > maxX) maxX = p.x;
+        if(p.y < minY) minY = p.y;
+        if(p.y > maxY) maxY = p.y;
+      });
+
+      const boxGeo = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(minX, minY, DEPTH/2 + 0.02),
+        new THREE.Vector3(maxX, minY, DEPTH/2 + 0.02),
+        new THREE.Vector3(maxX, maxY, DEPTH/2 + 0.02),
+        new THREE.Vector3(minX, maxY, DEPTH/2 + 0.02),
+        new THREE.Vector3(minX, minY, DEPTH/2 + 0.02)
+      ]);
+      
+      const line = new THREE.Line(boxGeo, controlLineMat);
+      line.computeLineDistances();
+      mainGroup.add(line);
+    }
+
+    function updateSelectOptions() {
+      document.getElementById('h-count').innerText = hShelves.length;
+      document.getElementById('v-count').innerText = vShelves.length;
+
+      const hSel = document.getElementById('h-select');
+      const vSel = document.getElementById('v-select');
+
+      hSel.innerHTML = '';
+      hShelves.forEach((y, i) => {
+        hSel.add(new Option(`Ripiano ${i+1} (Y: ${y.toFixed(2)}m)`, i));
+      });
+
+      vSel.innerHTML = '';
+      vShelves.forEach((x, i) => {
+        vSel.add(new Option(`Divisore ${i+1} (X: ${x.toFixed(2)}m)`, i));
+      });
+
+      if (selectedShelf.type === 'h' && selectedShelf.index < hShelves.length) {
+        hSel.value = selectedShelf.index;
+      }
+      if (selectedShelf.type === 'v' && selectedShelf.index < vShelves.length) {
+        vSel.value = selectedShelf.index;
+      }
+
+      syncShelfSliders('h');
+      syncShelfSliders('v');
+    }
+
+    function onSelectDropdownChange(type) {
+      const idx = parseInt(document.getElementById(type + '-select').value) || 0;
+      selectedShelf = { type, index: idx };
+      syncShelfSliders(type);
+      updateAll();
+    }
+
+    function syncShelfSliders(type) {
+      if (type === 'h' && hShelves.length > 0) {
+        const idx = document.getElementById('h-select').value || 0;
+        if (hShelves[idx] !== undefined) {
+          document.getElementById('hPos').value = hShelves[idx];
+          document.getElementById('val-hPos').innerText = parseFloat(hShelves[idx]).toFixed(2);
+        }
+      } else if (type === 'v' && vShelves.length > 0) {
+        const idx = document.getElementById('v-select').value || 0;
+        if (vShelves[idx] !== undefined) {
+          document.getElementById('vPos').value = vShelves[idx];
+          document.getElementById('val-vPos').innerText = parseFloat(vShelves[idx]).toFixed(2);
+        }
+      }
+    }
+
+    window.addShelf = function(type) {
+      if (type === 'h') {
+        hShelves.push(0.0);
+        selectedShelf = { type: 'h', index: hShelves.length - 1 };
+      } else {
+        vShelves.push(0.0);
+        selectedShelf = { type: 'v', index: vShelves.length - 1 };
+      }
+      updateAll();
+    };
+
+    window.removeSelectedShelf = function(type) {
+      if (type === 'h' && hShelves.length > 0) {
+        const idx = parseInt(document.getElementById('h-select').value);
+        hShelves.splice(idx, 1);
+        selectedShelf.index = Math.max(0, idx - 1);
+      } else if (type === 'v' && vShelves.length > 0) {
+        const idx = parseInt(document.getElementById('v-select').value);
+        vShelves.splice(idx, 1);
+        selectedShelf.index = Math.max(0, idx - 1);
+      }
+      updateAll();
+    };
+
+    window.moveShelf = function(type) {
+      if (type === 'h' && hShelves.length > 0) {
+        const idx = parseInt(document.getElementById('h-select').value);
+        const val = parseFloat(document.getElementById('hPos').value);
+        hShelves[idx] = val;
+        document.getElementById('val-hPos').innerText = val.toFixed(2);
+      } else if (type === 'v' && vShelves.length > 0) {
+        const idx = parseInt(document.getElementById('v-select').value);
+        const val = parseFloat(document.getElementById('vPos').value);
+        vShelves[idx] = val;
+        document.getElementById('val-vPos').innerText = val.toFixed(2);
+      }
+      updateAll();
+    };
+
+    resetGrid();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = container.clientWidth / container.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(container.clientWidth, container.clientHeight);
+    });
+  </script>
+</body>
+</html>

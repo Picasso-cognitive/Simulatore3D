@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3cad Studio 3D - Simulatore Cucina Interattivo</title>
+  <style>
+    :root {
+      --bg-main: #0f172a;
+      --panel-bg: #1e293b;
+      --panel-border: #334155;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --active: #10b981;
+      --danger: #ef4444;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body { background-color: var(--bg-main); color: var(--text); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+
+    /* Header */
+    header {
+      background: #090d16;
+      border-bottom: 1px solid var(--panel-border);
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 20;
+    }
+    .brand { font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .brand span { background: var(--accent); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; }
+
+    /* Layout Principale */
+    .app-container { flex: 1; display: flex; overflow: hidden; position: relative; }
+
+    /* Sidebars */
+    .sidebar {
+      width: 320px;
+      background: var(--panel-bg);
+      border-right: 1px solid var(--panel-border);
+      display: flex;
+      flex-direction: column;
+      z-index: 10;
+      overflow-y: auto;
+    }
+    .sidebar-right { border-right: none; border-left: 1px solid var(--panel-border); }
+
+    .panel-section { padding: 16px; border-bottom: 1px solid var(--panel-border); }
+    .panel-title { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px; letter-spacing: 0.05em; }
+
+    /* Controls UI */
+    .btn {
+      background: var(--panel-border);
+      color: var(--text);
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      width: 100%;
+      margin-bottom: 8px;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn:hover { background: var(--accent); color: white; }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-danger { background: rgba(239, 68, 68, 0.2); color: var(--danger); border: 1px solid var(--danger); }
+    .btn-danger:hover { background: var(--danger); color: white; }
+
+    .catalog-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .catalog-btn {
+      background: #0f172a; border: 1px solid var(--panel-border); color: var(--text);
+      padding: 10px; border-radius: 6px; font-size: 0.78rem; text-align: center; cursor: pointer;
+    }
+    .catalog-btn:hover { border-color: var(--accent); background: #1a2744; }
+
+    .form-group { margin-bottom: 10px; }
+    .form-group label { display: block; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; }
+    .form-control {
+      width: 100%; background: #0f172a; border: 1px solid var(--panel-border);
+      color: var(--text); padding: 6px 10px; border-radius: 4px; font-size: 0.85rem;
+    }
+
+    /* 3D Viewport */
+    .viewport { flex: 1; position: relative; background: #050811; }
+    #canvas3d { width: 100%; height: 100%; display: block; }
+
+    /* Overlay Toolbar 3D */
+    .viewport-overlay {
+      position: absolute; top: 15px; left: 15px; display: flex; gap: 8px; z-index: 5;
+      background: rgba(15, 23, 42, 0.8); padding: 6px; border-radius: 8px; backdrop-filter: blur(8px);
+      border: 1px solid var(--panel-border);
+    }
+    .tool-chip {
+      background: transparent; color: var(--text-muted); border: none; padding: 6px 12px;
+      font-size: 0.8rem; border-radius: 4px; cursor: pointer; font-weight: 600;
+    }
+    .tool-chip.active, .tool-chip:hover { background: var(--accent); color: white; }
+
+    /* Instructions Box */
+    .nav-help {
+      position: absolute; bottom: 15px; left: 15px; background: rgba(15, 23, 42, 0.85);
+      padding: 10px 14px; border-radius: 6px; border: 1px solid var(--panel-border);
+      font-size: 0.75rem; color: var(--text-muted); line-height: 1.5; pointer-events: none;
+    }
+    .nav-help strong { color: var(--text); }
+
+    /* Quote Box */
+    .quote-box { background: #0f172a; padding: 12px; border-radius: 6px; border: 1px solid var(--panel-border); }
+    .quote-row { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 6px; }
+    .quote-total { font-weight: bold; color: var(--active); font-size: 1.05rem; border-top: 1px solid var(--panel-border); padding-top: 6px; margin-top: 6px; }
+  </style>
+
+  <!-- Three.js e OrbitControls per la navigazione 3D fluida -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+  <header>
+    <div class="brand">3cad Studio 3D <span>v2.0 WebGL</span></div>
+    <div>
+      <button class="btn btn-primary" style="width: auto; margin-bottom:0;" onclick="resetToDefaultCucina()">📂 Carica Layout Immagine Default</button>
+    </div>
+  </header>
+
+  <div class="app-container">
+    
+    <!-- Sidebar Sinistra: Catalogo & Viste -->
+    <aside class="sidebar">
+      <div class="panel-section">
+        <div class="panel-title">Inquadrature Telecamera</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+          <button class="btn" onclick="setCameraView('perspective')">📷 3D Libero</button>
+          <button class="btn" onclick="setCameraView('top')">📐 Pianta 2D</button>
+          <button class="btn" onclick="setCameraView('front')">🖼️ Frontale</button>
+          <button class="btn" onclick="setCameraView('iso')">🧊 Assonometria</button>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-title">Aggiungi Moduli Cucina</div>
+        <div class="catalog-grid">
+          <div class="catalog-btn" onclick="addBaseModule()">📦 Base 60cm</div>
+          <div class="catalog-btn" onclick="addOvenModule()">🔥 Base Forno</div>
+          <div class="catalog-btn" onclick="addWallModule()">🗄️ Pensile 60cm</div>
+          <div class="catalog-btn" onclick="addIslandModule()">🏝️ Isola Centrale</div>
+          <div class="catalog-btn" onclick="addTableModule()">🍽️ Tavolo Pranzo</div>
+          <div class="catalog-btn" onclick="addChairModule()">🪑 Sedia Metallo</div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-title">Ambiente e Pareti</div>
+        <button class="btn" onclick="toggleWalls()">👁️ Mostra/Nascondi Pareti</button>
+      </div>
+    </aside>
+
+    <!-- Viewport 3D -->
+    <main class="viewport">
+      <div class="viewport-overlay">
+        <button class="tool-chip active" id="mode-select">🖱️ Seleziona & Sposta</button>
+      </div>
+
+      <div class="nav-help">
+        <strong>Navigazione 3D:</strong><br>
+        • <strong>Ruota scena:</strong> Click Sinistro + Trascina<br>
+        • <strong>Pan / Trasla:</strong> Click Destro + Trascina (o Shift + Click Sx)<br>
+        • <strong>Zoom:</strong> Rotella del mouse<br>
+        • <strong>Seleziona modulo:</strong> Click su un oggetto
+      </div>
+
+      <div id="canvas-container" style="width:100%; height:100%;"></div>
+    </main>
+
+    <!-- Sidebar Destra: Inspector & Preventivo -->
+    <aside class="sidebar sidebar-right">
+      <div class="panel-section">
+        <div class="panel-title">Ispettore Oggetto Selezionato</div>
+        
+        <div id="no-selection" style="color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 20px 0;">
+          Clicca su un mobile nella scena 3D per modificarlo.
+        </div>
+
+        <div id="inspector-form" style="display: none;">
+          <div class="form-group">
+            <label>Nome / Codice Modulo</label>
+            <input type="text" id="inp-name" class="form-control" onchange="updateSelectedObject()">
+          </div>
+
+          <div class="form-group">
+            <label>Posizione X (Larghezza cm)</label>
+            <input type="number" id="inp-x" step="5" class="form-control" oninput="updateSelectedObject()">
+          </div>
+          <div class="form-group">
+            <label>Posizione Y (Altezza cm)</label>
+            <input type="number" id="inp-y" step="5" class="form-control" oninput="updateSelectedObject()">
+          </div>
+          <div class="form-group">
+            <label>Posizione Z (Profondità cm)</label>
+            <input type="number" id="inp-z" step="5" class="form-control" oninput="updateSelectedObject()">
+          </div>
+
+          <div class="form-group">
+            <label>Rotazione Y (Gradi)</label>
+            <input type="range" id="inp-rot" min="0" max="360" step="15" class="form-control" oninput="updateSelectedObject()">
+          </div>
+
+          <div class="form-group">
+            <label>Colore / Finitura Materiale</label>
+            <input type="color" id="inp-color" class="form-control" style="height:38px; padding:2px;" onchange="updateSelectedObject()">
+          </div>
+
+          <button class="btn btn-danger" style="margin-top: 15px;" onclick="deleteSelectedObject()">🗑️ Elimina Oggetto</button>
+        </div>
+      </div>
+
+      <div class="panel-section" style="margin-top: auto;">
+        <div class="panel-title">Preventivo Immediato</div>
+        <div class="quote-box">
+          <div class="quote-row"><span>Elementi Inseriti:</span> <strong id="q-items">0</strong></div>
+          <div class="quote-row"><span>Totale Imponibile:</span> <strong id="q-subtotal">€0</strong></div>
+          <div class="quote-row"><span>Sconto Promozionale:</span> <strong style="color:var(--danger)">-10%</strong></div>
+          <div class="quote-row quote-total"><span>Totale Netto:</span> <span id="q-total">€0</span></div>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <script>
+    // --- COSTANTI E CONFIGURAZIONE SCENA THREE.JS ---
+    let scene, camera, renderer, controls;
+    let raycaster, mouse;
+    let kitchenGroup, wallsGroup;
+    let selectedObject = null;
+    let objectsRegistry = [];
+
+    // Finiture Predefinite (da immagini)
+    const MATERIALS = {
+      tortora: 0xb3aaa0,
+      topDark: 0x504c48,
+      whiteIsland: 0xf0f2f5,
+      woodFloor: 0x6a4a3a,
+      wallColor: 0xdedede,
+      metalChair: 0x94a3b8,
+      glass: 0xa5f3fc
+    };
+
+    // --- INIZIALIZZAZIONE ---
+    function init() {
+      const container = document.getElementById('canvas-container');
+
+      // 1. Scene
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x0a0f1d);
+
+      // 2. Camera
+      camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+      camera.position.set(5.5, 4.5, 6.5);
+
+      // 3. Renderer con Ombre Soft
+      renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+      renderer.setSize(container.clientWidth, container.clientHeight);
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      container.appendChild(renderer.domElement);
+
+      // 4. OrbitControls (Navigazione fluida e perno corretto)
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+      controls.target.set(3, 1, 1.5);
+      controls.maxPolarAngle = Math.PI / 2 + 0.01; // Non andare sotto il pavimento
+
+      // 5. Illuminazione Studio
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+      scene.add(ambientLight);
+
+      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      dirLight.position.set(8, 12, 10);
+      dirLight.castShadow = true;
+      dirLight.shadow.mapSize.width = 2048;
+      dirLight.shadow.mapSize.height = 2048;
+      scene.add(dirLight);
+
+      const fillLight = new THREE.DirectionalLight(0x90b0ff, 0.3);
+      fillLight.position.set(-5, 6, -5);
+      scene.add(fillLight);
+
+      // 6. Gruppi
+      kitchenGroup = new THREE.Group();
+      wallsGroup = new THREE.Group();
+      scene.add(kitchenGroup);
+      scene.add(wallsGroup);
+
+      // 7. Raycaster per selezione
+      raycaster = new THREE.Raycaster();
+      mouse = new THREE.Vector2();
+
+      // Event Listeners
+      window.addEventListener('resize', onWindowResize);
+      renderer.domElement.addEventListener('pointerdown', onPointerDown);
+
+      // Costruisci Stanza e Carica Cucina di Default dalle immagini
+      buildRoomStructure();
+      resetToDefaultCucina();
+
+      // Render Loop
+      animate();
+    }
+
+    // --- COSTRUZIONE STANZA (Pareti, Parquet, Finestra, Porta) ---
+    function buildRoomStructure() {
+      wallsGroup.clear();
+
+      // Pavimento Parquet
+      const floorGeo = new THREE.PlaneGeometry(7.5, 6);
+      const floorMat = new THREE.MeshStandardMaterial({ color: MATERIALS.woodFloor, roughness: 0.4, metalness: 0.1 });
+      const floor = new THREE.Mesh(floorGeo, floorMat);
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.set(3.25, 0, 2.5);
+      floor.receiveShadow = true;
+      wallsGroup.add(floor);
+
+      // Griglia Guida Pavimento
+      const grid = new THREE.GridHelper(8, 16, 0x334155, 0x1e293b);
+      grid.position.set(3.25, 0.001, 2.5);
+      wallsGroup.add(grid);
+
+      // Parete Fondo (Back Wall)
+      const backWall = createWallBox(7.5, 2.8, 0.15, MATERIALS.wallColor);
+      backWall.position.set(3.25, 1.4, -0.075);
+      wallsGroup.add(backWall);
+
+      // Parete Sinistra (Left Wall)
+      const leftWall = createWallBox(0.15, 2.8, 6, MATERIALS.wallColor);
+      leftWall.position.set(-0.075, 1.4, 2.5);
+      wallsGroup.add(leftWall);
+
+      // Finestra Alta su Parete Fondo
+      const windowFrame = createWallBox(1.1, 1.0, 0.18, 0xffffff);
+      windowFrame.position.set(4.8, 1.8, -0.075);
+      wallsGroup.add(windowFrame);
+
+      const windowGlass = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.9, 0.8),
+        new THREE.MeshPhysicalMaterial({ color: MATERIALS.glass, transparent: true, opacity: 0.6, roughness: 0.1 })
+      );
+      windowGlass.position.set(4.8, 1.8, 0.02);
+      wallsGroup.add(windowGlass);
+
+      // Porta Finestra Sinistra (2 Ante)
+      const doorFrame = createWallBox(0.18, 2.2, 1.3, 0xffffff);
+      doorFrame.position.set(-0.075, 1.1, 2.2);
+      wallsGroup.add(doorFrame);
+    }
+
+    function createWallBox(w, h, d, color) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(w, h, d),
+        new THREE.MeshStandardMaterial({ color: color, roughness: 0.9 })
+      );
+      mesh.receiveShadow = true;
+      return mesh;
+    }
+
+    // --- GENERA CUCINA DI DEFAULT (Layout Dalle Foto) ---
+    function resetToDefaultCucina() {
+      // Pulisci
+      objectsRegistry.forEach(obj => kitchenGroup.remove(obj.mesh));
+      objectsRegistry = [];
+      selectedObject = null;
+      updateInspectorUI();
+
+      // 1. BASI LINEARI A PARETE (Profondità 60cm, Altezza 85cm)
+      const basePositionsX = [1.8, 2.4, 3.0, 3.6, 4.8, 5.4, 6.0];
+      basePositionsX.forEach((x, index) => {
+        const isOven = (index === 3); // Forno in quarta posizione
+        addFurnitureObject({
+          name: isOven ? 'Base Forno 60cm' : `Base Cucina ${index + 1}`,
+          type: 'base',
+          price: isOven ? 580 : 240,
+          w: 0.6, h: 0.85, d: 0.6,
+          x: x, y: 0.425, z: 0.3,
+          color: isOven ? 0x222222 : MATERIALS.tortora,
+          isOven: isOven
+        });
+      });
+
+      // Top della cucina continuo
+      const topMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(4.8, 0.04, 0.62),
+        new THREE.MeshStandardMaterial({ color: MATERIALS.topDark, roughness: 0.3 })
+      );
+      topMesh.position.set(3.9, 0.87, 0.31);
+      topMesh.castShadow = true;
+      kitchenGroup.add(topMesh);
+
+      // 2. PENSILI SUPERIORI (Altezza 150cm da terra)
+      // 4 Pensili a Sinistra della finestra
+      [1.8, 2.3, 2.8, 3.3].forEach((x, i) => {
+        addFurnitureObject({
+          name: `Pensile Sx ${i + 1}`,
+          type: 'wallUnit',
+          price: 170,
+          w: 0.5, h: 0.72, d: 0.35,
+          x: x, y: 1.86, z: 0.175,
+          color: MATERIALS.tortora
+        });
+      });
+
+      // 3 Pensili a Destra della finestra (come da vista dall'alto)
+      [5.5, 6.1, 6.7].forEach((x, i) => {
+        addFurnitureObject({
+          name: `Pensile Dx ${i + 1}`,
+          type: 'wallUnit',
+          price: 190,
+          w: 0.6, h: 0.72, d: 0.35,
+          x: x, y: 1.86, z: 0.175,
+          color: MATERIALS.tortora
+        });
+      });
+
+      // 3. ISOLA CENTRALE
+      addFurnitureObject({
+        name: 'Isola Autonoma',
+        type: 'island',
+        price: 890,
+        w: 1.6, h: 0.85, d: 0.9,
+        x: 3.2, y: 0.425, z: 2.2,
+        color: MATERIALS.whiteIsland
+      });
+
+      // 4. ZONA PRANZO (Tavolo e 4 Sedie)
+      addFurnitureObject({
+        name: 'Tavolo Pranzo',
+        type: 'table',
+        price: 420,
+        w: 1.4, h: 0.75, d: 0.8,
+        x: 1.2, y: 0.375, z: 4.0,
+        color: 0xe2e8f0
+      });
+
+      // Sedie attorno al tavolo
+      const chairPos = [
+        { x: 0.8, z: 3.6 }, { x: 1.6, z: 3.6 },
+        { x: 0.8, z: 4.4 }, { x: 1.6, z: 4.4 }
+      ];
+      chairPos.forEach((p, i) => {
+        addFurnitureObject({
+          name: `Sedia Metallo ${i + 1}`,
+          type: 'chair',
+          price: 85,
+          w: 0.4, h: 0.85, d: 0.4,
+          x: p.x, y: 0.425, z: p.z,
+          color: MATERIALS.metalChair
+        });
+      });
+
+      updateQuoteUI();
+    }
+
+    // --- METODO PER INSERIRE UN OGGETTO 3D ---
+    function addFurnitureObject(config) {
+      const group = new THREE.Group();
+
+      // Corpo Principale Box
+      const geo = new THREE.BoxGeometry(config.w, config.h, config.d);
+      const mat = new THREE.MeshStandardMaterial({ color: config.color, roughness: 0.5 });
+      const mainMesh = new THREE.Mesh(geo, mat);
+      mainMesh.castShadow = true;
+      mainMesh.receiveShadow = true;
+      group.add(mainMesh);
+
+      // Dettagli Specifici (Maniglie / Top / Forno)
+      if (config.type === 'base' || config.type === 'wallUnit') {
+        // Maniglia
+        const handleGeo = new THREE.BoxGeometry(0.12, 0.02, 0.02);
+        const handleMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.8, roughness: 0.2 });
+        const handle = new THREE.Mesh(handleGeo, handleMat);
+        handle.position.set(0, 0, config.d / 2 + 0.01);
+        group.add(handle);
+      } else if (config.type === 'island') {
+        // Top Isola Separato
+        const topGeo = new THREE.BoxGeometry(config.w + 0.04, 0.04, config.d + 0.04);
+        const topMat = new THREE.MeshStandardMaterial({ color: MATERIALS.topDark, roughness: 0.3 });
+        const top = new THREE.Mesh(topGeo, topMat);
+        top.position.set(0, config.h / 2 + 0.02, 0);
+        top.castShadow = true;
+        group.add(top);
+      }
+
+      group.position.set(config.x, config.y, config.z);
+
+      kitchenGroup.add(group);
+
+      // Registra
+      const objData = {
+        id: 'obj_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+        name: config.name,
+        price: config.price || 150,
+        mesh: group,
+        mainMesh: mainMesh,
+        config: config
+      };
+
+      // Associa ID all'oggetto Three.js per Raycasting
+      mainMesh.userData = { registryId: objData.id };
+
+      objectsRegistry.push(objData);
+      return objData;
+    }
+
+    // --- AGGIUNTA MODULI DA BOTTONI CATALOGO ---
+    function addBaseModule() {
+      const obj = addFurnitureObject({ name: 'Nuova Base 60', type: 'base', price: 240, w: 0.6, h: 0.85, d: 0.6, x: 2, y: 0.425, z: 2, color: MATERIALS.tortora });
+      selectObjectById(obj.id);
+      updateQuoteUI();
+    }
+    function addOvenModule() {
+      const obj = addFurnitureObject({ name: 'Modulo Forno', type: 'base', price: 580, w: 0.6, h: 0.85, d: 0.6, x: 2, y: 0.425, z: 2, color: 0x222222 });
+      selectObjectById(obj.id);
+      updateQuoteUI();
+    }
+    function addWallModule() {
+      const obj = addFurnitureObject({ name: 'Pensile Pensile', type: 'wallUnit', price: 170, w: 0.6, h: 0.72, d: 0.35, x: 2, y: 1.86, z: 2, color: MATERIALS.tortora });
+      selectObjectById(obj.id);
+      updateQuoteUI();
+    }
+    function addIslandModule() {
+      const obj = addFurnitureObject({ name: 'Isola Cucina', type: 'island', price: 890, w: 1.6, h: 0.85, d: 0.9, x: 3, y: 0.425, z: 2.5, color: MATERIALS.whiteIsland });
+      selectObjectById(obj.id);
+      updateQuoteUI();
+    }
+    function addTableModule() {
+      const obj = addFurnitureObject({ name: 'Tavolo', type: 'table', price: 420, w: 1.4, h: 0.75, d: 0.8, x: 2, y: 0.375, z: 3.5, color: 0xe2e8f0 });
+      selectObjectById(obj.id);
+      updateQuoteUI();
+    }
+    function addChairModule() {
+      const obj = addFurnitureObject({ name: 'Sedia', type: 'chair', price: 85, w: 0.4, h: 0.85, d: 0.4, x: 2, y: 0.425, z: 3, color: MATERIALS.metalChair });
+      selectObjectById(obj.id);
+      updateQuoteUI();
+    }
+
+    // --- INTERAZIONI CON MOUSE & SELEZIONE RAYCASTING ---
+    function onPointerDown(event) {
+      // Ignora se si clicca con il tasto destro per panning
+      if (event.button !== 0) return;
+
+      const rect = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+
+      // Trova intersezioni con tutte le mesh dei mobili
+      const meshes = objectsRegistry.map(o => o.mainMesh);
+      const intersects = raycaster.intersectObjects(meshes);
+
+      if (intersects.length > 0) {
+        const hitMesh = intersects[0].object;
+        const regId = hitMesh.userData.registryId;
+        selectObjectById(regId);
+      }
+    }
+
+    function selectObjectById(id) {
+      // Deseleziona precedente
+      if (selectedObject) {
+        selectedObject.mainMesh.material.emissive.setHex(0x000000);
+      }
+
+      selectedObject = objectsRegistry.find(o => o.id === id);
+
+      if (selectedObject) {
+        // Evidenzia oggetto selezionato con emissivo verde/azzurro
+        selectedObject.mainMesh.material.emissive.setHex(0x10b981);
+        selectedObject.mainMesh.material.emissiveIntensity = 0.3;
+
+        // Imposta il centro di rotazione OrbitControls sull'oggetto selezionato!
+        controls.target.copy(selectedObject.mesh.position);
+
+        updateInspectorUI();
+      }
+    }
+
+    // --- ISPETTORE EDITING PROPRIETA' ---
+    function updateInspectorUI() {
+      const form = document.getElementById('inspector-form');
+      const noSel = document.getElementById('no-selection');
+
+      if (!selectedObject) {
+        form.style.display = 'none';
+        noSel.style.display = 'block';
+        return;
+      }
+
+      form.style.display = 'block';
+      noSel.style.display = 'none';
+
+      document.getElementById('inp-name').value = selectedObject.name;
+      document.getElementById('inp-x').value = Math.round(selectedObject.mesh.position.x * 100);
+      document.getElementById('inp-y').value = Math.round(selectedObject.mesh.position.y * 100);
+      document.getElementById('inp-z').value = Math.round(selectedObject.mesh.position.z * 100);
+      document.getElementById('inp-rot').value = Math.round(THREE.MathUtils.radToDeg(selectedObject.mesh.rotation.y));
+      
+      const hexColor = '#' + selectedObject.mainMesh.material.color.getHexString();
+      document.getElementById('inp-color').value = hexColor;
+    }
+
+    function updateSelectedObject() {
+      if (!selectedObject) return;
+
+      selectedObject.name = document.getElementById('inp-name').value;
+      selectedObject.mesh.position.x = parseFloat(document.getElementById('inp-x').value) / 100;
+      selectedObject.mesh.position.y = parseFloat(document.getElementById('inp-y').value) / 100;
+      selectedObject.mesh.position.z = parseFloat(document.getElementById('inp-z').value) / 100;
+
+      const deg = parseFloat(document.getElementById('inp-rot').value);
+      selectedObject.mesh.rotation.y = THREE.MathUtils.degToRad(deg);
+
+      const newColor = document.getElementById('inp-color').value;
+      selectedObject.mainMesh.material.color.set(newColor);
+    }
+
+    function deleteSelectedObject() {
+      if (!selectedObject) return;
+      kitchenGroup.remove(selectedObject.mesh);
+      objectsRegistry = objectsRegistry.filter(o => o.id !== selectedObject.id);
+      selectedObject = null;
+      updateInspectorUI();
+      updateQuoteUI();
+    }
+
+    // --- PREVENTIVO UI ---
+    function updateQuoteUI() {
+      const count = objectsRegistry.length;
+      const subtotal = objectsRegistry.reduce((acc, o) => acc + o.price, 0);
+      const total = subtotal * 0.9;
+
+      document.getElementById('q-items').innerText = count;
+      document.getElementById('q-subtotal').innerText = `€${subtotal.toFixed(2)}`;
+      document.getElementById('q-total').innerText = `€${total.toFixed(2)}`;
+    }
+
+    // --- CAMBIO VISTE TELECAMERA ---
+    function setCameraView(viewType) {
+      controls.reset();
+      if (viewType === 'top') {
+        camera.position.set(3.25, 7.5, 2.5);
+        controls.target.set(3.25, 0, 2.5);
+      } else if (viewType === 'front') {
+        camera.position.set(3.25, 1.4, 6.5);
+        controls.target.set(3.25, 1.4, 0);
+      } else if (viewType === 'iso') {
+        camera.position.set(7, 5, 6);
+        controls.target.set(3, 0.8, 1.5);
+      } else { // perspective
+        camera.position.set(5.5, 4.5, 6.5);
+        controls.target.set(3, 1, 1.5);
+      }
+    }
+
+    function toggleWalls() {
+      wallsGroup.visible = !wallsGroup.visible;
+    }
+
+    function onWindowResize() {
+      const container = document.getElementById('canvas-container');
+      camera.aspect = container.clientWidth / container.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(container.clientWidth, container.clientHeight);
+    }
+
+    // --- RENDER LOOP ---
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    // Avvio applicazione
+    window.onload = init;
+  </script>
+</body>
+</html>
