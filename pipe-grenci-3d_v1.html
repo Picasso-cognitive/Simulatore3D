@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pipe Grenci Brognaturo — Atelier · Configuratore 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/STLExporter.js"></script>
+
+<style>
+  :root{
+    --bg:#211812; --bg2:#2a1f16; --panel:#312418; --panel2:#3a2c1d;
+    --ink:#f2e6d4; --ink-soft:#c9b499; --line:rgba(214,176,120,.16);
+    --line2:rgba(214,176,120,.28); --amber:#d0913f; --amber-deep:#a86a24;
+    --ember:#c23b30; --ok:#7ea862;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0; padding:0; background:var(--bg); color:var(--ink); font-family:"Hanken Grotesk",system-ui,sans-serif; line-height:1.5; -webkit-font-smoothing:antialiased;}
+  a{color:inherit}
+
+  /* Header */
+  header{
+    display:flex; align-items:flex-end; justify-content:space-between; gap:24px;
+    padding:22px clamp(18px,4vw,44px) 18px; flex-wrap:wrap;
+    border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(42,31,22,.85), transparent);
+  }
+  .brand{display:flex; flex-direction:column; gap:2px}
+  .brand .top{font-size:.72rem; letter-spacing:.28em; color:var(--amber); font-weight:600}
+  .brand h1{
+    font-family:"Fraunces",serif; font-weight:900; font-optical-sizing:auto;
+    font-size:clamp(1.8rem,4.2vw,2.8rem); line-height:.95; margin:2px 0 0;
+    letter-spacing:-.01em;
+  }
+  .brand h1 em{font-style:italic; font-weight:400; color:var(--amber)}
+  .brand .sub{color:var(--ink-soft); font-size:.88rem; margin-top:4px}
+  .tools{display:flex; gap:8px; flex-wrap:wrap}
+  .tools button, .filelabel{
+    font:inherit; font-size:.82rem; font-weight:600; color:var(--ink);
+    background:var(--panel); border:1px solid var(--line2); border-radius:10px;
+    padding:9px 13px; cursor:pointer; transition:.15s; display:inline-flex; align-items:center; gap:6px;
+  }
+  .tools button:hover,.filelabel:hover{border-color:var(--amber); color:#fff; background:var(--panel2);}
+  .tools button.highlight-btn{background:var(--amber); color:#211812; border-color:var(--amber);}
+  .tools button.highlight-btn:hover{background:#e09f4b; color:#110b07;}
+  .filelabel input{display:none}
+
+  /* Layout */
+  main{
+    display:grid; grid-template-columns:minmax(380px,1.1fr) minmax(360px,1fr);
+    gap:clamp(16px,2.5vw,34px); padding:clamp(16px,3vw,34px) clamp(18px,4vw,44px) 60px;
+    align-items:start;
+  }
+  @media (max-width:1020px){ main{grid-template-columns:1fr} }
+
+  /* Stage & 3D Viewport */
+  .stage{position:sticky; top:16px; display:flex; flex-direction:column; gap:16px}
+  @media (max-width:1020px){ .stage{position:static} }
+  
+  .preview-3d-box{
+    position:relative; width:100%; height:440px;
+    background:radial-gradient(120% 90% at 50% 12%, #3b2c1d, #1a120c 85%);
+    border:1px solid var(--line2); border-radius:var(--radius); overflow:hidden;
+    box-shadow:inset 0 1px 0 rgba(255,220,170,.06), 0 24px 60px -30px #000;
+  }
+  #canvas3d{width:100%; height:100%; display:block; cursor:grab;}
+  #canvas3d:active{cursor:grabbing;}
+
+  /* Part Selection Bar & Overlay */
+  .part-bar{
+    position:absolute; top:12px; left:12px; right:12px;
+    display:flex; justify-content:space-between; align-items:center; gap:8px;
+    pointer-events:none; z-index:10;
+  }
+  .part-badge{
+    background:rgba(20,14,10,0.88); border:1px solid var(--amber); border-radius:8px;
+    padding:6px 12px; backdrop-filter:blur(8px); pointer-events:auto;
+    display:flex; flex-direction:column; gap:2px;
+  }
+  .part-badge span.lbl{font-size:.65rem; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.1em;}
+  .part-badge span.val{font-size:.88rem; color:var(--amber); font-weight:700;}
+
+  .part-tabs{display:flex; gap:6px; pointer-events:auto;}
+  .part-tab-btn{
+    background:rgba(30,22,16,0.85); border:1px solid var(--line2); color:var(--ink-soft);
+    padding:6px 10px; border-radius:8px; font-size:.78rem; font-weight:600; cursor:pointer; transition:.14s;
+  }
+  .part-tab-btn:hover,.part-tab-btn.active{background:var(--amber); color:#211812; border-color:var(--amber);}
+
+  .plate{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:10px 16px; border-top:1px solid var(--line); background:rgba(20,14,10,0.6);
+    font-family:"Fraunces",serif; font-size:.95rem; color:var(--ink-soft);
+  }
+  .plate b{color:var(--ink); font-weight:600}
+
+  /* Technical Specs Card */
+  .spec{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:16px 18px;
+  }
+  .spec h3{
+    margin:0 0 12px; font-family:"Fraunces",serif; font-weight:600; font-size:1.05rem;
+    display:flex; align-items:center; gap:9px;
+  }
+  .spec h3::before{content:""; width:8px; height:8px; border-radius:50%; background:var(--amber)}
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:2px 22px}
+  @media (max-width:520px){ .grid{grid-template-columns:1fr} }
+  .row{display:flex; justify-content:space-between; gap:10px; padding:6px 0; border-bottom:1px dashed var(--line); font-size:.88rem}
+  .row span{color:var(--ink-soft)} .row b{font-weight:600; text-align:right}
+
+  /* Controls */
+  .controls{display:flex; flex-direction:column; gap:14px}
+  .card{
+    background:linear-gradient(180deg, var(--panel), var(--bg2));
+    border:1px solid var(--line); border-radius:var(--radius); padding:16px 18px;
+    transition: border-color .2s;
+  }
+  .card.highlight{border-color:var(--amber); box-shadow:0 0 0 1px var(--amber);}
+  .card > .head{display:flex; align-items:baseline; gap:10px; margin-bottom:12px}
+  .card .num{
+    font-family:"Fraunces",serif; font-weight:900; font-size:1rem; color:var(--amber);
+    width:1.7em; flex:none;
+  }
+  .card .head h2{margin:0; font-size:1.02rem; font-weight:700}
+  .card .head p{margin:0; color:var(--ink-soft); font-size:.82rem}
+  .card .head .htxt{display:flex; flex-direction:column}
+
+  .seg{display:flex; flex-wrap:wrap; gap:8px}
+  .seg button, .swatch, .chip{
+    font:inherit; cursor:pointer; border-radius:10px; transition:.14s;
+    border:1px solid var(--line2); background:var(--panel2); color:var(--ink);
+  }
+  .seg button{padding:8px 12px; font-size:.84rem; font-weight:600; display:flex; flex-direction:column; gap:2px; align-items:flex-start}
+  .seg button small{font-weight:400; color:var(--ink-soft); font-size:.72rem}
+  .seg button:hover{border-color:var(--amber)}
+  .seg button.on{background:var(--amber); color:#241a12; border-color:var(--amber)}
+  .seg button.on small{color:#4a3416}
+
+  /* shape gallery */
+  .gallery{display:grid; grid-template-columns:repeat(auto-fill,minmax(135px,1fr)); gap:8px}
+  .shape{
+    text-align:left; padding:8px 10px; border:1px solid var(--line2); border-radius:12px;
+    background:var(--panel2); cursor:pointer; transition:.14s; color:var(--ink);
+  }
+  .shape:hover{border-color:var(--amber)}
+  .shape.on{border-color:var(--amber); background:rgba(208,145,63,0.15); box-shadow:0 0 0 1px var(--amber) inset}
+  .shape .nm{font-weight:700; font-size:.86rem; margin-top:2px}
+  .shape .df{font-size:.72rem; color:var(--ink-soft); line-height:1.3; margin-top:2px}
+
+  /* swatches */
+  .swatches{display:flex; flex-wrap:wrap; gap:8px}
+  .swatch{width:38px; height:38px; padding:0; position:relative}
+  .swatch.on{outline:2px solid var(--amber); outline-offset:2px}
+  .swatch .tri{position:absolute; inset:3px; border-radius:6px; overflow:hidden}
+  .colorpick{display:flex; align-items:center; gap:8px; margin-top:10px; font-size:.82rem; color:var(--ink-soft)}
+  input[type=color]{width:38px; height:32px; border:1px solid var(--line2); border-radius:8px; background:none; cursor:pointer; padding:2px}
+
+  label.field{display:flex; flex-direction:column; gap:5px; font-size:.8rem; color:var(--ink-soft); margin-top:10px}
+  input[type=text], select{
+    font:inherit; font-size:.88rem; color:var(--ink); background:var(--panel2);
+    border:1px solid var(--line2); border-radius:9px; padding:8px 11px;
+  }
+  input[type=text]::placeholder{color:#8a7658}
+  .chips{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px}
+  .chip{padding:6px 10px; font-size:1rem; line-height:1}
+  .chip.on{background:var(--amber); border-color:var(--amber)}
+  .subrow{display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin-top:10px}
+  .toggle{display:flex; align-items:center; gap:8px; font-size:.85rem; cursor:pointer}
+  .toggle input{width:18px; height:18px; accent-color:var(--amber)}
+
+  .presets{display:flex; gap:10px; flex-wrap:wrap}
+  .preset{
+    flex:1 1 140px; text-align:left; padding:10px 12px; border-radius:12px; cursor:pointer;
+    background:linear-gradient(180deg,#3a2a1a,#2c2015); border:1px solid var(--line2); color:var(--ink); transition:.14s;
+  }
+  .preset:hover{border-color:var(--amber)}
+  .preset b{display:block; font-family:"Fraunces",serif; font-size:.95rem}
+  .preset small{color:var(--ink-soft); font-size:.74rem}
+
+  .note{font-size:.78rem; color:var(--ink-soft); margin-top:10px; line-height:1.45}
+  footer{padding:24px clamp(18px,4vw,44px) 50px; color:var(--ink-soft); font-size:.8rem; border-top:1px solid var(--line)}
+
+  /* MODAL WINDOW FOR ADVANCED PART EDITING */
+  .modal-overlay{
+    position:fixed; inset:0; z-index:999;
+    background:rgba(12,8,5,0.82); backdrop-filter:blur(8px);
+    display:none; align-items:center; justify-content:center; padding:20px;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal-box{
+    background:var(--panel); border:1px solid var(--amber); border-radius:18px;
+    width:100%; max-width:680px; max-height:90vh; overflow-y:auto;
+    box-shadow:0 30px 80px rgba(0,0,0,0.8); display:flex; flex-direction:column;
+  }
+  .modal-header{
+    padding:18px 24px; border-bottom:1px solid var(--line);
+    display:flex; justify-content:space-between; align-items:center;
+    background:rgba(20,14,10,0.4);
+  }
+  .modal-header h2{margin:0; font-family:"Fraunces",serif; font-size:1.3rem; color:var(--amber)}
+  .modal-close{
+    background:none; border:none; color:var(--ink-soft); font-size:1.5rem;
+    cursor:pointer; padding:0; line-height:1; transition:.15s;
+  }
+  .modal-close:hover{color:#fff;}
+  .modal-body{padding:20px 24px; display:flex; flex-direction:column; gap:20px;}
+  .modal-tabs{display:flex; gap:8px; border-bottom:1px solid var(--line); padding-bottom:12px;}
+  .modal-tab-btn{
+    background:var(--panel2); border:1px solid var(--line2); color:var(--ink-soft);
+    padding:8px 14px; border-radius:10px; font-weight:600; font-size:.85rem; cursor:pointer;
+  }
+  .modal-tab-btn.active{background:var(--amber); color:#211812; border-color:var(--amber);}
+  
+  .tab-content{display:none; flex-direction:column; gap:16px;}
+  .tab-content.active{display:flex;}
+
+  .range-field{display:flex; flex-direction:column; gap:6px;}
+  .range-header{display:flex; justify-content:space-between; font-size:.85rem; color:var(--ink-soft);}
+  .range-header b{color:var(--amber);}
+  input[type=range]{
+    width:100%; accent-color:var(--amber); cursor:pointer;
+  }
+  .file-upload-box{
+    border:2px dashed var(--line2); border-radius:12px; padding:16px;
+    text-align:center; background:var(--panel2); transition:.15s; cursor:pointer;
+  }
+  .file-upload-box:hover{border-color:var(--amber);}
+  .file-upload-box input{display:none;}
+  .badge-ext{
+    display:inline-block; font-size:.72rem; padding:3px 8px; border-radius:6px;
+    background:rgba(126,168,98,0.2); color:var(--ok); border:1px solid rgba(126,168,98,0.4); margin-top:4px;
+  }
+
+  /* PRINT STYLES */
+  @media print{
+    header .tools, .controls, .part-bar, .modal-overlay{display:none!important}
+    body{background:#fff!important; color:#000!important}
+    main{display:block!important; padding:0!important}
+    .stage{position:static!important; width:100%!important}
+    .preview-3d-box{
+      height:380px!important; border:1px solid #aaa!important;
+      background:#f8f5f0!important; box-shadow:none!important;
+    }
+    .plate{background:#eee!important; color:#000!important; border-top:1px solid #ccc!important}
+    .plate b{color:#000!important}
+    .spec{background:#fff!important; border:1px solid #ccc!important; color:#000!important; margin-top:20px}
+    .spec h3{color:#000!important}
+    .row{border-bottom:1px dashed #ccc!important}
+    .row span, .row b{color:#000!important}
+    .print-header{
+      display:block!important; margin-bottom:20px; padding-bottom:10px; border-bottom:2px solid #000;
+    }
+    .print-header h1{font-family:"Fraunces",serif; font-size:2rem; margin:0}
+    .print-header p{margin:4px 0 0; font-size:.9rem; color:#444}
+  }
+  .print-header{display:none}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="top">ATELIER · BROGNATURO</div>
+    <h1>Pipe Grenci <em>Brognaturo</em></h1>
+    <div class="sub">Configuratore 3D Artigianale · Progetta e personalizza la tua pipa in tempo reale</div>
+  </div>
+  <div class="tools">
+    <button id="btnCustomModal" class="highlight-btn">🛠️ Personalizza Pezzi &amp; Texture</button>
+    <button id="btnPng">📸 Scarica Foto 3D</button>
+    <button id="btnPrint">📄 Stampa Scheda</button>
+    <button id="btnStl">🧊 Esporta Modello STL</button>
+    <button id="btnSave">💾 Salva Progetto</button>
+    <label class="filelabel">📂 Apri<input type="file" id="fileLoad" accept="application/json"></label>
+  </div>
+</header>
+
+<main>
+  <div class="print-header">
+    <h1>Pipe Grenci Brognaturo — Scheda Tecnica D'Atelier</h1>
+    <p>Documento ufficiale di configurazione artigianale · Brognaturo (Calabria)</p>
+  </div>
+
+  <section class="stage">
+    <div class="preview-3d-box">
+      <div class="part-bar">
+        <div class="part-badge">
+          <span class="lbl">Parte selezionata (Clicca sul 3D)</span>
+          <span class="val" id="selectedPartLabel">Fornello Cavo</span>
+        </div>
+        <div class="part-tabs">
+          <button class="part-tab-btn active" id="tab-bowl" onclick="selectPart('bowl')">Fornello</button>
+          <button class="part-tab-btn" id="tab-shank" onclick="selectPart('shank')">Gambo &amp; Vera</button>
+          <button class="part-tab-btn" id="tab-stem" onclick="selectPart('stem')">Bocchino</button>
+        </div>
+      </div>
+
+      <div id="canvas3d"></div>
+
+      <div class="plate">
+        <span id="plateName">La tua pipa</span>
+        <span>Lunghezza totale: <b id="plateLen">—</b> mm</span>
+      </div>
+    </div>
+
+    <div class="spec">
+      <h3>Scheda tecnica del progetto</h3>
+      <div class="grid" id="specGrid"></div>
+    </div>
+  </section>
+
+  <section class="controls">
+    <div class="card">
+      <div class="head"><span class="num">◆</span><div class="htxt"><h2>Modelli di partenza</h2><p>Seleziona un preset d'Atelier o personalizza liberamente</p></div></div>
+      <div class="presets" id="presets"></div>
+    </div>
+
+    <div class="card" id="card-bowl">
+      <div class="head"><span class="num">1</span><div class="htxt"><h2>Forma &amp; Modellazione Fornello</h2><p>Fornello cavo renderizzato in 3D con geometria e spessore reali</p></div></div>
+      <div class="gallery" id="gallery"></div>
+    </div>
+
+    <div class="card">
+      <div class="head"><span class="num">2</span><div class="htxt"><h2>Durata fumata &amp; Dimensioni Camera</h2><p>Calibra il volume della camera da tabacco</p></div></div>
+      <div class="seg" id="segDur"></div>
+      <div class="note" id="durNote"></div>
+    </div>
+
+    <div class="card" id="card-shank">
+      <div class="head"><span class="num">3</span><div class="htxt"><h2>Curvatura del Gambo</h2><p>Inclinazione del profilo anatomico</p></div></div>
+      <div class="seg" id="segBend"></div>
+    </div>
+
+    <div class="card">
+      <div class="head"><span class="num">4</span><div class="htxt"><h2>Vera (Ghiera)</h2><p>Fascetta metallica o in legno con incisione personalizzata</p></div></div>
+      <div class="seg" id="segBand"></div>
+      <label class="field">Incisione sulla vera
+        <input type="text" id="bandText" maxlength="18" placeholder="es. AL VALORE">
+      </label>
+    </div>
+
+    <div class="card" id="card-stem">
+      <div class="head"><span class="num">5</span><div class="htxt"><h2>Bocchino &amp; Colori</h2><p>Ebonite, acrilico ambrato, tricolore o motivi a fasce</p></div></div>
+      <div class="seg" id="segStem"></div>
+      <div class="subrow" id="stemColors">
+        <div class="colorpick">Colore 1 <input type="color" id="c1"></div>
+        <div class="colorpick">Colore 2 <input type="color" id="c2"></div>
+        <div class="colorpick">Colore 3 <input type="color" id="c3"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="head"><span class="num">6</span><div class="htxt"><h2>Finitura &amp; Texture Legno</h2><p>Scultura superficiale con mappa tattile in 3D</p></div></div>
+      <div class="seg" id="segTex"></div>
+      <div class="note">La finitura <b>Mista</b> lavora il fornello lasciando la sfaccettatura frontale liscia.</div>
+    </div>
+
+    <div class="card">
+      <div class="head"><span class="num">7</span><div class="htxt"><h2>Colore del Corpo / Tintura</h2><p>Essenze naturali o colorazioni artigianali Grenci</p></div></div>
+      <div class="swatches" id="swatches"></div>
+      <div class="colorpick">Tinta personalizzata <input type="color" id="bodyCustom"></div>
+    </div>
+
+    <div class="card">
+      <div class="head"><span class="num">8</span><div class="htxt"><h2>Cima sopra il fornello (Rim)</h2><p>Lavorazione del bordo superiore</p></div></div>
+      <div class="seg" id="segRim"></div>
+      <div class="subrow">
+        <label class="toggle"><input type="checkbox" id="whitePeak"> Vetta chiara / sfumata Monte Bianco</label>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="head"><span class="num">9</span><div class="htxt"><h2>Incisione &amp; Dedica</h2><p>Dettagli identificativi del pezzo unico</p></div></div>
+      <div class="chips" id="reliefChips"></div>
+      <label class="field">Simbolo / Testo in rilievo
+        <input type="text" id="reliefText" maxlength="4" placeholder="es. 🎤 o iniziali">
+      </label>
+      <label class="field">Dedica / Nome della pipa
+        <input type="text" id="dedica" maxlength="34" placeholder="es. Omaggio a Sandro Pertini">
+      </label>
+    </div>
+  </section>
+</main>
+
+<div class="modal-overlay" id="customModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>Modifica Avanzata Pezzi &amp; Texture Custom</h2>
+      <button class="modal-close" id="btnCloseModal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-tabs">
+        <button class="modal-tab-btn active" onclick="switchModalTab('m-bowl')">🪵 Fornello</button>
+        <button class="modal-tab-btn" onclick="switchModalTab('m-shank')">🌿 Gambo</button>
+        <button class="modal-tab-btn" onclick="switchModalTab('m-stem')">✒️ Bocchino</button>
+      </div>
+
+      <div class="tab-content active" id="m-bowl">
+        <div class="range-field">
+          <div class="range-header"><span>Altezza Fornello</span><b id="valBowlH">48 mm</b></div>
+          <input type="range" id="rngBowlH" min="30" max="75" value="48">
+        </div>
+        <div class="range-field">
+          <div class="range-header"><span>Diametro Esterno</span><b id="valBowlRad">40 mm</b></div>
+          <input type="range" id="rngBowlRad" min="26" max="60" value="40" step="2">
+        </div>
+        <div class="range-field">
+          <div class="range-header"><span>Spessore Pareti</span><b id="valBowlWall">7 mm</b></div>
+          <input type="range" id="rngBowlWall" min="4" max="14" value="7">
+        </div>
+        <div class="range-field">
+          <div class="range-header"><span>Profondità Camera Tabacco</span><b id="valBowlDepth">36 mm</b></div>
+          <input type="range" id="rngBowlDepth" min="20" max="55" value="36">
+        </div>
+
+        <hr style="border:0; border-top:1px dashed var(--line2); margin:8px 0;">
+
+        <div class="range-field">
+          <div class="range-header">
+            <span>Texture Rilievo/Estrusione Fornello</span>
+            <span class="badge-ext">🔒 Solo Superficie Esterna</span>
+          </div>
+          <label class="file-upload-box">
+            <span id="lblBowlTex">📁 Carica immagine texture (PNG/JPG)</span>
+            <input type="file" id="fileBowlTex" accept="image/*">
+          </label>
+        </div>
+        <div class="range-field">
+          <div class="range-header"><span>Intensità Estrusione Rilievo</span><b id="valBowlExt">1.5 mm</b></div>
+          <input type="range" id="rngBowlExt" min="0" max="5" value="1.5" step="0.2">
+        </div>
+      </div>
+
+      <div class="tab-content" id="m-shank">
+        <div class="range-field">
+          <div class="range-header"><span>Lunghezza Gambo</span><b id="valShankLen">52 mm</b></div>
+          <input type="range" id="rngShankLen" min="20" max="120" value="52">
+        </div>
+        <div class="range-field">
+          <div class="range-header"><span>Diametro Gambo</span><b id="valShankRad">24 mm</b></div>
+          <input type="range" id="rngShankRad" min="12" max="36" value="24" step="2">
+        </div>
+
+        <hr style="border:0; border-top:1px dashed var(--line2); margin:8px 0;">
+
+        <div class="range-field">
+          <div class="range-header">
+            <span>Texture Rilievo/Estrusione Gambo</span>
+            <span class="badge-ext">🔒 Solo Superficie Esterna</span>
+          </div>
+          <label class="file-upload-box">
+            <span id="lblShankTex">📁 Carica immagine texture (PNG/JPG)</span>
+            <input type="file" id="fileShankTex" accept="image/*">
+          </label>
+        </div>
+        <div class="range-field">
+          <div class="range-header"><span>Intensità Estrusione Gambo</span><b id="valShankExt">1.0 mm</b></div>
+          <input type="range" id="rngShankExt" min="0" max="4" value="1.0" step="0.2">
+        </div>
+      </div>
+
+      <div class="tab-content" id="m-stem">
+        <div class="range-field">
+          <div class="range-header"><span>Lunghezza Bocchino</span><b id="valStemLen">60 mm</b></div>
+          <input type="range" id="rngStemLen" min="25" max="180" value="60">
+        </div>
+        <div class="range-field">
+          <div class="range-header"><span>Spessore Bocchino</span><b id="valStemRad">18 mm</b></div>
+          <input type="range" id="rngStemRad" min="10" max="30" value="18" step="2">
+        </div>
+        <div class="range-field">
+          <div class="range-header"><span>Grado Curvatura</span><b id="valStemBend">25%</b></div>
+          <input type="range" id="rngStemBend" min="0" max="80" value="25">
+        </div>
+
+        <hr style="border:0; border-top:1px dashed var(--line2); margin:8px 0;">
+
+        <div class="range-field">
+          <div class="range-header">
+            <span>Texture Superficie Esterna Bocchino</span>
+            <span class="badge-ext">Mappatura Esterna</span>
+          </div>
+          <label class="file-upload-box">
+            <span id="lblStemTex">📁 Carica immagine texture (PNG/JPG)</span>
+            <input type="file" id="fileStemTex" accept="image/*">
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>Pipe Grenci Brognaturo — Configuratore 3D d'Atelier. Salva il tuo progetto in formato JSON o esportalo in 3D STL per la stampa.</footer>
+
+<script>
+/* ---------- DATA & CONFIG ---------- */
+const SHAPES = [
+  {id:'billiard', nm:'Billiard', df:'La classica: fornello cilindrico, gambo e bocchino in linea.'},
+  {id:'dublin',   nm:'Dublin',   df:'Fornello troncoconico svasato verso l’alto. Slanciata ed elegante.'},
+  {id:'apple',    nm:'Apple / Mela', df:'Fornello tondo a mela, morbido e compatto.'},
+  {id:'bulldog',  nm:'Bulldog',  df:'Doppio cono con spigolo a metà, gambo a diamante.'},
+  {id:'poker',    nm:'Poker',    df:'Fondo piatto: sta in piedi da sola sul tavolo.'},
+  {id:'canadese', nm:'Canadese', df:'Gambo ovale lungo, bocchino corto a sella.'},
+  {id:'corta',    nm:'Corta', df:'Tascabile (nose-warmer): gambo e bocchino ridotti.'},
+  {id:'churchwarden', nm:'Churchwarden', df:'Bocchino lunghissimo: fumata fresca e lenta.'},
+];
+
+const FAM = {
+  billiard:{shank:52,stem:60,shape:'billiard'},
+  dublin:{shank:52,stem:60,shape:'dublin'},
+  apple:{shank:50,stem:60,shape:'apple'},
+  bulldog:{shank:52,stem:60,shape:'bulldog'},
+  poker:{shank:48,stem:58,shape:'poker'},
+  canadese:{shank:98,stem:30,shape:'billiard'},
+  corta:{shank:26,stem:32,shape:'billiard'},
+  churchwarden:{shank:56,stem:158,shape:'billiard'},
+};
+
+const BENDS = [{id:'dritta',nm:'Dritta',f:0},{id:'mezza',nm:'Mezza curva',f:.25},{id:'curva',nm:'Curva',f:.5}];
+
+const DURS = [
+  {min:15,dC:16,hC:28,lbl:'15 min'},
+  {min:30,dC:18,hC:36,lbl:'30 min'},
+  {min:60,dC:20,hC:44,lbl:'1 ora'},
+  {min:90,dC:22,hC:52,lbl:'1 ora ½'},
+];
+
+const STEMS = [
+  {id:'classico',nm:'Classico nero',sub:'ebanite lucida'},
+  {id:'tricolore',nm:'Tricolore',sub:'bandiera italiana'},
+  {id:'random',nm:'Macchiato',sub:'effetto ambra/colore'},
+  {id:'long',nm:'Longitudinale',sub:'righe in lunghezza'},
+  {id:'trasv',nm:'Trasversale',sub:'righe di traverso'},
+];
+
+const BANDS = [
+  {id:'none',nm:'Nessuna'},
+  {id:'argento',nm:'Argento',color:0xdfdfe6,metal:0.9,rough:0.15},
+  {id:'oro',nm:'Oro',color:0xf4d98a,metal:0.95,rough:0.12},
+  {id:'ottone',nm:'Ottone',color:0xe6c877,metal:0.8,rough:0.25},
+  {id:'legno',nm:'Legno',color:0xa5763f,metal:0.0,rough:0.6},
+  {id:'corno',nm:'Corno',color:0x3a322b,metal:0.1,rough:0.3},
+];
+
+const TEX = [
+  {id:'liscia',nm:'Liscia'},
+  {id:'sabbiata',nm:'Sabbiata'},
+  {id:'rusticata',nm:'Rusticata'},
+  {id:'scolpita',nm:'Scolpita'},
+  {id:'mista',nm:'Mista'}
+];
+
+const BODIES = [
+  {id:'radica',nm:'Radica naturale',color:0x8e4c1e,l:'#bd7433'},
+  {id:'moro',nm:'Testa di moro',color:0x31200f,l:'#5a3a20'},
+  {id:'nero',nm:'Nero satinato',color:0x1b1918,l:'#333029'},
+  {id:'garofano',nm:'Rosso garofano',color:0x8c1420,l:'#c22633'},
+  {id:'bosco',nm:'Verde bosco',color:0x1b3b27,l:'#2e5a37'},
+  {id:'notte',nm:'Blu notte',color:0x152542,l:'#264a7e'},
+  {id:'miele',nm:'Miele / ocra',color:0x9e6819,l:'#cf9a30'},
+  {id:'tricolore',nm:'Tricolore',tri:true},
+];
+
+const RIMS = [
+  {id:'piatta',nm:'Piatta'},
+  {id:'bombata',nm:'Bombata'},
+  {id:'montagna',nm:'Scolpita a montagna'}
+];
+
+const RELIEFS = ['🎤','🌹','⭐','🎵','⚓','🍃','🔥','🏔️'];
+
+/* ---------- STATE ---------- */
+let S = {
+  fam:'billiard', bend:'mezza', dur:30,
+  stem:'classico', c1:'#b3121f', c2:'#f2f2f2', c3:'#0a7a3a',
+  band:'none', bandText:'',
+  tex:'liscia', body:'radica', bodyCustom:'#8a5a2a',
+  rim:'piatta', whitePeak:false,
+  relief:'', dedica:'',
+  // Custom Dimension & Texture State
+  custom: {
+    bowlH: 48,
+    bowlRad: 20,
+    bowlWall: 7,
+    bowlDepth: 36,
+    bowlTexImg: null,
+    bowlExt: 1.5,
+
+    shankLen: 52,
+    shankRad: 12,
+    shankTexImg: null,
+    shankExt: 1.0,
+
+    stemLen: 60,
+    stemRad: 9,
+    stemBend: 0.25,
+    stemTexImg: null
+  }
+};
+
+let selectedPart = 'bowl';
+
+/* ---------- THREE.JS GLOBALS ---------- */
+let scene, camera, renderer, controls;
+let pipeGroup;
+let bowlMesh, shankMesh, bandMesh, stemMesh;
+let raycaster, mouse;
+let texturesCache = {};
+
+/* ---------- INITIALIZE THREE.JS SCENE ---------- */
+function init3D() {
+  const container = document.getElementById('canvas3d');
+  scene = new THREE.Scene();
+  
+  camera = new THREE.PerspectiveCamera(35, container.clientWidth / container.clientHeight, 0.1, 1000);
+  camera.position.set(-60, 45, 140);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  container.appendChild(renderer.domElement);
+
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.05;
+  controls.target.set(30, 0, 0);
+
+  const ambient = new THREE.AmbientLight(0xffeedd, 0.9);
+  scene.add(ambient);
+
+  const keyLight = new THREE.DirectionalLight(0xfff5ea, 1.4);
+  keyLight.position.set(50, 80, 60);
+  scene.add(keyLight);
+
+  const fillLight = new THREE.DirectionalLight(0x7090bb, 0.6);
+  fillLight.position.set(-60, -20, -50);
+  scene.add(fillLight);
+
+  pipeGroup = new THREE.Group();
+  scene.add(pipeGroup);
+
+  raycaster = new THREE.Raycaster();
+  mouse = new THREE.Vector2();
+
+  renderer.domElement.addEventListener('pointerdown', onCanvasClick);
+  window.addEventListener('resize', onWindowResize);
+
+  generateProceduralTextures();
+}
+
+/* ---------- PROCEDURAL TEXTURE GENERATORS ---------- */
+function generateProceduralTextures() {
+  const cR = document.createElement('canvas');
+  cR.width = cR.height = 256;
+  const ctxR = cR.getContext('2d');
+  ctxR.fillStyle = '#808080'; ctxR.fillRect(0,0,256,256);
+  for(let i=0; i<3000; i++) {
+    const x = Math.random()*256, y = Math.random()*256, r = 1 + Math.random()*4;
+    ctxR.fillStyle = Math.random()>0.5 ? '#ffffff' : '#000000';
+    ctxR.beginPath(); ctxR.arc(x,y,r,0,Math.PI*2); ctxR.fill();
+  }
+  const texR = new THREE.CanvasTexture(cR);
+  texR.wrapS = texR.wrapT = THREE.RepeatWrapping;
+  texR.repeat.set(3,3);
+  texturesCache.rust = texR;
+
+  const cS = document.createElement('canvas');
+  cS.width = cS.height = 256;
+  const ctxS = cS.getContext('2d');
+  const imgData = ctxS.createImageData(256,256);
+  for(let i=0; i<imgData.data.length; i+=4) {
+    const val = Math.floor(Math.random()*255);
+    imgData.data[i] = imgData.data[i+1] = imgData.data[i+2] = val;
+    imgData.data[i+3] = 255;
+  }
+  ctxS.putImageData(imgData,0,0);
+  const texS = new THREE.CanvasTexture(cS);
+  texS.wrapS = texS.wrapT = THREE.RepeatWrapping;
+  texS.repeat.set(6,6);
+  texturesCache.sand = texS;
+}
+
+/* HELPER: CRAFTS A DISPLACEMENT MASKED TEXTURE (Extrudes only on external surfaces) */
+function createOuterMaskedTexture(imgObj) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512; canvas.height = 512;
+  const ctx = canvas.getContext('2d');
+
+  // Neutral gray = 0 displacement for inner cavity (top 50% of profile UV)
+  ctx.fillStyle = '#808080';
+  ctx.fillRect(0, 0, 512, 256);
+
+  // Outer wall UVs receive user texture image (bottom 50% of profile UV)
+  if(imgObj) {
+    ctx.drawImage(imgObj, 0, 256, 512, 256);
+  } else {
+    ctx.fillRect(0, 256, 512, 256);
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
+function createStemTexture(type, c1, c2, c3, customImg) {
+  if(customImg) {
+    const tex = new THREE.CanvasTexture(customImg);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    return tex;
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 512; canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+
+  if(type === 'tricolore') {
+    ctx.fillStyle = '#008C45'; ctx.fillRect(0, 0, 170, 128);
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(170, 0, 172, 128);
+    ctx.fillStyle = '#CD212A'; ctx.fillRect(342, 0, 170, 128);
+  } else if(type === 'long') {
+    ctx.fillStyle = c1; ctx.fillRect(0, 0, 512, 42);
+    ctx.fillStyle = c2; ctx.fillRect(0, 42, 512, 44);
+    ctx.fillStyle = c3; ctx.fillRect(0, 86, 512, 42);
+  } else if(type === 'trasv') {
+    for(let i=0; i<512; i+=40) {
+      ctx.fillStyle = (i/40)%3===0 ? c1 : ((i/40)%3===1 ? c2 : c3);
+      ctx.fillRect(i, 0, 40, 128);
+    }
+  } else if(type === 'random') {
+    ctx.fillStyle = '#111'; ctx.fillRect(0, 0, 512, 128);
+    const cols = [c1, c2, c3];
+    for(let i=0; i<150; i++) {
+      ctx.fillStyle = cols[i%3];
+      ctx.beginPath();
+      ctx.arc(Math.random()*512, Math.random()*128, 6 + Math.random()*16, 0, Math.PI*2);
+      ctx.fill();
+    }
+  } else {
+    ctx.fillStyle = '#121110'; ctx.fillRect(0,0,512,128);
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
+function createBandTexture(text) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512; canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,512,64);
+  if(text) {
+    ctx.fillStyle = '#000000'; ctx.font = 'bold 28px sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(text.toUpperCase(), 256, 32);
+  }
+  return new THREE.CanvasTexture(canvas);
+}
+
+/* ---------- BUILD 3D PIPE MODEL ---------- */
+function buildPipe3D() {
+  while(pipeGroup.children.length > 0) pipeGroup.remove(pipeGroup.children[0]);
+
+  const fam = FAM[S.fam];
+  const dur = DURS.find(d => d.min === S.dur) || DURS[1];
+  const bendObj = BENDS.find(b => b.id === S.bend) || BENDS[0];
+  const bandObj = BANDS.find(b => b.id === S.band) || BANDS[0];
+
+  // Custom vs Default dimensions
+  const bowlH = S.custom.bowlH;
+  const outerRad = S.custom.bowlRad;
+  const wall = S.custom.bowlWall;
+  const innerDepth = S.custom.bowlDepth;
+  const innerRad = Math.max(2, outerRad - wall);
+  const baseThickness = Math.max(4, bowlH - innerDepth);
+
+  // Color & Materials
+  let bodyColor = 0x8e4c1e;
+  const bObj = BODIES.find(b => b.id === S.body);
+  if(S.body === 'custom') bodyColor = parseInt(S.bodyCustom.replace('#','0x'));
+  else if(bObj && bObj.color) bodyColor = bObj.color;
+
+  let bumpMap = null, bumpScale = 0, displacementMap = null, displacementScale = 0;
+  if(S.custom.bowlTexImg) {
+    displacementMap = createOuterMaskedTexture(S.custom.bowlTexImg);
+    displacementScale = S.custom.bowlExt;
+  } else if(S.tex === 'rusticata' || S.tex === 'mista') { 
+    bumpMap = texturesCache.rust; bumpScale = 0.8; 
+  } else if(S.tex === 'sabbiata') { 
+    bumpMap = texturesCache.sand; bumpScale = 0.4; 
+  }
+
+  const woodMat = new THREE.MeshStandardMaterial({
+    color: bodyColor,
+    roughness: S.tex === 'liscia' ? 0.25 : 0.6,
+    metalness: 0.05,
+    bumpMap: bumpMap,
+    bumpScale: bumpScale,
+    displacementMap: displacementMap,
+    displacementScale: displacementScale,
+    side: THREE.DoubleSide
+  });
+
+  /* 1. BOWL (Fornello Cavo) */
+  const pts = [];
+  const N = 24;
+  // Cavità interna (dal fondo cavo fino al bordo superiore)
+  for(let i=0; i<=N; i++) {
+    const t = i/N;
+    const y = -bowlH/2 + baseThickness + t * innerDepth;
+    const r = innerRad * (0.85 + 0.15 * Math.sin(t * Math.PI / 2));
+    pts.push(new THREE.Vector2(r, y));
+  }
+  // Superficie Esterna
+  const shapeType = fam.shape;
+  for(let i=N; i>=0; i--) {
+    const t = i/N;
+    const y = -bowlH/2 + t * bowlH;
+    let r = outerRad;
+    if(shapeType === 'dublin') r = outerRad * (0.7 + 0.45 * t);
+    else if(shapeType === 'apple') r = outerRad * (0.8 + 0.35 * Math.sin(t * Math.PI));
+    else if(shapeType === 'bulldog') r = outerRad * (t < 0.5 ? 0.6 + 0.8*t : 1.0 - 0.3*(t-0.5));
+    else if(shapeType === 'poker') r = outerRad * 0.98;
+    pts.push(new THREE.Vector2(r, y));
+  }
+  pts.push(new THREE.Vector2(0, -bowlH/2));
+
+  const bowlGeo = new THREE.LatheGeometry(pts, 64);
+
+  if(S.rim === 'montagna') {
+    const pos = bowlGeo.attributes.position;
+    for(let i=0; i<pos.count; i++) {
+      let y = pos.getY(i);
+      if(y > bowlH/2 - 2) {
+        let x = pos.getX(i), z = pos.getZ(i);
+        let angle = Math.atan2(z, x);
+        let wave = Math.sin(angle * 4) * 3 + Math.cos(angle * 2) * 2;
+        pos.setY(i, y + wave);
+      }
+    }
+    bowlGeo.computeVertexNormals();
+  }
+
+  bowlMesh = new THREE.Mesh(bowlGeo, woodMat);
+  bowlMesh.position.set(0, bowlH/2, 0);
+  bowlMesh.userData = { partName: 'bowl' };
+  pipeGroup.add(bowlMesh);
+
+  /* 2. SHANK (Gambo) */
+  const shankLen = S.custom.shankLen;
+  const shankRad = S.custom.shankRad;
+  const shankGeo = new THREE.CylinderGeometry(shankRad*0.9, shankRad, shankLen, 32, 32);
+  shankGeo.rotateZ(-Math.PI / 2);
+  shankGeo.translate(shankLen/2, 0, 0);
+
+  let shankMat = woodMat;
+  if(S.custom.shankTexImg) {
+    const shankDispTex = new THREE.CanvasTexture(S.custom.shankTexImg);
+    shankDispTex.wrapS = shankDispTex.wrapT = THREE.RepeatWrapping;
+    const shankCapMat = woodMat;
+    const shankOuterMat = new THREE.MeshStandardMaterial({
+      color: bodyColor,
+      roughness: 0.5,
+      displacementMap: shankDispTex,
+      displacementScale: S.custom.shankExt
+    });
+    // Multi-material to apply displacement ONLY to outer cylinder side wall
+    shankMat = [shankOuterMat, shankCapMat, shankCapMat];
+  }
+
+  shankMesh = new THREE.Mesh(shankGeo, shankMat);
+  shankMesh.position.set(outerRad*0.4, shankRad*0.9, 0);
+  shankMesh.userData = { partName: 'shank' };
+  pipeGroup.add(shankMesh);
+
+  /* 3. VERA (Ghiera) */
+  let bandW = bandObj.id === 'none' ? 0 : 6;
+  let currentX = outerRad*0.4 + shankLen;
+
+  if(bandW > 0) {
+    const bandGeo = new THREE.CylinderGeometry(shankRad*0.91, shankRad*0.91, bandW, 24);
+    bandGeo.rotateZ(-Math.PI / 2);
+    bandGeo.translate(bandW/2, 0, 0);
+
+    const bandTex = createBandTexture(S.bandText);
+    const bandMat = new THREE.MeshStandardMaterial({
+      color: bandObj.color || 0xcccccc,
+      metalness: bandObj.metal,
+      roughness: bandObj.rough,
+      bumpMap: bandTex,
+      bumpScale: 0.15
+    });
+
+    bandMesh = new THREE.Mesh(bandGeo, bandMat);
+    bandMesh.position.set(currentX, shankRad*0.9, 0);
+    bandMesh.userData = { partName: 'shank' };
+    pipeGroup.add(bandMesh);
+    currentX += bandW;
+  }
+
+  /* 4. BOCCHINO (Stem) */
+  const stemLen = S.custom.stemLen;
+  const stemRad = S.custom.stemRad;
+  const bendF = S.custom.stemBend;
+
+  const p1 = new THREE.Vector3(currentX, shankRad*0.9, 0);
+  const p2 = new THREE.Vector3(currentX + stemLen*0.45, shankRad*0.9, 0);
+  const p3 = new THREE.Vector3(currentX + stemLen, shankRad*0.9 - bendF * stemLen, 0);
+  const curve = new THREE.CubicBezierCurve3(p1, p2, p3, p3);
+
+  const stemGeo = new THREE.TubeGeometry(curve, 32, stemRad*0.45, 16, false);
+  const stemTex = createStemTexture(S.stem, S.c1, S.c2, S.c3, S.custom.stemTexImg);
+
+  const stemMat = new THREE.MeshStandardMaterial({
+    map: stemTex,
+    roughness: 0.12,
+    metalness: 0.1
+  });
+
+  stemMesh = new THREE.Mesh(stemGeo, stemMat);
+  stemMesh.userData = { partName: 'stem' };
+  pipeGroup.add(stemMesh);
+
+  highlightSelectedPart();
+}
+
+/* ---------- RAYCASTING & PART SELECTION ---------- */
+function onCanvasClick(e) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(pipeGroup.children, true);
+
+  if(intersects.length > 0) {
+    let hit = intersects[0].object;
+    if(hit.userData && hit.userData.partName) {
+      selectPart(hit.userData.partName);
+    }
+  }
+}
+
+function selectPart(part) {
+  selectedPart = part;
+  const labelMap = {
+    bowl: 'Fornello Cavo',
+    shank: 'Gambo & Vera',
+    stem: 'Bocchino Anatomico'
+  };
+  document.getElementById('selectedPartLabel').textContent = labelMap[part];
+
+  document.querySelectorAll('.part-tab-btn').forEach(b => b.classList.remove('active'));
+  const activeTab = document.getElementById(`tab-${part}`);
+  if(activeTab) activeTab.classList.add('active');
+
+  document.querySelectorAll('.card').forEach(c => c.classList.remove('highlight'));
+  const targetCard = document.getElementById(`card-${part}`);
+  if(targetCard) {
+    targetCard.classList.add('highlight');
+    targetCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  highlightSelectedPart();
+}
+
+function highlightSelectedPart() {
+  [bowlMesh, shankMesh, bandMesh, stemMesh].forEach(mesh => {
+    if(mesh && mesh.material) {
+      const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      mats.forEach(m => {
+        if(mesh.userData.partName === selectedPart) {
+          m.emissive = new THREE.Color(0xd0913f);
+          m.emissiveIntensity = 0.18;
+        } else {
+          m.emissive = new THREE.Color(0x000000);
+          m.emissiveIntensity = 0.0;
+        }
+      });
+    }
+  });
+}
+
+function onWindowResize() {
+  const container = document.getElementById('canvas3d');
+  if(!container || !camera || !renderer) return;
+  camera.aspect = container.clientWidth / container.clientHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(container.clientWidth, container.clientHeight);
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  if(controls) controls.update();
+  if(renderer && scene && camera) renderer.render(scene, camera);
+}
+
+/* ---------- SPEC SHEET COMPUTATION ---------- */
+function computeSpec() {
+  const dur = DURS.find(d => d.min === S.dur) || DURS[1];
+  const bandW = S.band === 'none' ? 0 : 6;
+  const extDia = S.custom.bowlRad * 2;
+  const extH = S.custom.bowlH;
+  const cap = Math.PI * Math.pow((S.custom.bowlRad - S.custom.bowlWall)/10, 2) * (S.custom.bowlDepth/10);
+  const grams = Math.max(0, cap * 0.25);
+  const total = Math.round(extDia*0.4 + S.custom.shankLen + bandW + S.custom.stemLen);
+  return {extDia, extH, dur, total, grams};
+}
+
+function renderSpec() {
+  const sp = computeSpec();
+  const famNm = SHAPES.find(s=>s.id===S.fam).nm;
+  const bendNm = BENDS.find(b=>b.id===S.bend).nm;
+  const stemNm = STEMS.find(s=>s.id===S.stem).nm;
+  const bandNm = BANDS.find(b=>b.id===S.band).nm;
+  const texNm = TEX.find(t=>t.id===S.tex).nm;
+  const bodyNm = BODIES.find(b=>b.id===S.body) ? BODIES.find(b=>b.id===S.body).nm : 'Personalizzato';
+  const rimNm = RIMS.find(r=>r.id===S.rim).nm;
+
+  const rows = [
+    ['Modello / Forma', famNm],
+    ['Curvatura gambo', bendNm],
+    ['Stima fumata', sp.dur.lbl],
+    ['Diametro camera', ((S.custom.bowlRad - S.custom.bowlWall)*2) + ' mm'],
+    ['Profondità camera', S.custom.bowlDepth + ' mm'],
+    ['Altezza fornello', S.custom.bowlH + ' mm'],
+    ['Lunghezza gambo', S.custom.shankLen + ' mm'],
+    ['Lunghezza bocchino', S.custom.stemLen + ' mm'],
+    ['Lunghezza totale', sp.total + ' mm'],
+    ['Capacità tabacco', sp.grams.toFixed(1).replace('.',',') + ' g'],
+    ['Stile bocchino', stemNm],
+    ['Vera / Ghiera', bandNm + (S.bandText ? ' «' + S.bandText + '»' : '')],
+    ['Finitura superficie', texNm],
+    ['Colore corpo', bodyNm],
+    ['Bordo cima (Rim)', rimNm + (S.whitePeak ? ' · vetta chiara' : '')],
+    ['Incisione rilievo', S.relief || '—'],
+    ['Dedica pezzo', S.dedica || '—'],
+  ];
+
+  document.getElementById('specGrid').innerHTML = rows.map(r => 
+    `<div class="row"><span>${r[0]}</span><b>${escapeHtml(r[1])}</b></div>`
+  ).join('');
+
+  document.getElementById('plateName').textContent = S.dedica || ('Pipa Grenci ' + famNm);
+  document.getElementById('plateLen').textContent = sp.total;
+}
+
+function escapeHtml(s){return String(s).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));}
+
+/* ---------- FULL RENDER SYNC ---------- */
+function render() {
+  buildPipe3D();
+  renderSpec();
+
+  document.querySelectorAll('[data-grp]').forEach(el => {
+    const g = el.dataset.grp, v = el.dataset.val;
+    el.classList.toggle('on', String(S[g]) === String(v));
+  });
+
+  document.getElementById('stemColors').style.opacity = S.stem==='classico'?'0.4':'1';
+
+  c1.value = S.c1; c2.value = S.c2; c3.value = S.c3;
+  bodyCustom.value = S.bodyCustom;
+  bandText.value = S.bandText;
+  reliefText.value = S.relief;
+  dedica.value = S.dedica;
+  whitePeak.checked = S.whitePeak;
+
+  document.getElementById('durNote').innerHTML = 
+    `Camera calibrata: <b>Ø ${((S.custom.bowlRad - S.custom.bowlWall)*2)} mm × ${S.custom.bowlDepth} mm</b>. Modellazione 3D aggiornata in tempo reale.`;
+}
+
+/* ---------- UI BUILDERS & EVENT HANDLERS ---------- */
+function seg(container, items, grp, {sub}={}) {
+  const el = document.getElementById(container);
+  el.innerHTML = items.map(it => 
+    `<button data-grp="${grp}" data-val="${it.id}">${it.nm}${sub&&it.sub?`<small>${it.sub}</small>`:''}</button>`
+  ).join('');
+  el.querySelectorAll('button').forEach(b => b.onclick = () => { S[grp] = b.dataset.val; render(); });
+}
+
+seg('segBend', BENDS, 'bend');
+seg('segDur', DURS.map(d=>({id:d.min, nm:d.lbl})), 'dur');
+seg('segStem', STEMS, 'stem', {sub:true});
+seg('segBand', BANDS, 'band');
+seg('segTex', TEX, 'tex');
+seg('segRim', RIMS, 'rim');
+
+document.querySelectorAll('#segDur button').forEach(b => b.onclick = () => { 
+  S.dur = +b.dataset.val;
+  const dObj = DURS.find(d => d.min === S.dur);
+  if(dObj) {
+    S.custom.bowlDepth = dObj.hC;
+    S.custom.bowlRad = Math.round((dObj.dC + 14)/2);
+    syncCustomControlsUI();
+  }
+  render(); 
+});
+
+document.querySelectorAll('#segBend button').forEach(b => b.onclick = () => {
+  S.bend = b.dataset.val;
+  const bendObj = BENDS.find(x => x.id === S.bend);
+  if(bendObj) {
+    S.custom.stemBend = bendObj.f;
+    syncCustomControlsUI();
+  }
+  render();
+});
+
+// Shape gallery
+document.getElementById('gallery').innerHTML = SHAPES.map(s => 
+  `<button class="shape" data-grp="fam" data-val="${s.id}"><div class="nm">${s.nm}</div><div class="df">${s.df}</div></button>`
+).join('');
+document.querySelectorAll('.shape').forEach(b => b.onclick = () => { 
+  S.fam = b.dataset.val; 
+  const f = FAM[S.fam];
+  if(f) {
+    S.custom.shankLen = f.shank;
+    S.custom.stemLen = f.stem;
+    syncCustomControlsUI();
+  }
+  render(); 
+});
+
+// Body swatches
+document.getElementById('swatches').innerHTML = BODIES.map(b => {
+  const fill = b.tri ? 
+    `<div class="tri" style="background:linear-gradient(0deg,#008C45 33%,#FFFFFF 33% 66%,#CD212A 66%)"></div>` : 
+    `<div class="tri" style="background:${b.l}"></div>`;
+  return `<button class="swatch" data-grp="body" data-val="${b.id}" title="${b.nm}">${fill}</button>`;
+}).join('');
+document.querySelectorAll('.swatch').forEach(b => b.onclick = () => { S.body = b.dataset.val; render(); });
+
+// Relief chips
+document.getElementById('reliefChips').innerHTML = RELIEFS.map(r => `<button class="chip" data-val="${r}">${r}</button>`).join('');
+document.querySelectorAll('#reliefChips .chip').forEach(b => b.onclick = () => { S.relief = (S.relief === b.dataset.val ? '' : b.dataset.val); render(); });
+
+// Dynamic Inputs
+c1.oninput = e => { S.c1 = e.target.value; render(); };
+c2.oninput = e => { S.c2 = e.target.value; render(); };
+c3.oninput = e => { S.c3 = e.target.value; render(); };
+bodyCustom.oninput = e => { S.bodyCustom = e.target.value; S.body = 'custom'; render(); };
+bandText.oninput = e => { S.bandText = e.target.value; render(); };
+reliefText.oninput = e => { S.relief = e.target.value; render(); };
+dedica.oninput = e => { S.dedica = e.target.value; render(); };
+whitePeak.onchange = e => { S.whitePeak = e.target.checked; render(); };
+
+/* ---------- MODAL & ADVANCED CUSTOMIZATION HANDLERS ---------- */
+const modal = document.getElementById('customModal');
+document.getElementById('btnCustomModal').onclick = () => modal.classList.add('open');
+document.getElementById('btnCloseModal').onclick = () => modal.classList.remove('open');
+
+function switchModalTab(tabId) {
+  document.querySelectorAll('.modal-tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  
+  event.currentTarget.classList.add('active');
+  document.getElementById(tabId).classList.add('active');
+}
+
+function syncCustomControlsUI() {
+  rngBowlH.value = S.custom.bowlH; valBowlH.textContent = S.custom.bowlH + ' mm';
+  rngBowlRad.value = S.custom.bowlRad * 2; valBowlRad.textContent = (S.custom.bowlRad * 2) + ' mm';
+  rngBowlWall.value = S.custom.bowlWall; valBowlWall.textContent = S.custom.bowlWall + ' mm';
+  rngBowlDepth.value = S.custom.bowlDepth; valBowlDepth.textContent = S.custom.bowlDepth + ' mm';
+  rngBowlExt.value = S.custom.bowlExt; valBowlExt.textContent = S.custom.bowlExt + ' mm';
+
+  rngShankLen.value = S.custom.shankLen; valShankLen.textContent = S.custom.shankLen + ' mm';
+  rngShankRad.value = S.custom.shankRad * 2; valShankRad.textContent = (S.custom.shankRad * 2) + ' mm';
+  rngShankExt.value = S.custom.shankExt; valShankExt.textContent = S.custom.shankExt + ' mm';
+
+  rngStemLen.value = S.custom.stemLen; valStemLen.textContent = S.custom.stemLen + ' mm';
+  rngStemRad.value = S.custom.stemRad * 2; valStemRad.textContent = (S.custom.stemRad * 2) + ' mm';
+  rngStemBend.value = Math.round(S.custom.stemBend * 100); valStemBend.textContent = Math.round(S.custom.stemBend * 100) + '%';
+}
+
+// Sliders Event Listeners
+rngBowlH.oninput = e => { S.custom.bowlH = +e.target.value; valBowlH.textContent = e.target.value + ' mm'; render(); };
+rngBowlRad.oninput = e => { S.custom.bowlRad = Math.round(+e.target.value / 2); valBowlRad.textContent = e.target.value + ' mm'; render(); };
+rngBowlWall.oninput = e => { S.custom.bowlWall = +e.target.value; valBowlWall.textContent = e.target.value + ' mm'; render(); };
+rngBowlDepth.oninput = e => { S.custom.bowlDepth = +e.target.value; valBowlDepth.textContent = e.target.value + ' mm'; render(); };
+rngBowlExt.oninput = e => { S.custom.bowlExt = +e.target.value; valBowlExt.textContent = e.target.value + ' mm'; render(); };
+
+rngShankLen.oninput = e => { S.custom.shankLen = +e.target.value; valShankLen.textContent = e.target.value + ' mm'; render(); };
+rngShankRad.oninput = e => { S.custom.shankRad = Math.round(+e.target.value / 2); valShankRad.textContent = e.target.value + ' mm'; render(); };
+rngShankExt.oninput = e => { S.custom.shankExt = +e.target.value; valShankExt.textContent = e.target.value + ' mm'; render(); };
+
+rngStemLen.oninput = e => { S.custom.stemLen = +e.target.value; valStemLen.textContent = e.target.value + ' mm'; render(); };
+rngStemRad.oninput = e => { S.custom.stemRad = Math.round(+e.target.value / 2); valStemRad.textContent = e.target.value + ' mm'; render(); };
+rngStemBend.oninput = e => { S.custom.stemBend = (+e.target.value)/100; valStemBend.textContent = e.target.value + '%'; render(); };
+
+// Custom Image Texture Loaders
+function setupTextureUploader(fileInputId, labelId, customProp) {
+  document.getElementById(fileInputId).onchange = e => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        S.custom[customProp] = img;
+        document.getElementById(labelId).textContent = '✅ ' + file.name;
+        render();
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+}
+
+setupTextureUploader('fileBowlTex', 'lblBowlTex', 'bowlTexImg');
+setupTextureUploader('fileShankTex', 'lblShankTex', 'shankTexImg');
+setupTextureUploader('fileStemTex', 'lblStemTex', 'stemTexImg');
+
+/* ---------- PRESETS ---------- */
+const PRESETS = [
+  {key:'std', nm:'Billiard Standard', note:'Punto di riferimento equilibrato', st:{fam:'billiard', bend:'mezza', dur:30, stem:'classico', band:'none', tex:'liscia', body:'radica', rim:'piatta', whitePeak:false, relief:'', dedica:''}},
+  {key:'pertini', nm:'Omaggio a Pertini', note:'Garofano, vera «AL VALORE», cima Monte Bianco, tricolore', st:{fam:'dublin', bend:'mezza', dur:60, stem:'tricolore', band:'argento', bandText:'AL VALORE', tex:'mista', body:'garofano', rim:'montagna', whitePeak:true, relief:'🎤', dedica:'A Sandro Pertini'}},
+  {key:'church', nm:'Churchwarden', note:'Bocchino lungo, fumata fresca da lettura', st:{fam:'churchwarden', bend:'mezza', dur:60, stem:'classico', band:'legno', bandText:'', tex:'liscia', body:'moro', rim:'bombata', whitePeak:false, relief:'', dedica:''}},
+  {key:'poker', nm:'Poker da Scrivania', note:'Fondo piatto, si sostiene autonomamente', st:{fam:'poker', bend:'dritta', dur:30, stem:'classico', band:'ottone', bandText:'', tex:'sabbiata', body:'miele', rim:'piatta', whitePeak:false, relief:'', dedica:''}},
+];
+
+document.getElementById('presets').innerHTML = PRESETS.map(p => `<button class="preset" data-k="${p.key}"><b>${p.nm}</b><small>${p.note}</small></button>`).join('');
+document.querySelectorAll('.preset').forEach(b => b.onclick = () => {
+  const p = PRESETS.find(x => x.key === b.dataset.k);
+  S = Object.assign({}, S, p.st);
+  const f = FAM[S.fam];
+  if(f) {
+    S.custom.shankLen = f.shank;
+    S.custom.stemLen = f.stem;
+  }
+  syncCustomControlsUI();
+  render();
+});
+
+/* ---------- EXPORT ACTIONS ---------- */
+document.getElementById('btnPng').onclick = () => {
+  renderer.render(scene, camera);
+  const dataUrl = renderer.domElement.toDataURL('image/png');
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = (S.dedica ? S.dedica.replace(/[^\w]+/g,'_') : 'pipa_grenci_3d') + '.png';
+  a.click();
+};
+
+document.getElementById('btnPrint').onclick = () => { window.print(); };
+
+document.getElementById('btnStl').onclick = () => {
+  const exporter = new THREE.STLExporter();
+  const result = exporter.parse(pipeGroup, { binary: true });
+  const blob = new Blob([result], { type: 'application/octet-stream' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (S.dedica ? S.dedica.replace(/[^\w]+/g,'_') : 'pipa_grenci_3d') + '.stl';
+  a.click();
+};
+
+document.getElementById('btnSave').onclick = () => {
+  const saveData = Object.assign({}, S);
+  delete saveData.custom.bowlTexImg;
+  delete saveData.custom.shankTexImg;
+  delete saveData.custom.stemTexImg;
+
+  const blob = new Blob([JSON.stringify(saveData, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (S.dedica ? S.dedica.replace(/[^\w]+/g,'_') : 'progetto_pipa_grenci') + '.json';
+  a.click();
+};
+
+document.getElementById('fileLoad').onchange = e => {
+  const f = e.target.files[0];
+  if(!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try { 
+      S = Object.assign(S, JSON.parse(r.result)); 
+      syncCustomControlsUI();
+      render(); 
+    }
+    catch(_) { alert('File di progetto non valido'); }
+  };
+  r.readAsText(f);
+};
+
+/* ---------- INIT ---------- */
+window.onload = () => {
+  init3D();
+  syncCustomControlsUI();
+  render();
+  animate();
+};
+</script>
+</body>
+</html>
