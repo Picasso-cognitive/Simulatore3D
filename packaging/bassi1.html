@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Design in Italia - Alberto Bassi Studio 3D (Custom Material & Dimensions)</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Three.js + OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #0e0e10;
+            --panel-bg: #16161a;
+            --accent-color: #e65100;
+            --text-color: #f4f4f6;
+            --subtext-color: #a0a0ab;
+            --border-color: #282832;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Montserrat', system-ui, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+        }
+
+        /* Sidebar Controlli */
+        .sidebar {
+            width: 410px;
+            min-width: 410px;
+            background-color: var(--panel-bg);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            border-right: 1px solid var(--border-color);
+            overflow-y: auto;
+            height: 100vh;
+            z-index: 10;
+        }
+
+        .sidebar header {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .sidebar h1 {
+            font-size: 1.1rem;
+            color: #ffffff;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .sidebar .subtitle {
+            font-size: 0.73rem;
+            color: var(--accent-color);
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        .section-title {
+            font-size: 0.7rem;
+            color: var(--accent-color);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 700;
+            margin-top: 4px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .control-row .control-group {
+            flex: 1;
+        }
+
+        .control-group label {
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            color: var(--subtext-color);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        select, input[type="text"], input[type="number"], input[type="color"], input[type="range"] {
+            width: 100%;
+            padding: 6px 8px;
+            background: #202026;
+            border: 1px solid var(--border-color);
+            color: #fff;
+            border-radius: 4px;
+            outline: none;
+            font-size: 0.8rem;
+        }
+
+        input[type="range"] {
+            padding: 0;
+            accent-color: var(--accent-color);
+            cursor: pointer;
+        }
+
+        input[type="color"] {
+            height: 32px;
+            padding: 2px;
+            cursor: pointer;
+        }
+
+        select:focus, input:focus {
+            border-color: var(--accent-color);
+        }
+
+        /* Viewport 3D Canvas */
+        .viewport {
+            flex-grow: 1;
+            height: 100vh;
+            position: relative;
+            background: radial-gradient(circle at center, #23232b 0%, #060608 100%);
+            transition: background 0.3s ease;
+        }
+
+        #webgl-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .canvas-hint {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(0,0,0,0.65);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            color: #ccc;
+            pointer-events: none;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* Scheda Critica Teorica */
+        .analysis-card {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(18, 18, 22, 0.92);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            padding: 18px;
+            border-radius: 8px;
+            width: 350px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+        }
+
+        .analysis-card h2 {
+            font-size: 0.95rem;
+            color: #ffffff;
+            margin-bottom: 2px;
+        }
+
+        .analysis-card .meta {
+            font-size: 0.72rem;
+            color: var(--accent-color);
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .analysis-card p {
+            font-size: 0.75rem;
+            color: #dddddd;
+            line-height: 1.4;
+            margin-bottom: 8px;
+        }
+
+        .pillar-badge {
+            display: inline-block;
+            background: rgba(230, 81, 0, 0.18);
+            color: var(--accent-color);
+            border: 1px solid var(--accent-color);
+            padding: 3px 7px;
+            border-radius: 4px;
+            font-size: 0.63rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <header>
+            <h1>Food Design Italia</h1>
+            <div class="subtitle">Laboratorio 3D & Materiali (Alberto Bassi)</div>
+        </header>
+
+        <!-- 1. SELEZIONE PRODOTTO -->
+        <div class="section-title">1. Progetto Iconico</div>
+        <div class="control-group">
+            <label for="productSelect">Seleziona Icona</label>
+            <select id="productSelect">
+                <option value="campari">Bottiglietta Campari Soda (F. Depero, 1932)</option>
+                <option value="moka">Moka Express (A. Bialetti, 1933)</option>
+                <option value="gianduiotto">Gianduiotto (Caffarel, 1865)</option>
+                <option value="rigatoni">Rigatone Estruso (Geometria Pasta)</option>
+                <option value="nutella">Vaso Nutella (Pelicon / Ferrero, 1964)</option>
+            </select>
+        </div>
+        <div>
+            <span class="pillar-badge" id="categoryBadge">Packaging Alimentare</span>
+        </div>
+
+        <!-- 2. SCALA E DIMENSIONI 3D -->
+        <div class="section-title">2. Dimensioni & Scala 3D</div>
+        <div class="control-row">
+            <div class="control-group">
+                <label for="scaleX">Scala X <span id="valX">1.00</span></label>
+                <input type="range" id="scaleX" min="0.3" max="2.5" step="0.05" value="1.0">
+            </div>
+            <div class="control-group">
+                <label for="scaleY">Scala Y <span id="valY">1.00</span></label>
+                <input type="range" id="scaleY" min="0.3" max="2.5" step="0.05" value="1.0">
+            </div>
+            <div class="control-group">
+                <label for="scaleZ">Scala Z <span id="valZ">1.00</span></label>
+                <input type="range" id="scaleZ" min="0.3" max="2.5" step="0.05" value="1.0">
+            </div>
+        </div>
+
+        <!-- 3. MATERIALE E FINITURA -->
+        <div class="section-title">3. Tipologia Materiale</div>
+        <div class="control-group">
+            <label for="materialType">Tipo di Materiale</label>
+            <select id="materialType">
+                <option value="glass">Vetro Trasparente / Satinato</option>
+                <option value="metal">Metallo / Alluminio Spazzolato</option>
+                <option value="plastic_gloss">Plastica Lucida (Glossy)</option>
+                <option value="plastic_matte">Plastica Opaca (Soft-Touch)</option>
+                <option value="foil">Lamina Metallizzata (Foil)</option>
+                <option value="ceramic">Ceramica / Terracotta</option>
+            </select>
+        </div>
+
+        <div class="control-row">
+            <div class="control-group">
+                <label for="roughnessSlider">Rugosità <span id="valRoughness">0.20</span></label>
+                <input type="range" id="roughnessSlider" min="0.0" max="1.0" step="0.05" value="0.2">
+            </div>
+            <div class="control-group">
+                <label for="metalnessSlider">Riflessione <span id="valMetalness">0.10</span></label>
+                <input type="range" id="metalnessSlider" min="0.0" max="1.0" step="0.05" value="0.1">
+            </div>
+        </div>
+
+        <!-- 4. COLORI PERSONALIZZATI -->
+        <div class="section-title">4. Palette Colori</div>
+        <div class="control-row">
+            <div class="control-group">
+                <label for="mainColor">Colore Principale</label>
+                <input type="color" id="mainColor" value="#d32f2f">
+            </div>
+            <div class="control-group">
+                <label for="secondaryColor">Colore Dettagli</label>
+                <input type="color" id="secondaryColor" value="#cccccc">
+            </div>
+            <div class="control-group">
+                <label for="bgColor">Sfondo Viewport</label>
+                <input type="color" id="bgColor" value="#121218">
+            </div>
+        </div>
+
+        <!-- 5. RENDERING & ANIMAZIONE -->
+        <div class="section-title">5. Modalità & Animazione</div>
+        <div class="control-row">
+            <div class="control-group">
+                <label for="wireframeToggle">Visualizzazione</label>
+                <select id="wireframeToggle">
+                    <option value="solid">Solido (Shaded)</option>
+                    <option value="wireframe">Rete (Wireframe)</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="rotSpeed">Velocità Rotazione <span id="valRot">1.0</span></label>
+                <input type="range" id="rotSpeed" min="0.0" max="3.0" step="0.2" value="1.0">
+            </div>
+        </div>
+    </div>
+
+    <!-- Viewport Canvas 3D -->
+    <div class="viewport" id="viewportDiv">
+        <div class="canvas-hint">🖱️ Trascina per ruotare 3D | Scroll per Zoom</div>
+        <canvas id="webgl-canvas"></canvas>
+
+        <!-- Scheda Critica del Libro -->
+        <div class="analysis-card">
+            <h2 id="cardTitle">Bottiglietta Campari Soda</h2>
+            <div class="meta" id="cardMeta">Fortunato Depero, 1932 | Camparisoda</div>
+            <p id="cardDescription">
+                Icona del packaging italiano. Una bottiglia conica in vetro smerigliato che elimina l'etichetta di carta: la grafica futurista è impressa direttamente sul vetro.
+            </p>
+            <div id="cardAnalysis" style="font-size:0.7rem; color:#aaa; border-top:1px solid #333; padding-top:6px;">
+                <strong>Analisi di Alberto Bassi:</strong> Perfetta integrazione tra arte futurista, produzione industriale monouso e rituale sociale dell'aperitivo italiano.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- SETUP SCENA THREE.JS ---
+        const canvas = document.getElementById('webgl-canvas');
+        const viewportDiv = document.getElementById('viewportDiv');
+        const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+        renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(45, canvas.clientWidth / canvas.clientHeight, 0.1, 100);
+        camera.position.set(0, 2, 5.5);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        // ILLUMINAZIONE STUDIO
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+        scene.add(ambientLight);
+
+        const dirLight1 = new THREE.DirectionalLight(0xffffff, 1.2);
+        dirLight1.position.set(5, 8, 5);
+        scene.add(dirLight1);
+
+        const dirLight2 = new THREE.DirectionalLight(0xe65100, 0.4);
+        dirLight2.position.set(-5, -2, -4);
+        scene.add(dirLight2);
+
+        let currentGroup = new THREE.Group();
+        scene.add(currentGroup);
+
+        // --- DATABASE PRODOTTI (LIBRO ALBERTO BASSI) ---
+        const productsData = {
+            campari: {
+                title: "Bottiglietta Campari Soda",
+                meta: "Fortunato Depero, 1932 | Davide Campari & C.",
+                category: "Packaging Alimentare & Rituale",
+                description: "La celebre bottiglia conica tronca monodose. Depero elimina l'etichetta cartacea trasformando il vetro stesso in superficie grafica strutturata.",
+                analysis: "Nel saggio di Bassi rappresenta la fusione tra avanguardia artistica futurista, riproducibilità tecnica di massa e creazione del rituale moderno dell'aperitivo.",
+                defaultMat: "glass",
+                defaultMainColor: "#d32f2f",
+                defaultSecColor: "#cccccc",
+                build: createCampariModel
+            },
+            moka: {
+                title: "Moka Express Bialetti",
+                meta: "Alfonso Bialetti, 1933 | Bialetti",
+                category: "Design PER il Cibo (Strumento)",
+                description: "Caffettiera ottagonale in fusione d'alluminio. La sua forma geometrica si ispira all'Art Déco e al funzionamento delle liscivaatrici domestiche.",
+                analysis: "Bassi evidenzia come la Moka abbia 'democratizzato' l'espresso da bar portando la preparazione professionale dentro la gestualità della casa italiana.",
+                defaultMat: "metal",
+                defaultMainColor: "#dddddd",
+                defaultSecColor: "#111111",
+                build: createMokaModel
+            },
+            gianduiotto: {
+                title: "Gianduiotto Caffarel",
+                meta: "Caffarel, 1865 | Cioccolato Piemontese",
+                category: "Design DEL Cibo (Prodotto Edibile)",
+                description: "Il primo cioccolatino incartato singolarmente al mondo, caratterizzato dalla forma a barca rovesciata o calotta prismatica.",
+                analysis: "Un classico esempio di design edibile: la forma e la grammatura nascono da esigenze di miscelazione della nocciola con il cacao.",
+                defaultMat: "foil",
+                defaultMainColor: "#d4af37",
+                defaultSecColor: "#3d2314",
+                build: createGianduiottoModel
+            },
+            rigatoni: {
+                title: "Rigatone Estruso in Bronzo",
+                meta: "Tradizione Pastaia Italiana | Trafilatura",
+                category: "Design DEL Cibo (Geometria Industriale)",
+                description: "Formato di pasta cilindrico con scanalature esterne longitudinali destinate a trattenere il condimento e garantire cottura omogenea.",
+                analysis: "Analizzato da Bassi come 'architettura edibile': la pasta italiana è un capolavoro di micro-ingegneria funzionale tra fluidodinamica e cottura.",
+                defaultMat: "ceramic",
+                defaultMainColor: "#e0a96d",
+                defaultSecColor: "#ffffff",
+                build: createRigatoniModel
+            },
+            nutella: {
+                title: "Vaso Nutella (Pelicon / Ferrero)",
+                meta: "Pietro Ferrero & Studio Pelicon, 1964 | Ferrero",
+                category: "Packaging & Seconda Vita",
+                description: "Il famoso vaso in vetro conico sporgente e tappo bianco in plastica, progettato per essere riutilizzato come bicchiere da tavola.",
+                analysis: "Bassi sottolinea la genialità dell'eco-design ante-litteram: il packaging non diventa rifiuto, ma prolunga la presenza del brand in casa.",
+                defaultMat: "glass",
+                defaultMainColor: "#ffffff",
+                defaultSecColor: "#3d2314",
+                build: createNutellaModel
+            }
+        };
+
+        // --- FACTORY MATERIALI DYNAMIC ---
+        function createCustomMaterial(type, colorHex, roughness, metalness, wireframe) {
+            const color = new THREE.Color(colorHex);
+            switch(type) {
+                case 'glass':
+                    return new THREE.MeshPhysicalMaterial({
+                        color: color,
+                        transmission: 0.85,
+                        transparent: true,
+                        opacity: 0.9,
+                        roughness: roughness,
+                        metalness: metalness,
+                        wireframe: wireframe
+                    });
+                case 'metal':
+                    return new THREE.MeshStandardMaterial({
+                        color: color,
+                        metalness: Math.max(0.7, metalness),
+                        roughness: roughness,
+                        wireframe: wireframe
+                    });
+                case 'plastic_gloss':
+                    return new THREE.MeshPhysicalMaterial({
+                        color: color,
+                        roughness: roughness,
+                        metalness: metalness,
+                        clearcoat: 1.0,
+                        clearcoatRoughness: 0.1,
+                        wireframe: wireframe
+                    });
+                case 'foil':
+                    return new THREE.MeshStandardMaterial({
+                        color: color,
+                        metalness: 0.85,
+                        roughness: Math.min(0.3, roughness),
+                        wireframe: wireframe
+                    });
+                case 'ceramic':
+                    return new THREE.MeshStandardMaterial({
+                        color: color,
+                        roughness: Math.max(0.4, roughness),
+                        metalness: 0.05,
+                        wireframe: wireframe
+                    });
+                case 'plastic_matte':
+                default:
+                    return new THREE.MeshStandardMaterial({
+                        color: color,
+                        roughness: Math.max(0.6, roughness),
+                        metalness: 0.0,
+                        wireframe: wireframe
+                    });
+            }
+        }
+
+        // --- COSTRUTTORI 3D PROCEDURALI ---
+
+        function createCampariModel(matType, mainCol, secCol, roughness, metalness, wireframe) {
+            const group = new THREE.Group();
+            const mainMat = createCustomMaterial(matType, mainCol, roughness, metalness, wireframe);
+            const capMat = createCustomMaterial('metal', secCol, 0.3, 0.9, wireframe);
+
+            const bodyGeom = new THREE.CylinderGeometry(0.35, 1.1, 2.6, 24);
+            const bodyMesh = new THREE.Mesh(bodyGeom, mainMat);
+            group.add(bodyMesh);
+
+            const neckGeom = new THREE.CylinderGeometry(0.25, 0.25, 0.5, 20);
+            const neckMesh = new THREE.Mesh(neckGeom, mainMat);
+            neckMesh.position.y = 1.55;
+            group.add(neckMesh);
+
+            const capGeom = new THREE.CylinderGeometry(0.28, 0.28, 0.12, 20);
+            const capMesh = new THREE.Mesh(capGeom, capMat);
+            capMesh.position.y = 1.82;
+            group.add(capMesh);
+
+            return group;
+        }
+
+        function createMokaModel(matType, mainCol, secCol, roughness, metalness, wireframe) {
+            const group = new THREE.Group();
+            const bodyMat = createCustomMaterial(matType, mainCol, roughness, metalness, wireframe);
+            const detailMat = createCustomMaterial('plastic_matte', secCol, 0.8, 0.0, wireframe);
+
+            const baseGeom = new THREE.CylinderGeometry(1.0, 0.8, 1.2, 8);
+            const baseMesh = new THREE.Mesh(baseGeom, bodyMat);
+            baseMesh.position.y = -0.6;
+            group.add(baseMesh);
+
+            const ringGeom = new THREE.CylinderGeometry(0.85, 0.85, 0.15, 8);
+            const ringMesh = new THREE.Mesh(ringGeom, bodyMat);
+            ringMesh.position.y = 0.05;
+            group.add(ringMesh);
+
+            const topGeom = new THREE.CylinderGeometry(1.05, 0.85, 1.2, 8);
+            const topMesh = new THREE.Mesh(topGeom, bodyMat);
+            topMesh.position.y = 0.72;
+            group.add(topMesh);
+
+            const lidGeom = new THREE.ConeGeometry(1.06, 0.3, 8);
+            const lidMesh = new THREE.Mesh(lidGeom, bodyMat);
+            lidMesh.position.y = 1.45;
+            group.add(lidMesh);
+
+            const knobGeom = new THREE.CylinderGeometry(0.12, 0.12, 0.2, 8);
+            const knobMesh = new THREE.Mesh(knobGeom, detailMat);
+            knobMesh.position.y = 1.68;
+            group.add(knobMesh);
+
+            const handleGeom = new THREE.TorusGeometry(0.6, 0.08, 8, 16, Math.PI);
+            const handleMesh = new THREE.Mesh(handleGeom, detailMat);
+            handleMesh.position.set(0.9, 0.6, 0);
+            handleMesh.rotation.z = -Math.PI / 2;
+            group.add(handleMesh);
+
+            return group;
+        }
+
+        function createGianduiottoModel(matType, mainCol, secCol, roughness, metalness, wireframe) {
+            const group = new THREE.Group();
+            const foilMat = createCustomMaterial(matType, mainCol, roughness, metalness, wireframe);
+
+            const shape = new THREE.Shape();
+            shape.moveTo(-1.2, -0.4);
+            shape.lineTo(1.2, -0.4);
+            shape.lineTo(0.8, 0.5);
+            shape.lineTo(-0.8, 0.5);
+            shape.closePath();
+
+            const extrudeSettings = { depth: 0.7, bevelEnabled: true, bevelSegments: 3, steps: 1, bevelSize: 0.1, bevelThickness: 0.1 };
+            const geom = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+            geom.center();
+
+            const mesh = new THREE.Mesh(geom, foilMat);
+            mesh.rotation.x = Math.PI / 6;
+            group.add(mesh);
+
+            return group;
+        }
+
+        function createRigatoniModel(matType, mainCol, secCol, roughness, metalness, wireframe) {
+            const group = new THREE.Group();
+            const pastaMat = createCustomMaterial(matType, mainCol, roughness, metalness, wireframe);
+
+            const cylinderGeom = new THREE.CylinderGeometry(0.7, 0.7, 2.2, 32, 1, true);
+            const outerMesh = new THREE.Mesh(cylinderGeom, pastaMat);
+            group.add(outerMesh);
+
+            const innerGeom = new THREE.CylinderGeometry(0.55, 0.55, 2.2, 32, 1, true);
+            const innerMesh = new THREE.Mesh(innerGeom, pastaMat);
+            group.add(innerMesh);
+
+            return group;
+        }
+
+        function createNutellaModel(matType, mainCol, secCol, roughness, metalness, wireframe) {
+            const group = new THREE.Group();
+            const jarMat = createCustomMaterial(matType, mainCol, roughness, metalness, wireframe);
+            const nutellaMat = createCustomMaterial('plastic_matte', secCol, 0.6, 0.0, wireframe);
+            const capMat = createCustomMaterial('plastic_gloss', '#ffffff', 0.2, 0.0, wireframe);
+
+            const jarGeom = new THREE.CylinderGeometry(0.9, 0.75, 1.8, 24);
+            const jarMesh = new THREE.Mesh(jarGeom, jarMat);
+            group.add(jarMesh);
+
+            const nutellaGeom = new THREE.CylinderGeometry(0.82, 0.68, 1.5, 24);
+            const nutellaMesh = new THREE.Mesh(nutellaGeom, nutellaMat);
+            nutellaMesh.position.y = -0.1;
+            group.add(nutellaMesh);
+
+            const capGeom = new THREE.CylinderGeometry(0.92, 0.92, 0.35, 24);
+            const capMesh = new THREE.Mesh(capGeom, capMat);
+            capMesh.position.y = 1.05;
+            group.add(capMesh);
+
+            return group;
+        }
+
+        // --- AGGIORNAMENTO SCENA E PARAMETRI ---
+        let currentProductKey = '';
+
+        function onProductChange() {
+            const key = document.getElementById('productSelect').value;
+            const data = productsData[key];
+
+            // Carica preimpostazioni del prodotto selezionato
+            if (key !== currentProductKey) {
+                document.getElementById('materialType').value = data.defaultMat;
+                document.getElementById('mainColor').value = data.defaultMainColor;
+                document.getElementById('secondaryColor').value = data.defaultSecColor;
+                currentProductKey = key;
+            }
+
+            updateProduct3D();
+        }
+
+        function updateProduct3D() {
+            const key = document.getElementById('productSelect').value;
+            const data = productsData[key];
+
+            scene.remove(currentGroup);
+
+            const matType = document.getElementById('materialType').value;
+            const mainCol = document.getElementById('mainColor').value;
+            const secCol = document.getElementById('secondaryColor').value;
+            const roughness = parseFloat(document.getElementById('roughnessSlider').value);
+            const metalness = parseFloat(document.getElementById('metalnessSlider').value);
+            const wireframe = document.getElementById('wireframeToggle').value === 'wireframe';
+
+            // Scala 3D
+            const sx = parseFloat(document.getElementById('scaleX').value);
+            const sy = parseFloat(document.getElementById('scaleY').value);
+            const sz = parseFloat(document.getElementById('scaleZ').value);
+
+            document.getElementById('valX').textContent = sx.toFixed(2);
+            document.getElementById('valY').textContent = sy.toFixed(2);
+            document.getElementById('valZ').textContent = sz.toFixed(2);
+            document.getElementById('valRoughness').textContent = roughness.toFixed(2);
+            document.getElementById('valMetalness').textContent = metalness.toFixed(2);
+            document.getElementById('valRot').textContent = parseFloat(document.getElementById('rotSpeed').value).toFixed(1);
+
+            // Sfondo Viewport
+            const bgCol = document.getElementById('bgColor').value;
+            viewportDiv.style.background = `radial-gradient(circle at center, ${bgCol} 0%, #050508 100%)`;
+
+            // Costruzione nuovo modello con materiale custom
+            currentGroup = data.build(matType, mainCol, secCol, roughness, metalness, wireframe);
+            currentGroup.scale.set(sx, sy, sz);
+            scene.add(currentGroup);
+
+            // Aggiorna testi scheda libro
+            document.getElementById('cardTitle').textContent = data.title;
+            document.getElementById('cardMeta').textContent = data.meta;
+            document.getElementById('cardDescription').textContent = data.description;
+            document.getElementById('cardAnalysis').innerHTML = `<strong>Analisi di Alberto Bassi:</strong> ${data.analysis}`;
+            document.getElementById('categoryBadge').textContent = data.category;
+        }
+
+        // --- EVENT LISTENERS ---
+        document.getElementById('productSelect').addEventListener('change', onProductChange);
+
+        const controlIds = [
+            'scaleX', 'scaleY', 'scaleZ', 'materialType', 
+            'roughnessSlider', 'metalnessSlider', 'mainColor', 
+            'secondaryColor', 'bgColor', 'wireframeToggle', 'rotSpeed'
+        ];
+
+        controlIds.forEach(id => {
+            const elem = document.getElementById(id);
+            if (elem) {
+                elem.addEventListener('input', updateProduct3D);
+                elem.addEventListener('change', updateProduct3D);
+            }
+        });
+
+        // Loop di rendering 3D
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const speed = parseFloat(document.getElementById('rotSpeed').value) * 0.008;
+            if (currentGroup) {
+                currentGroup.rotation.y += speed;
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = canvas.clientWidth / canvas.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+        });
+
+        // Avvio Iniziale
+        onProductChange();
+        animate();
+    </script>
+</body>
+</html>
