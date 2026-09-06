@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Territorio 3D - Dipignano (CS)</title>
+    
+    <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+    <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body, html { width: 100%; height: 100%; overflow: hidden; font-family: system-ui, -apple-system, sans-serif; background-color: #000; color: #fff; }
+        #map { width: 100vw; height: 100vh; }
+
+        .custom-marker {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white; width: 34px; height: 34px; border-radius: 50%;
+            border: 2px solid #ffffff; display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            cursor: pointer; transition: transform 0.2s;
+        }
+        .custom-marker.first-marker { background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important; }
+        .custom-marker:hover { transform: scale(1.2); }
+
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(6px);
+            display: flex; align-items: center; justify-content: center; z-index: 100;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-card {
+            background: #1e293b; border: 1px solid #334155; width: 92%; max-width: 900px;
+            max-height: 90vh; border-radius: 14px; padding: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8); overflow-y: auto;
+            display: flex; flex-direction: column; gap: 14px;
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 12px; }
+        .modal-header h3 { font-size: 1.3rem; color: #38bdf8; }
+        .close-btn { background: none; border: none; color: #94a3b8; font-size: 1.8rem; cursor: pointer; }
+        .close-btn:hover { color: #fff; }
+        .modal-body-text { font-size: 1rem; color: #cbd5e1; line-height: 1.6; white-space: pre-wrap; }
+
+        .media-preview { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+        .media-preview img, .media-preview iframe, .media-preview video {
+            width: 100%; height: 450px; border-radius: 8px; object-fit: cover; border: 1px solid #334155; background: #000;
+        }
+        .media-preview img { height: auto; max-height: 450px; }
+
+        .btn-media-link {
+            display: inline-block; padding: 12px 18px; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600; text-align: center; font-size: 0.9rem; margin-top: 4px;
+        }
+        .btn-video-link { background: #cc181e; }
+        .btn-video-link:hover { background: #b31217; }
+        .btn-external-link { background: #0284c7; }
+        .btn-external-link:hover { background: #0369a1; }
+    </style>
+</head>
+<body>
+
+    <div id="map"></div>
+
+    <div id="modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="view-title"></h3>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <p id="view-text" class="modal-body-text"></p>
+            <div id="view-media" class="media-preview"></div>
+        </div>
+    </div>
+
+    <script>
+        const MARKERS_DATA = [
+  {
+    "number": 1,
+    "coords": [
+      16.2505549,
+      39.2376415
+    ],
+    "title": "Municipio di Dipignano",
+    "text": "Sede municipale del comune di Dipignano (CS).",
+    "image": "https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?w=500",
+    "video": ""
+  },
+  {
+    "number": 2,
+    "coords": [
+      16.251330077648163,
+      39.23747293885384
+    ],
+    "title": "Punto #2",
+    "text": "chiesa dei doviziosi",
+    "image": "https://picasso-cognitive.github.io/Simulatore3D/tourdipignano/1riforma.jpeg",
+    "video": "https://www.youtube.com/watch?v=VCGVRMih5K8",
+    "videoMode": "external",
+    "webUrl": "https://picasso-cognitive.github.io/Simulatore3D/tourdipignano/dipignanoracconta.html",
+    "webMode": "external"
+  }
+];
+
+        const map = new maplibregl.Map({
+            container: 'map',
+            zoom: 16,
+            center: [16.2505549, 39.2376415],
+            pitch: 60,
+            bearing: 15,
+            style: {
+                version: 8,
+                sources: {
+                    'esri-sat': {
+                        type: 'raster',
+                        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+                        tileSize: 256
+                    },
+                    'terrain': {
+                        type: 'raster-dem',
+                        tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
+                        encoding: 'terrarium', tileSize: 256, maxzoom: 15
+                    }
+                },
+                layers: [{ id: 'sat-layer', type: 'raster', source: 'esri-sat' }],
+                terrain: { source: 'terrain', exaggeration: 1.4 }
+            }
+        });
+
+        map.addControl(new maplibregl.NavigationControl());
+
+        function extractYouTubeId(url) {
+            if (!url) return null;
+            const regExp = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+            const match = url.match(regExp);
+            return match ? match[1] : null;
+        }
+
+        map.on('load', () => {
+            MARKERS_DATA.forEach((data, index) => {
+                const el = document.createElement('div');
+                el.className = 'custom-marker';
+                if (index === 0) el.classList.add('first-marker');
+                el.innerText = data.number || (index + 1);
+
+                new maplibregl.Marker({ element: el })
+                    .setLngLat(data.coords)
+                    .addTo(map);
+
+                el.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    showDetails(data);
+                });
+            });
+        });
+
+        function showDetails(data) {
+            document.getElementById('view-title').innerText = data.title || ('Punto #' + data.number);
+            document.getElementById('view-text').innerText = data.text || '';
+
+            const container = document.getElementById('view-media');
+            container.innerHTML = '';
+
+            if (data.image) {
+                const img = document.createElement('img');
+                img.src = data.image;
+                img.onerror = () => img.style.display = 'none';
+                container.appendChild(img);
+            }
+
+            if (data.video) {
+                if (data.videoMode === 'external') {
+                    const videoBtn = document.createElement('a');
+                    videoBtn.href = data.video;
+                    videoBtn.target = '_blank';
+                    videoBtn.className = 'btn-media-link btn-video-link';
+                    videoBtn.innerText = '▶️ Guarda Video (YouTube / Esterno)';
+                    container.appendChild(videoBtn);
+                } else {
+                    const ytId = extractYouTubeId(data.video);
+                    if (ytId) {
+                        const iframe = document.createElement('iframe');
+                        iframe.src = 'https://www.youtube-nocookie.com/embed/' + ytId;
+                        iframe.setAttribute('allowfullscreen', 'true');
+                        iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
+                        container.appendChild(iframe);
+                    } else {
+                        const video = document.createElement('video');
+                        video.src = data.video;
+                        video.controls = true;
+                        container.appendChild(video);
+                    }
+                }
+            }
+
+            if (data.webUrl) {
+                if (data.webMode === 'embed') {
+                    const iframe = document.createElement('iframe');
+                    iframe.src = data.webUrl;
+                    container.appendChild(iframe);
+                } else {
+                    const linkBtn = document.createElement('a');
+                    linkBtn.href = data.webUrl;
+                    linkBtn.target = '_blank';
+                    linkBtn.className = 'btn-media-link btn-external-link';
+                    linkBtn.innerText = '🔗 Apri Pagina Web Collegata';
+                    container.appendChild(linkBtn);
+                }
+            }
+
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+    </script>
+</body>
+</html>
