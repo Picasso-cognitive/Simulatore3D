@@ -1,0 +1,473 @@
+<!-- Simulatore Avatar - Galileo Galilei con Movimenti Casuali e Animazione Labbra -->
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulatore Teoria del Caos - Galileo Galilei</title>
+    <!-- Collegamento alla base di conoscenza esterna (1.000 record) -->
+    <script src="1000_domande_caos.js"></script>
+    <style>
+        .avatar-free-container { 
+            position: fixed; 
+            bottom: 20px; 
+            right: 20px; 
+            z-index: 9999; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: flex-end; 
+            gap: 10px; 
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        
+        /* Contenitore figura Galileo Galilei */
+        .avatar-trigger-wrapper {
+            position: relative;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .avatar-trigger { 
+            position: relative;
+            width: 140px; 
+            height: 190px; 
+            cursor: pointer; 
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), filter 0.3s; 
+            transform-origin: bottom center;
+            animation: idle-float 4s ease-in-out infinite;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid #38bdf8;
+            background: #0f172a;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+        }
+
+        .avatar-trigger img#avatar-img { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: cover;
+            object-position: top center;
+            pointer-events: none;
+        }
+
+        /* Overlay dinamico per simulare il movimento delle labbra */
+        .avatar-mouth {
+            position: absolute;
+            top: 54%; 
+            left: 50%;
+            width: 18px;
+            height: 3px;
+            background: #1a0a03;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: height 0.08s ease, width 0.08s ease;
+            opacity: 0.85;
+            mix-blend-mode: multiply;
+            pointer-events: none;
+        }
+
+        .avatar-trigger:hover { 
+            filter: brightness(1.1); 
+        }
+
+        /* Animazione base di respirazione */
+        @keyframes idle-float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-5px) rotate(0.8deg); }
+        }
+
+        /* Pulsante per modificare l'immagine */
+        .btn-change-avatar {
+            position: absolute;
+            bottom: 4px;
+            left: 4px;
+            background: #0284c7;
+            color: #fff;
+            border: 2px solid #0f172a;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 12px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+            transition: transform 0.2s, background 0.2s;
+            z-index: 10;
+        }
+        .btn-change-avatar:hover {
+            transform: scale(1.15);
+            background: #38bdf8;
+        }
+
+        .avatar-chat-window { 
+            width: 360px; 
+            height: 460px; 
+            background: rgba(15, 23, 42, 0.95); 
+            border: 1px solid #334155; 
+            border-radius: 12px; 
+            display: none; 
+            flex-direction: column; 
+            overflow: hidden; 
+            backdrop-filter: blur(8px); 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5); 
+        }
+        .avatar-chat-window.active { 
+            display: flex; 
+        }
+        .chat-header { 
+            background: #1e293b; 
+            padding: 12px 14px; 
+            font-weight: bold; 
+            color: #38bdf8; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            border-bottom: 1px solid #334155;
+        }
+        .chat-messages { 
+            flex: 1; 
+            padding: 12px; 
+            overflow-y: auto; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 10px; 
+            font-size: 0.88rem; 
+        }
+        .msg { 
+            padding: 10px 12px; 
+            border-radius: 8px; 
+            max-width: 85%; 
+            line-height: 1.45; 
+            word-wrap: break-word;
+        }
+        .ai-msg { 
+            background: #1e293b; 
+            color: #f8fafc; 
+            align-self: flex-start; 
+            border: 1px solid #334155; 
+        }
+        .user-msg { 
+            background: #0284c7; 
+            color: #fff; 
+            align-self: flex-end; 
+        }
+        .chat-input-area { 
+            display: flex; 
+            padding: 10px; 
+            background: #0f172a; 
+            border-top: 1px solid #334155; 
+            gap: 6px; 
+        }
+        .chat-input-area input { 
+            flex: 1; 
+            background: #1e293b; 
+            border: 1px solid #334155; 
+            color: #fff; 
+            padding: 8px 10px; 
+            border-radius: 6px; 
+            font-size: 0.85rem; 
+            outline: none;
+        }
+        .chat-input-area input:focus {
+            border-color: #38bdf8;
+        }
+        .btn-chat { 
+            background: #0284c7; 
+            border: none; 
+            color: #fff; 
+            padding: 8px 12px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-weight: bold; 
+        }
+        .btn-chat:hover {
+            background: #0369a1;
+        }
+        .btn-mic { 
+            background: #059669; 
+        }
+        .btn-mic:hover {
+            background: #047857;
+        }
+        .btn-mic.recording { 
+            background: #ef4444; 
+            animation: pulse-mic 1s infinite; 
+        }
+        @keyframes pulse-mic { 
+            0% { opacity: 1; } 
+            50% { opacity: 0.5; } 
+            100% { opacity: 1; } 
+        }
+    </style>
+</head>
+<body>
+
+<div class="avatar-free-container">
+    <div class="avatar-chat-window" id="chat-window">
+        <div class="chat-header">
+            <span>🔭 Galileo Galilei</span>
+            <button onclick="toggleChat()" style="background:none; border:none; color:#fff; cursor:pointer; font-size: 1rem;">✖</button>
+        </div>
+        
+        <div class="chat-messages" id="chat-messages">
+            <div class="msg ai-msg">
+                Benvenuto! Sono Galileo Galilei. Parliamo di moto, sistemi dinamici, determinismo e della moderna Teoria del Caos. Come posso aiutarti oggi?
+            </div>
+        </div>
+
+        <div class="chat-input-area">
+            <input type="text" id="user-input" placeholder="Chiedi di Lorenz, Chua, determinismo, frattali..." onkeypress="handleKeyPress(event)">
+            <button class="btn-chat" onclick="sendMessage()">Invia</button>
+            <button class="btn-chat btn-mic" id="mic-btn" onclick="toggleVoiceRecognition()" title="Parla al microfono">🎙️</button>
+        </div>
+    </div>
+    
+    <!-- Wrapper avatar Galileo Galilei con protezione caricamento e overlay labbra -->
+    <div class="avatar-trigger-wrapper">
+        <div class="avatar-trigger" id="avatar-container" onclick="toggleChat()">
+            <img id="avatar-img" 
+                 src="https://upload.wikimedia.org/wikipedia/commons/d/d4/Justus_Sustermans_-_Portrait_of_Galileo_Galilei%2C_1636.jpg" 
+                 alt="Galileo Galilei"
+                 referrerpolicy="no-referrer"
+                 onerror="this.onerror=null; this.src='https://cdn-icons-png.flaticon.com/512/4712/4712109.png';">
+            <!-- Strato dinamico per il movimento delle labbra -->
+            <div id="avatar-mouth" class="avatar-mouth"></div>
+        </div>
+        <button class="btn-change-avatar" onclick="document.getElementById('avatar-file-input').click()" title="Cambia immagine dell'avatar">📷</button>
+        <input type="file" id="avatar-file-input" accept="image/*" style="display: none;" onchange="changeAvatarImage(event)">
+    </div>
+</div>
+
+<script>
+/* ==========================================================================
+   1. MOTORE MOVIMENTI CASUALI E MOVIMENTO LABBRA (GALILEO GALILEI)
+   ========================================================================== */
+let isSpeaking = false;
+
+// Movimenti corporei procedurali (testa, inclinazione e respiro)
+function triggerRandomBodyMovement() {
+    const avatar = document.getElementById('avatar-container');
+    if (!avatar) return;
+
+    const randomX = (Math.random() - 0.5) * (isSpeaking ? 10 : 5);
+    const randomY = (Math.random() - 0.5) * (isSpeaking ? 8 : 4);
+    const randomRot = (Math.random() - 0.5) * (isSpeaking ? 6 : 2.5);
+    const randomScaleX = 0.98 + Math.random() * 0.04;
+    const randomScaleY = 0.98 + Math.random() * 0.04;
+
+    avatar.style.transform = `translate(${randomX}px, ${randomY}px) rotate(${randomRot}deg) scale(${randomScaleX}, ${randomScaleY})`;
+
+    const nextInterval = isSpeaking ? 180 + Math.random() * 200 : 1200 + Math.random() * 2000;
+    setTimeout(triggerRandomBodyMovement, nextInterval);
+}
+
+// Movimento casuale delle labbra
+function triggerLipMovement() {
+    const mouth = document.getElementById('avatar-mouth');
+    if (!mouth) return;
+
+    if (isSpeaking) {
+        // Apertura/chiusura labbra ad alta frequenza durante il parlato
+        const openHeight = 3 + Math.random() * 7;
+        const openWidth = 16 + Math.random() * 6;
+        mouth.style.height = `${openHeight}px`;
+        mouth.style.width = `${openWidth}px`;
+        mouth.style.opacity = '0.9';
+    } else {
+        // Micro-scatti e movimenti casuali a riposo (smorfie, assestamento labbra)
+        if (Math.random() < 0.15) { 
+            const microHeight = 2 + Math.random() * 3;
+            const microWidth = 15 + Math.random() * 4;
+            mouth.style.height = `${microHeight}px`;
+            mouth.style.width = `${microWidth}px`;
+        } else {
+            mouth.style.height = '2px';
+            mouth.style.width = '18px';
+        }
+    }
+
+    const nextMouthInterval = isSpeaking ? 70 + Math.random() * 80 : 350 + Math.random() * 900;
+    setTimeout(triggerLipMovement, nextMouthInterval);
+}
+
+// Avvio animazioni
+triggerRandomBodyMovement();
+triggerLipMovement();
+
+/* ==========================================================================
+   2. CAMBIO IMMAGINE AVATAR
+   ========================================================================== */
+function changeAvatarImage(event) {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('avatar-img').src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+/* ==========================================================================
+   3. ELENCO DI RISPOSTE DI RIPIEGO DINAMICHE
+   ========================================================================== */
+const fallbackResponses = [
+    "Non ho trovato una risposta precisa nel database. Prova a farmi una domanda sull'effetto farfalla, sull'attrattore di Lorenz o sul meccanicismo.",
+    "Non sono sicuro di aver compreso. Che ne dici di chiedermi informazioni sul circuito di Chua, sul doppio scroll o sulle biforcazioni?",
+    "Questa richiesta non trova un riscontro diretto. Puoi provare a domandarmi qualcosa su Benoît Mandelbrot, sulla costante di Feigenbaum o sui frattali.",
+    "Non riesco a trovare informazioni su questo argomento. Prova a chiedermi del determinismo di Laplace, delle equazioni differenziali o della termodinamica.",
+    "Il termine cercato non è presente nel mio archivio. Prova a riformulare la domanda usando argomenti come automi cellulari, sistemi complessi o econofisica.",
+    "Non ho trovato corrispondenze esatte. Ti andrebbe di approfondire la farfalla di Lorenz, l'analisi numerica o lo spazio delle fasi?"
+];
+
+/* ==========================================================================
+   4. MOTORE DI RICERCA SULLA BASE DI CONOSCENZA ESTERNA
+   ========================================================================== */
+function findBestAnswer(userInput) {
+    const text = userInput.toLowerCase();
+    
+    if (typeof chaosTheoryDatabase === 'undefined' || !Array.isArray(chaosTheoryDatabase)) {
+        return "Attenzione: non è stato possibile caricare il file 1000_domande_caos.js. Assicurati che si trovi nella stessa cartella del simulatore.";
+    }
+
+    let bestMatch = null;
+    let maxScore = 0;
+
+    chaosTheoryDatabase.forEach(item => {
+        let score = 0;
+        if (Array.isArray(item.keywords)) {
+            item.keywords.forEach(kw => {
+                if (text.includes(kw.toLowerCase())) {
+                    score += 1;
+                }
+            });
+        }
+
+        if (score > maxScore) {
+            maxScore = score;
+            bestMatch = item;
+        }
+    });
+
+    if (!bestMatch || maxScore === 0) {
+        const randomIndex = Math.floor(Math.random() * fallbackResponses.length);
+        return fallbackResponses[randomIndex];
+    }
+
+    let response = bestMatch.answer;
+    if (bestMatch.url) {
+        response += `<br><br><small>🔗 <a href="${bestMatch.url}" target="_blank" style="color: #38bdf8; text-decoration: underline;">Approfondisci la voce su Treccani</a></small>`;
+    }
+
+    return response;
+}
+
+/* ==========================================================================
+   5. GESTIONE CHAT ED INTERFACCIA UTENTE
+   ========================================================================== */
+function toggleChat() {
+    document.getElementById('chat-window').classList.toggle('active');
+}
+
+function handleKeyPress(e) {
+    if (e.key === 'Enter') sendMessage();
+}
+
+function sendMessage(customText = null) {
+    const input = document.getElementById('user-input');
+    const text = customText || input.value.trim();
+    if (!text) return;
+
+    appendMessage(text, 'user-msg');
+    if (!customText) input.value = '';
+
+    const answer = findBestAnswer(text);
+    
+    setTimeout(() => {
+        appendMessage(answer, 'ai-msg');
+        speakText(answer);
+    }, 250);
+}
+
+function appendMessage(text, className) {
+    const container = document.getElementById('chat-messages');
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `msg ${className}`;
+    msgDiv.innerHTML = text;
+    container.appendChild(msgDiv);
+    container.scrollTop = container.scrollHeight;
+}
+
+/* ==========================================================================
+   6. SINTESI VOCALE (TEXT-TO-SPEECH) E RICONOSCIMENTO VOCALE
+   ========================================================================== */
+function speakText(text) {
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const plainText = text.replace(/<[^>]*>/g, '');
+        const utterance = new SpeechSynthesisUtterance(plainText);
+        utterance.lang = 'it-IT';
+        utterance.rate = 0.95;
+
+        utterance.onstart = () => { isSpeaking = true; };
+        utterance.onend = () => { isSpeaking = false; };
+        utterance.onerror = () => { isSpeaking = false; };
+
+        window.speechSynthesis.speak(utterance);
+    }
+}
+
+let recognition = null;
+let isRecording = false;
+
+if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.lang = 'it-IT';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        toggleMicState(false);
+        sendMessage(transcript);
+    };
+
+    recognition.onerror = () => toggleMicState(false);
+    recognition.onend = () => toggleMicState(false);
+}
+
+function toggleVoiceRecognition() {
+    if (!recognition) {
+        alert("Il tuo browser non supporta la ricerca vocale. Usa Google Chrome o Microsoft Edge.");
+        return;
+    }
+    if (isRecording) {
+        recognition.stop();
+        toggleMicState(false);
+    } else {
+        recognition.start();
+        toggleMicState(true);
+    }
+}
+
+function toggleMicState(recording) {
+    isRecording = recording;
+    const btn = document.getElementById('mic-btn');
+    if (recording) {
+        btn.classList.add('recording');
+        btn.innerText = '🔴';
+    } else {
+        btn.classList.remove('recording');
+        btn.innerText = '🎙️';
+    }
+}
+</script>
+
+</body>
+</html>

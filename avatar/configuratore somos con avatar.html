@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editor Tour Virtuale 360° con Avatar Assistant</title>
+    
+    <!-- Libreria Pannellum Viewer -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
+
+    <!-- Base di conoscenza esterna per l'Avatar -->
+    <script src="1000_domande_caos.js"></script>
+
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body, html { width: 100%; height: 100%; overflow: hidden; font-family: system-ui, -apple-system, sans-serif; background: #020617; color: #fff; }
+
+        #panorama { width: 100vw; height: 100vh; }
+
+        /* Barra Comandi Superiore */
+        .top-bar {
+            position: absolute; top: 15px; left: 15px; z-index: 10;
+            background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(8px);
+            padding: 10px 16px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.15);
+            display: flex; gap: 10px; align-items: center; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            flex-wrap: wrap;
+        }
+        .btn-action {
+            padding: 8px 14px; font-size: 0.85rem; font-weight: 600; background: #059669;
+            color: #fff; border: none; border-radius: 6px; cursor: pointer; transition: 0.2s;
+        }
+        .btn-action:hover { background: #047857; }
+        .btn-replace { background: #d97706; color: #fff; }
+        .btn-replace:hover { background: #b45309; }
+        .btn-json { background: #6366f1; }
+        .btn-json:hover { background: #4f46e5; }
+        .btn-export { background: #0284c7; }
+        .btn-export:hover { background: #0369a1; }
+
+        /* Banner Istruzioni Editor */
+        .instruction-banner {
+            position: absolute; top: 15px; right: 15px; z-index: 10;
+            background: rgba(15, 23, 42, 0.9); border: 1px solid #38bdf8; color: #f8fafc;
+            padding: 10px 16px; border-radius: 10px; font-size: 0.82rem; backdrop-filter: blur(8px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        .instruction-banner strong { color: #38bdf8; }
+
+        /* Carousel Icone in Basso */
+        .thumb-carousel-container {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 20; max-width: 80vw; background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px); padding: 10px 16px; border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.2); box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+            display: flex; flex-direction: column; gap: 6px; align-items: center;
+        }
+        .thumb-carousel-title { font-size: 0.72rem; color: #94a3b8; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em; }
+        .thumb-strip { display: flex; gap: 10px; overflow-x: auto; max-width: 100%; padding: 4px 2px; }
+        .thumb-strip::-webkit-scrollbar { height: 5px; }
+        .thumb-strip::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        
+        .thumb-item {
+            position: relative; flex: 0 0 auto; width: 100px; height: 60px; border-radius: 8px;
+            overflow: hidden; cursor: pointer; border: 2px solid transparent; transition: all 0.2s;
+        }
+        .thumb-item img { width: 100%; height: 100%; object-fit: cover; }
+        .thumb-item span {
+            position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.75);
+            font-size: 0.68rem; text-align: center; padding: 2px 4px; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;
+        }
+        .thumb-item.active { border-color: #38bdf8; transform: scale(1.05); box-shadow: 0 0 12px rgba(56, 189, 248, 0.6); }
+
+        /* Stile dei Pulsanti sulla Foto 360° */
+        .pnm-hotspot.custom-hotspot-container { width: 0 !important; height: 0 !important; }
+        .custom-marker {
+            position: absolute; transform: translate(-50%, -50%);
+            min-width: 44px; height: 44px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.25rem; cursor: pointer; border: 2.5px solid #ffffff;
+            box-shadow: 0 0 15px rgba(0,0,0,0.8), 0 0 10px rgba(56, 189, 248, 0.8);
+            transition: transform 0.2s, background 0.2s; animation: pulse 2s infinite; pointer-events: auto;
+            color: #fff; font-weight: 600; padding: 0 8px;
+        }
+        .custom-marker.text-marker {
+            width: auto !important; height: auto !important;
+            padding: 8px 16px !important; border-radius: 20px !important;
+            font-size: 0.85rem !important; white-space: nowrap !important;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.8); }
+            70% { box-shadow: 0 0 0 12px rgba(255, 255, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+        }
+        .custom-marker:hover { transform: translate(-50%, -50%) scale(1.18); z-index: 100; animation: none; }
+        .marker-door { background: linear-gradient(135deg, #10b981, #047857); }
+        .marker-resource { background: linear-gradient(135deg, #0284c7, #0369a1); }
+
+        /* Modal Finestra di Dialogo Modifica */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(6px);
+            display: flex; align-items: center; justify-content: center; z-index: 1000;
+            opacity: 0; pointer-events: none; transition: opacity 0.25s;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-card {
+            background: #1e293b; border: 1px solid #334155; width: 92%; max-width: 620px;
+            max-height: 90vh; border-radius: 14px; padding: 22px; overflow-y: auto;
+            display: flex; flex-direction: column; gap: 14px;
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+        .modal-header h3 { font-size: 1.15rem; color: #38bdf8; }
+        .close-btn { background: none; border: none; color: #94a3b8; font-size: 1.8rem; cursor: pointer; }
+
+        .form-group { display: flex; flex-direction: column; gap: 5px; }
+        .form-group label { font-size: 0.82rem; color: #cbd5e1; font-weight: 600; }
+        .form-group input, .form-group select, .form-group textarea {
+            background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 9px; color: #fff; font-size: 0.88rem;
+        }
+        .form-group textarea { resize: vertical; min-height: 70px; }
+
+        .media-box { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+        .media-box img, .media-box iframe { width: 100%; max-height: 350px; border-radius: 8px; border: 1px solid #334155; background: #000; }
+        .btn-link-ext {
+            display: inline-block; padding: 10px; background: #0284c7; color: #fff; text-decoration: none;
+            border-radius: 6px; text-align: center; font-weight: 600; font-size: 0.9rem;
+        }
+        .btn-link-ext:hover { background: #0369a1; }
+
+        /* ==================== STILI AVATAR IN BASSO A DESTRA ==================== */
+        .avatar-free-container { 
+            position: fixed; 
+            bottom: 20px; 
+            right: 20px; 
+            z-index: 9999; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: flex-end; 
+            gap: 10px; 
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        .avatar-trigger-wrapper { position: relative; display: inline-block; }
+        .avatar-trigger img { 
+            width: 70px; height: 70px; border-radius: 50%; border: 3px solid #38bdf8; 
+            background: #0f172a; cursor: pointer; object-fit: cover;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5); transition: transform 0.2s; 
+        }
+        .avatar-trigger img:hover { transform: scale(1.05); }
+        .btn-change-avatar {
+            position: absolute; bottom: 2px; left: -2px; background: #0284c7; color: #fff;
+            border: 2px solid #0f172a; border-radius: 50%; width: 26px; height: 26px;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+            font-size: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.5); transition: transform 0.2s, background 0.2s;
+        }
+        .btn-change-avatar:hover { transform: scale(1.15); background: #38bdf8; }
+        .avatar-chat-window { 
+            width: 360px; height: 460px; background: rgba(15, 23, 42, 0.95); 
+            border: 1px solid #334155; border-radius: 12px; display: none; 
+            flex-direction: column; overflow: hidden; backdrop-filter: blur(8px); 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5); 
+        }
+        .avatar-chat-window.active { display: flex; }
+        .chat-header { 
+            background: #1e293b; padding: 12px 14px; font-weight: bold; color: #38bdf8; 
+            display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155;
+        }
+        .chat-messages { 
+            flex: 1; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; font-size: 0.88rem; 
+        }
+        .msg { padding: 10px 12px; border-radius: 8px; max-width: 85%; line-height: 1.45; word-wrap: break-word; }
+        .ai-msg { background: #1e293b; color: #f8fafc; align-self: flex-start; border: 1px solid #334155; }
+        .user-msg { background: #0284c7; color: #fff; align-self: flex-end; }
+        .chat-input-area { display: flex; padding: 10px; background: #0f172a; border-top: 1px solid #334155; gap: 6px; }
+        .chat-input-area input { 
+            flex: 1; background: #1e293b; border: 1px solid #334155; color: #fff; 
+            padding: 8px 10px; border-radius: 6px; font-size: 0.85rem; outline: none;
+        }
+        .chat-input-area input:focus { border-color: #38bdf8; }
+        .btn-chat { background: #0284c7; border: none; color: #fff; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .btn-chat:hover { background: #0369a1; }
+        .btn-mic { background: #059669; }
+        .btn-mic:hover { background: #047857; }
+        .btn-mic.recording { background: #ef4444; animation: pulse-mic 1s infinite; }
+        @keyframes pulse-mic { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <!-- Barra Comandi Editor -->
+    <div class="top-bar">
+        <button class="btn-action" onclick="document.getElementById('file-input-scene').click()">➕ Aggiungi Nuova Stanza</button>
+        <input type="file" id="file-input-scene" accept="image/*" style="display:none;" onchange="addNewSceneFromFile(event)">
+        
+        <button class="btn-action btn-replace" onclick="document.getElementById('file-input-replace-scene').click()">🖼️ Cambia Foto Stanza Corrente</button>
+        <input type="file" id="file-input-replace-scene" accept="image/*" style="display:none;" onchange="replaceCurrentSceneImage(event)">
+
+        <button class="btn-action btn-json" onclick="saveTourJSON()">💾 Salva JSON Progetto</button>
+        <button class="btn-action btn-json" onclick="document.getElementById('file-input-json').click()">📥 Carica JSON Progetto</button>
+        <input type="file" id="file-input-json" accept=".json" style="display:none;" onchange="loadTourJSON(event)">
+
+        <button class="btn-action btn-export" onclick="exportHTML()">🌐 Esporta HTML Finale (Solo Lettura)</button>
+    </div>
+
+    <!-- Indicazioni Comandi Editor -->
+    <div class="instruction-banner">
+        🖱️ <strong>Tasto Destro:</strong> Crea o Modifica un Pulsante<br>
+        👈 <strong>Tasto Sinistro:</strong> Clicca sul pulsante per eseguire l'azione
+    </div>
+
+    <!-- Visore 360° -->
+    <div id="panorama"></div>
+
+    <!-- Carousel Icone in Basso -->
+    <div class="thumb-carousel-container">
+        <div class="thumb-carousel-title">Scorrimento Foto 360°</div>
+        <div class="thumb-strip" id="thumb-strip"></div>
+    </div>
+
+    <!-- Modal Finestra di Dialogo -->
+    <div id="modal" class="modal-overlay">
+        <div class="modal-card" id="modal-content"></div>
+    </div>
+
+    <!-- COMPONENTE AVATAR IN BASSO A DESTRA -->
+    <div class="avatar-free-container">
+        <div class="avatar-chat-window" id="chat-window">
+            <div class="chat-header">
+                <span>🤖 Guida Teoria del Caos</span>
+                <button onclick="toggleChat()" style="background:none; border:none; color:#fff; cursor:pointer; font-size: 1rem;">✖</button>
+            </div>
+            
+            <div class="chat-messages" id="chat-messages">
+                <div class="msg ai-msg">
+                    Ciao! Sono la tua guida interattiva sulla Teoria del Caos. Puoi chiedermi del determinismo, dell'effetto farfalla, del circuito di Chua, degli attrattori o della geometria frattale. Come posso aiutarti?
+                </div>
+            </div>
+
+            <div class="chat-input-area">
+                <input type="text" id="user-input" placeholder="Chiedi di Lorenz, Chua, Feigenbaum..." onkeypress="handleKeyPress(event)">
+                <button class="btn-chat" onclick="sendMessage()">Invia</button>
+                <button class="btn-chat btn-mic" id="mic-btn" onclick="toggleVoiceRecognition()" title="Parla al microfono">🎙️</button>
+            </div>
+        </div>
+        
+        <div class="avatar-trigger-wrapper">
+            <div class="avatar-trigger" onclick="toggleChat()">
+                <img id="avatar-img" src="https://cdn-icons-png.flaticon.com/512/4140/4140048.png" alt="Guida Teoria del Caos">
+            </div>
+            <button class="btn-change-avatar" onclick="document.getElementById('avatar-file-input').click()" title="Cambia immagine dell'avatar">📷</button>
+            <input type="file" id="avatar-file-input" accept="image/*" style="display: none;" onchange="changeAvatarImage(event)">
+        </div>
+    </div>
+
+    <script>
+        let viewer = null;
+        let scenes = {};
+        let activeSceneId = 'scene_1';
+        let sceneCounter = 1;
+        let activeHotspotId = null;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            scenes['scene_1'] = {
+                id: 'scene_1',
+                name: 'Foto 360° Stanza 1',
+                image: 'https://pannellum.org/images/alma.jpg',
+                hotspots: []
+            };
+            renderScene('scene_1');
+            setupRightClickContextMenu();
+        });
+
+        function renderScene(sceneId) {
+            activeSceneId = sceneId;
+            if (viewer) viewer.destroy();
+
+            viewer = pannellum.viewer('panorama', {
+                "type": "equirectangular",
+                "panorama": scenes[sceneId].image,
+                "autoLoad": true,
+                "showControls": true
+            });
+
+            viewer.on('load', () => rebuildHotspots());
+            updateThumbnailBar();
+        }
+
+        function setupRightClickContextMenu() {
+            const panoDiv = document.getElementById('panorama');
+            
+            panoDiv.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                if (!viewer) return;
+
+                const coords = viewer.mouseEventToCoords(e);
+                if (!coords) return;
+
+                const targetMarker = e.target.closest('.custom-marker');
+                if (targetMarker && targetMarker.dataset.id) {
+                    openHotspotEditor(null, null, targetMarker.dataset.id);
+                } else {
+                    openHotspotEditor(coords[0], coords[1]);
+                }
+            });
+        }
+
+        function updateThumbnailBar() {
+            const strip = document.getElementById('thumb-strip');
+            strip.innerHTML = '';
+            Object.values(scenes).forEach(s => {
+                const item = document.createElement('div');
+                item.className = `thumb-item ${s.id === activeSceneId ? 'active' : ''}`;
+                item.onclick = () => renderScene(s.id);
+                item.innerHTML = `<img src="${s.image}"><span>${s.name}</span>`;
+                strip.appendChild(item);
+            });
+        }
+
+        /* --- AGGIUNTA E SOSTITUZIONE FOTO 360° --- */
+        function addNewSceneFromFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                sceneCounter++;
+                const newId = 'scene_' + sceneCounter;
+                scenes[newId] = { id: newId, name: `Foto 360° (${sceneCounter})`, image: e.target.result, hotspots: [] };
+                renderScene(newId);
+            };
+            reader.readAsDataURL(file);
+            event.target.value = '';
+        }
+
+        function replaceCurrentSceneImage(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                scenes[activeSceneId].image = e.target.result;
+                renderScene(activeSceneId);
+            };
+            reader.readAsDataURL(file);
+            event.target.value = '';
+        }
+
+        /* --- GESTIONE SALVATAGGIO / CARICAMENTO JSON --- */
+        function saveTourJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(scenes, null, 2));
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", "progetto_tour_360.json");
+            dlAnchor.click();
+        }
+
+        function loadTourJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const loadedScenes = JSON.parse(e.target.result);
+                    if (typeof loadedScenes === 'object' && Object.keys(loadedScenes).length > 0) {
+                        scenes = loadedScenes;
+                        const keys = Object.keys(scenes);
+                        sceneCounter = keys.length;
+                        renderScene(keys[0]);
+                        alert("Progetto JSON caricato con successo!");
+                    } else {
+                        alert("Formato file JSON non valido.");
+                    }
+                } catch (err) {
+                    alert("Errore durante la lettura del file JSON.");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        /* --- EDITOR PULSANTI --- */
+        function openHotspotEditor(pitch, yaw, existingId = null) {
+            activeHotspotId = existingId || 'hs_' + Date.now();
+            const hs = existingId 
+                ? scenes[activeSceneId].hotspots.find(h => h.id === existingId) 
+                : { pitch, yaw, type: 'door', displayStyle: 'icon', iconSymbol: '🚪', labelText: 'Vai a...' };
+
+            let sceneOptions = Object.values(scenes)
+                .map(s => `<option value="${s.id}" ${hs.targetSceneId === s.id ? 'selected' : ''}>${s.name}</option>`).join('');
+
+            document.getElementById('modal-content').innerHTML = `
+                <div class="modal-header">
+                    <h3>⚙️ Configura Pulsante 360°</h3>
+                    <button class="close-btn" onclick="closeModal()">&times;</button>
+                </div>
+                
+                <div class="form-group">
+                    <label>Azione del Pulsante (Tasto Sinistro)</label>
+                    <select id="edit-type" onchange="toggleTypeFields()">
+                        <option value="door" ${hs.type === 'door' ? 'selected' : ''}>🚪 Passa ad un'altra Foto 360°</option>
+                        <option value="resource" ${hs.type === 'resource' ? 'selected' : ''}>🔗 Apri Risorsa (Video, Foto, Link, Info)</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="background: rgba(56, 189, 248, 0.1); padding: 10px; border-radius: 8px; border: 1px solid #0284c7;">
+                    <label style="color: #38bdf8;">Aspetto Visivo del Pulsante sulla Foto</label>
+                    <select id="edit-display-style" onchange="toggleDisplayStyleFields()">
+                        <option value="icon" ${hs.displayStyle === 'icon' ? 'selected' : ''}>🎨 Icona (Simbolo)</option>
+                        <option value="text" ${hs.displayStyle === 'text' ? 'selected' : ''}>🏷️ Etichetta di Testo</option>
+                    </select>
+
+                    <div id="group-style-icon" class="form-group" style="margin-top: 8px;">
+                        <label>Scegli Icona</label>
+                        <select id="edit-icon-symbol">
+                            <option value="🚪" ${hs.iconSymbol === '🚪' ? 'selected' : ''}>🚪 Porta / Passaggio</option>
+                            <option value="🔗" ${hs.iconSymbol === '🔗' ? 'selected' : ''}>🔗 Link / Collegamento</option>
+                            <option value="ℹ️" ${hs.iconSymbol === 'ℹ️' ? 'selected' : ''}>ℹ️ Informazioni</option>
+                            <option value="🎥" ${hs.iconSymbol === '🎥' ? 'selected' : ''}>🎥 Video</option>
+                            <option value="📷" ${hs.iconSymbol === '📷' ? 'selected' : ''}>📷 Foto / Immagine</option>
+                            <option value="⭐" ${hs.iconSymbol === '⭐' ? 'selected' : ''}>⭐ Evidenza</option>
+                            <option value="📍" ${hs.iconSymbol === '📍' ? 'selected' : ''}>📍 Punto Mappa</option>
+                        </select>
+                    </div>
+
+                    <div id="group-style-text" class="form-group" style="margin-top: 8px; display: none;">
+                        <label>Testo del Pulsante</label>
+                        <input type="text" id="edit-label-text" placeholder="Es. Entra in Salotto / Guarda Video" value="${hs.labelText || ''}">
+                    </div>
+                </div>
+
+                <div class="form-group" id="group-door">
+                    <label>Seleziona Foto 360° di Destinazione</label>
+                    <select id="edit-target">${sceneOptions}</select>
+                </div>
+
+                <div id="group-resource" style="display:none; flex-direction:column; gap:10px;">
+                    <div class="form-group">
+                        <label>Titolo del Punto d'Interesse</label>
+                        <input type="text" id="edit-title" placeholder="Es. Dettaglio Quadro" value="${hs.title || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label>Descrizione / Testo Informativo</label>
+                        <textarea id="edit-text" placeholder="Inserisci una spiegazione...">${hs.text || ''}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>URL Immagine / Foto Integrata</label>
+                        <input type="text" id="edit-img" placeholder="https://sito.com/immagine.jpg" value="${hs.image || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label>URL Video YouTube</label>
+                        <input type="text" id="edit-video" placeholder="https://www.youtube.com/watch?v=..." value="${hs.video || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label>URL Link Web Esterno</label>
+                        <input type="text" id="edit-link" placeholder="https://sitoesterno.com" value="${hs.link || ''}">
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; margin-top:10px;">
+                    <button class="btn-action" style="background:#ef4444;" onclick="deleteHotspot('${activeHotspotId}')">Elimina Pulsante</button>
+                    <button class="btn-action" onclick="saveHotspot(${hs.pitch}, ${hs.yaw})">Salva Pulsante</button>
+                </div>
+            `;
+            
+            toggleTypeFields();
+            toggleDisplayStyleFields();
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function toggleDisplayStyleFields() {
+            const isText = document.getElementById('edit-display-style').value === 'text';
+            document.getElementById('group-style-icon').style.display = isText ? 'none' : 'flex';
+            document.getElementById('group-style-text').style.display = isText ? 'flex' : 'none';
+        }
+
+        function toggleTypeFields() {
+            const isDoor = document.getElementById('edit-type').value === 'door';
+            document.getElementById('group-door').style.display = isDoor ? 'flex' : 'none';
+            document.getElementById('group-resource').style.display = isDoor ? 'none' : 'flex';
+        }
+
+        function saveHotspot(pitch, yaw) {
+            const type = document.getElementById('edit-type').value;
+            const displayStyle = document.getElementById('edit-display-style').value;
+            const iconSymbol = document.getElementById('edit-icon-symbol').value;
+            const labelText = document.getElementById('edit-label-text').value;
+
+            const hsData = {
+                id: activeHotspotId, pitch, yaw, type, displayStyle, iconSymbol, labelText,
+                targetSceneId: document.getElementById('edit-target') ? document.getElementById('edit-target').value : '',
+                title: document.getElementById('edit-title') ? document.getElementById('edit-title').value : '',
+                text: document.getElementById('edit-text') ? document.getElementById('edit-text').value : '',
+                image: document.getElementById('edit-img') ? document.getElementById('edit-img').value : '',
+                video: document.getElementById('edit-video') ? document.getElementById('edit-video').value : '',
+                link: document.getElementById('edit-link') ? document.getElementById('edit-link').value : ''
+            };
+
+            const list = scenes[activeSceneId].hotspots;
+            const idx = list.findIndex(h => h.id === activeHotspotId);
+            if (idx >= 0) list[idx] = hsData; else list.push(hsData);
+
+            closeModal();
+            rebuildHotspots();
+        }
+
+        function deleteHotspot(id) {
+            scenes[activeSceneId].hotspots = scenes[activeSceneId].hotspots.filter(h => h.id !== id);
+            closeModal();
+            rebuildHotspots();
+        }
+
+        function rebuildHotspots() {
+            scenes[activeSceneId].hotspots.forEach(hs => {
+                try { viewer.removeHotSpot(hs.id); } catch(e){}
+                viewer.addHotSpot({
+                    id: hs.id, pitch: hs.pitch, yaw: hs.yaw,
+                    cssClass: 'custom-hotspot-container',
+                    createTooltipFunc: (div) => {
+                        div.classList.add('custom-marker', hs.type === 'door' ? 'marker-door' : 'marker-resource');
+                        div.dataset.id = hs.id;
+
+                        if (hs.displayStyle === 'text') {
+                            div.classList.add('text-marker');
+                            div.innerText = hs.labelText || (hs.type === 'door' ? 'Vai qui' : 'Dettagli');
+                        } else {
+                            div.classList.remove('text-marker');
+                            div.innerText = hs.iconSymbol || (hs.type === 'door' ? '🚪' : '🔗');
+                        }
+                    },
+                    clickHandlerFunc: () => {
+                        if (hs.type === 'door' && hs.targetSceneId) {
+                            renderScene(hs.targetSceneId);
+                        } else {
+                            openResourceViewerModal(hs);
+                        }
+                    }
+                });
+            });
+        }
+
+        function openResourceViewerModal(hs) {
+            let mediaContent = '';
+            if (hs.image) mediaContent += `<div class="media-box"><img src="${hs.image}"></div>`;
+            if (hs.video) {
+                const regExp = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+                const match = hs.video.match(regExp);
+                if (match) mediaContent += `<div class="media-box"><iframe src="https://www.youtube-nocookie.com/embed/${match[1]}" allowfullscreen></iframe></div>`;
+            }
+            if (hs.link) mediaContent += `<div style="margin-top:10px;"><a href="${hs.link}" target="_blank" class="btn-link-ext">🌐 Visita Link Esterno</a></div>`;
+
+            document.getElementById('modal-content').innerHTML = `
+                <div class="modal-header">
+                    <h3>${hs.title || 'Punto d\'Interesse'}</h3>
+                    <button class="close-btn" onclick="closeModal()">&times;</button>
+                </div>
+                <div style="font-size:0.95rem; line-height:1.5; color:#cbd5e1;">${hs.text || ''}</div>
+                ${mediaContent}
+                <div style="text-align:right; margin-top:10px;">
+                    <button class="btn-action" style="background:#334155;" onclick="openHotspotEditor(null, null, '${hs.id}')">✏️ Modifica Pulsante</button>
+                </div>
+            `;
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function closeModal() { document.getElementById('modal').classList.remove('active'); }
+
+        /* --- LOGICA FUNZIONALE AVATAR ASSISTANT --- */
+        function changeAvatarImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('avatar-img').src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        const fallbackResponses = [
+            "Non ho trovato una risposta precisa nel database. Prova a farmi una domanda sull'effetto farfalla, sull'attrattore di Lorenz o sul meccanicismo.",
+            "Non sono sicuro di aver compreso. Che ne dici di chiedermi informazioni sul circuito di Chua, sul doppio scroll o sulle biforcazioni?",
+            "Questa richiesta non trova un riscontro diretto. Puoi provare a domandarmi qualcosa su Benoît Mandelbrot, sulla costante di Feigenbaum o sui frattali.",
+            "Non riesco a trovare informazioni su questo argomento. Prova a chiedermi del determinismo di Laplace, delle equazioni differenziali o della termodinamica.",
+            "Il termine cercato non è presente nel mio archivio. Prova a riformulare la domanda usando argomenti come automi cellulari, sistemi complessi o econofisica.",
+            "Non ho trovato corrispondenze esatte. Ti andrebbe di approfondire la farfalla di Lorenz, l'analisi numerica o lo spazio delle fasi?"
+        ];
+
+        function findBestAnswer(userInput) {
+            const text = userInput.toLowerCase();
+            if (typeof chaosTheoryDatabase === 'undefined' || !Array.isArray(chaosTheoryDatabase)) {
+                return "Attenzione: non è stato possibile caricare il file 1000_domande_caos.js. Assicurati che si trovi nella stessa cartella del progetto.";
+            }
+
+            let bestMatch = null;
+            let maxScore = 0;
+
+            chaosTheoryDatabase.forEach(item => {
+                let score = 0;
+                if (Array.isArray(item.keywords)) {
+                    item.keywords.forEach(kw => {
+                        if (text.includes(kw.toLowerCase())) score += 1;
+                    });
+                }
+                if (score > maxScore) {
+                    maxScore = score;
+                    bestMatch = item;
+                }
+            });
+
+            if (!bestMatch || maxScore === 0) {
+                const randomIndex = Math.floor(Math.random() * fallbackResponses.length);
+                return fallbackResponses[randomIndex];
+            }
+
+            let response = bestMatch.answer;
+            if (bestMatch.url) {
+                response += `<br><br><small>🔗 <a href="${bestMatch.url}" target="_blank" style="color: #38bdf8; text-decoration: underline;">Approfondisci la voce su Treccani</a></small>`;
+            }
+            return response;
+        }
+
+        function toggleChat() {
+            document.getElementById('chat-window').classList.toggle('active');
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') sendMessage();
+        }
+
+        function sendMessage(customText = null) {
+            const input = document.getElementById('user-input');
+            const text = customText || input.value.trim();
+            if (!text) return;
+
+            appendMessage(text, 'user-msg');
+            if (!customText) input.value = '';
+
+            const answer = findBestAnswer(text);
+            
+            setTimeout(() => {
+                appendMessage(answer, 'ai-msg');
+                speakText(answer);
+            }, 250);
+        }
+
+        function appendMessage(text, className) {
+            const container = document.getElementById('chat-messages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `msg ${className}`;
+            msgDiv.innerHTML = text;
+            container.appendChild(msgDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const plainText = text.replace(/<[^>]*>/g, '');
+                const utterance = new SpeechSynthesisUtterance(plainText);
+                utterance.lang = 'it-IT';
+                utterance.rate = 1.0;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        let recognition = null;
+        let isRecording = false;
+
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'it-IT';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                toggleMicState(false);
+                sendMessage(transcript);
+            };
+
+            recognition.onerror = () => toggleMicState(false);
+            recognition.onend = () => toggleMicState(false);
+        }
+
+        function toggleVoiceRecognition() {
+            if (!recognition) {
+                alert("Il tuo browser non supporta la ricerca vocale. Usa Google Chrome o Microsoft Edge.");
+                return;
+            }
+            if (isRecording) {
+                recognition.stop();
+                toggleMicState(false);
+            } else {
+                recognition.start();
+                toggleMicState(true);
+            }
+        }
+
+        function toggleMicState(recording) {
+            isRecording = recording;
+            const btn = document.getElementById('mic-btn');
+            if (recording) {
+                btn.classList.add('recording');
+                btn.innerText = '🔴';
+            } else {
+                btn.classList.remove('recording');
+                btn.innerText = '🎙️';
+            }
+        }
+
+        /* --- ESPORTAZIONE FILE HTML IN SOLA LETTURA INCLUSO L'AVATAR --- */
+        function exportHTML() {
+            const avatarImgSrc = document.getElementById('avatar-img').src;
+
+            const standaloneHTML = `<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tour Virtuale 360° con Avatar Assistant</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"><\/script>
+    <script src="1000_domande_caos.js"><\/script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body, html { width: 100%; height: 100%; overflow: hidden; font-family: system-ui, -apple-system, sans-serif; background: #020617; color: #fff; }
+        #panorama { width: 100vw; height: 100vh; }
+        
+        .thumb-carousel-container {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 20; max-width: 80vw; background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px); padding: 10px 16px; border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.2); box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+            display: flex; flex-direction: column; gap: 6px; align-items: center;
+        }
+        .thumb-carousel-title { font-size: 0.72rem; color: #94a3b8; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em; }
+        .thumb-strip { display: flex; gap: 10px; overflow-x: auto; max-width: 100%; padding: 4px 2px; }
+        .thumb-strip::-webkit-scrollbar { height: 5px; }
+        .thumb-strip::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        
+        .thumb-item {
+            position: relative; flex: 0 0 auto; width: 100px; height: 60px; border-radius: 8px;
+            overflow: hidden; cursor: pointer; border: 2px solid transparent; transition: all 0.2s;
+        }
+        .thumb-item img { width: 100%; height: 100%; object-fit: cover; }
+        .thumb-item span {
+            position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.75);
+            font-size: 0.68rem; text-align: center; padding: 2px 4px; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;
+        }
+        .thumb-item.active { border-color: #38bdf8; transform: scale(1.05); box-shadow: 0 0 12px rgba(56, 189, 248, 0.6); }
+
+        .pnm-hotspot.custom-hotspot-container { width: 0 !important; height: 0 !important; }
+        .custom-marker {
+            position: absolute; transform: translate(-50%, -50%);
+            min-width: 44px; height: 44px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.25rem; cursor: pointer; border: 2.5px solid #ffffff;
+            box-shadow: 0 0 15px rgba(0,0,0,0.8), 0 0 10px rgba(56, 189, 248, 0.8);
+            transition: transform 0.2s, background 0.2s; animation: pulse 2s infinite; pointer-events: auto;
+            color: #fff; font-weight: 600; padding: 0 8px;
+        }
+        .custom-marker.text-marker {
+            width: auto !important; height: auto !important;
+            padding: 8px 16px !important; border-radius: 20px !important;
+            font-size: 0.85rem !important; white-space: nowrap !important;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.8); }
+            70% { box-shadow: 0 0 0 12px rgba(255, 255, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+        }
+        .custom-marker:hover { transform: translate(-50%, -50%) scale(1.18); z-index: 100; animation: none; }
+        .marker-door { background: linear-gradient(135deg, #10b981, #047857); }
+        .marker-resource { background: linear-gradient(135deg, #0284c7, #0369a1); }
+
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(6px);
+            display: flex; align-items: center; justify-content: center; z-index: 1000;
+            opacity: 0; pointer-events: none; transition: opacity 0.25s;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-card {
+            background: #1e293b; border: 1px solid #334155; width: 92%; max-width: 620px;
+            max-height: 90vh; border-radius: 14px; padding: 22px; overflow-y: auto;
+            display: flex; flex-direction: column; gap: 14px;
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+        .modal-header h3 { font-size: 1.15rem; color: #38bdf8; }
+        .close-btn { background: none; border: none; color: #94a3b8; font-size: 1.8rem; cursor: pointer; }
+        .media-box { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+        .media-box img, .media-box iframe { width: 100%; max-height: 350px; border-radius: 8px; border: 1px solid #334155; background: #000; }
+        .btn-link-ext {
+            display: inline-block; padding: 10px; background: #0284c7; color: #fff; text-decoration: none;
+            border-radius: 6px; text-align: center; font-weight: 600; font-size: 0.9rem;
+        }
+        .btn-link-ext:hover { background: #0369a1; }
+
+        .avatar-free-container { 
+            position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; 
+            flex-direction: column; align-items: flex-end; gap: 10px; font-family: system-ui, -apple-system, sans-serif;
+        }
+        .avatar-trigger img { 
+            width: 70px; height: 70px; border-radius: 50%; border: 3px solid #38bdf8; 
+            background: #0f172a; cursor: pointer; object-fit: cover; box-shadow: 0 4px 15px rgba(0,0,0,0.5); 
+        }
+        .avatar-chat-window { 
+            width: 360px; height: 460px; background: rgba(15, 23, 42, 0.95); 
+            border: 1px solid #334155; border-radius: 12px; display: none; 
+            flex-direction: column; overflow: hidden; backdrop-filter: blur(8px); box-shadow: 0 10px 25px rgba(0,0,0,0.5); 
+        }
+        .avatar-chat-window.active { display: flex; }
+        .chat-header { background: #1e293b; padding: 12px 14px; font-weight: bold; color: #38bdf8; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; }
+        .chat-messages { flex: 1; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; font-size: 0.88rem; }
+        .msg { padding: 10px 12px; border-radius: 8px; max-width: 85%; line-height: 1.45; word-wrap: break-word; }
+        .ai-msg { background: #1e293b; color: #f8fafc; align-self: flex-start; border: 1px solid #334155; }
+        .user-msg { background: #0284c7; color: #fff; align-self: flex-end; }
+        .chat-input-area { display: flex; padding: 10px; background: #0f172a; border-top: 1px solid #334155; gap: 6px; }
+        .chat-input-area input { flex: 1; background: #1e293b; border: 1px solid #334155; color: #fff; padding: 8px 10px; border-radius: 6px; font-size: 0.85rem; outline: none; }
+        .btn-chat { background: #0284c7; border: none; color: #fff; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .btn-mic { background: #059669; }
+        .btn-mic.recording { background: #ef4444; animation: pulse-mic 1s infinite; }
+        @keyframes pulse-mic { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+    <div id="panorama"></div>
+    
+    <div class="thumb-carousel-container">
+        <div class="thumb-carousel-title">Scorrimento Foto 360°</div>
+        <div class="thumb-strip" id="thumb-strip"></div>
+    </div>
+    
+    <div id="modal" class="modal-overlay">
+        <div class="modal-card" id="modal-content"></div>
+    </div>
+
+    <div class="avatar-free-container">
+        <div class="avatar-chat-window" id="chat-window">
+            <div class="chat-header">
+                <span>🤖 Guida Teoria del Caos</span>
+                <button onclick="toggleChat()" style="background:none; border:none; color:#fff; cursor:pointer; font-size: 1rem;">✖</button>
+            </div>
+            <div class="chat-messages" id="chat-messages">
+                <div class="msg ai-msg">
+                    Ciao! Sono la tua guida interattiva sulla Teoria del Caos. Puoi chiedermi del determinismo, dell'effetto farfalla, del circuito di Chua, degli attrattori o della geometria frattale. Come posso aiutarti?
+                </div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="user-input" placeholder="Chiedi di Lorenz, Chua, Feigenbaum..." onkeypress="handleKeyPress(event)">
+                <button class="btn-chat" onclick="sendMessage()">Invia</button>
+                <button class="btn-chat btn-mic" id="mic-btn" onclick="toggleVoiceRecognition()" title="Parla al microfono">🎙️</button>
+            </div>
+        </div>
+        <div class="avatar-trigger-wrapper">
+            <div class="avatar-trigger" onclick="toggleChat()">
+                <img id="avatar-img" src="${avatarImgSrc}" alt="Guida Teoria del Caos">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const scenes = ${JSON.stringify(scenes)};
+        let activeSceneId = '${activeSceneId}', viewer = null;
+
+        function renderScene(sceneId) {
+            activeSceneId = sceneId;
+            if (viewer) viewer.destroy();
+
+            viewer = pannellum.viewer('panorama', {
+                "type": "equirectangular",
+                "panorama": scenes[sceneId].image,
+                "autoLoad": true,
+                "showControls": true
+            });
+
+            viewer.on('load', () => rebuildHotspots());
+            updateThumbnailBar();
+        }
+
+        function updateThumbnailBar() {
+            const strip = document.getElementById('thumb-strip');
+            strip.innerHTML = '';
+            Object.values(scenes).forEach(s => {
+                const item = document.createElement('div');
+                item.className = \`thumb-item \${s.id === activeSceneId ? 'active' : ''}\`;
+                item.onclick = () => renderScene(s.id);
+                item.innerHTML = \`<img src="\${s.image}"><span>\${s.name}</span>\`;
+                strip.appendChild(item);
+            });
+        }
+
+        function rebuildHotspots() {
+            scenes[activeSceneId].hotspots.forEach(hs => {
+                try { viewer.removeHotSpot(hs.id); } catch(e){}
+                viewer.addHotSpot({
+                    id: hs.id, pitch: hs.pitch, yaw: hs.yaw,
+                    cssClass: 'custom-hotspot-container',
+                    createTooltipFunc: (div) => {
+                        div.classList.add('custom-marker', hs.type === 'door' ? 'marker-door' : 'marker-resource');
+                        if (hs.displayStyle === 'text') {
+                            div.classList.add('text-marker');
+                            div.innerText = hs.labelText || (hs.type === 'door' ? 'Vai qui' : 'Dettagli');
+                        } else {
+                            div.classList.remove('text-marker');
+                            div.innerText = hs.iconSymbol || (hs.type === 'door' ? '🚪' : '🔗');
+                        }
+                    },
+                    clickHandlerFunc: () => {
+                        if (hs.type === 'door' && hs.targetSceneId) {
+                            renderScene(hs.targetSceneId);
+                        } else {
+                            openResourceViewerModal(hs);
+                        }
+                    }
+                });
+            });
+        }
+
+        function openResourceViewerModal(hs) {
+            let mediaContent = '';
+            if (hs.image) mediaContent += \`<div class="media-box"><img src="\${hs.image}"></div>\`;
+            if (hs.video) {
+                const regExp = /(?:youtube\\.com\\/(?:[^\\/]+\\/.+\\/|(?:v|e(?:mbed)?)\\/|.*[?&]v=)|youtu\\.be\\/)([^"&?\\/\\s]{11})/;
+                const match = hs.video.match(regExp);
+                if (match) mediaContent += \`<div class="media-box"><iframe src="https://www.youtube-nocookie.com/embed/\${match[1]}" allowfullscreen></iframe></div>\`;
+            }
+            if (hs.link) mediaContent += \`<div style="margin-top:10px;"><a href="\${hs.link}" target="_blank" class="btn-link-ext">🌐 Visita Link Esterno</a></div>\`;
+
+            document.getElementById('modal-content').innerHTML = \`
+                <div class="modal-header">
+                    <h3>\${hs.title || 'Punto d\\'Interesse'}</h3>
+                    <button class="close-btn" onclick="closeModal()">&times;</button>
+                </div>
+                <div style="font-size:0.95rem; line-height:1.5; color:#cbd5e1;">\${hs.text || ''}</div>
+                \${mediaContent}
+            \`;
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function closeModal() { document.getElementById('modal').classList.remove('active'); }
+
+        const fallbackResponses = [
+            "Non ho trovato una risposta precisa nel database. Prova a farmi una domanda sull'effetto farfalla, sull'attrattore di Lorenz o sul meccanicismo.",
+            "Non sono sicuro di aver compreso. Che ne dici di chiedermi informazioni sul circuito di Chua, sul doppio scroll o sulle biforcazioni?",
+            "Questa richiesta non trova un riscontro diretto. Puoi provare a domandarmi qualcosa su Benoît Mandelbrot, sulla costante di Feigenbaum o sui frattali."
+        ];
+
+        function findBestAnswer(userInput) {
+            const text = userInput.toLowerCase();
+            if (typeof chaosTheoryDatabase === 'undefined' || !Array.isArray(chaosTheoryDatabase)) {
+                return "Attenzione: non è stato possibile caricare la base dati del caos.";
+            }
+
+            let bestMatch = null, maxScore = 0;
+            chaosTheoryDatabase.forEach(item => {
+                let score = 0;
+                if (Array.isArray(item.keywords)) {
+                    item.keywords.forEach(kw => { if (text.includes(kw.toLowerCase())) score += 1; });
+                }
+                if (score > maxScore) { maxScore = score; bestMatch = item; }
+            });
+
+            if (!bestMatch || maxScore === 0) return fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
+
+            let response = bestMatch.answer;
+            if (bestMatch.url) response += \`<br><br><small>🔗 <a href="\${bestMatch.url}" target="_blank" style="color: #38bdf8; text-decoration: underline;">Approfondisci la voce su Treccani</a></small>\`;
+            return response;
+        }
+
+        function toggleChat() { document.getElementById('chat-window').classList.toggle('active'); }
+        function handleKeyPress(e) { if (e.key === 'Enter') sendMessage(); }
+        function sendMessage(customText = null) {
+            const input = document.getElementById('user-input');
+            const text = customText || input.value.trim();
+            if (!text) return;
+            appendMessage(text, 'user-msg');
+            if (!customText) input.value = '';
+            const answer = findBestAnswer(text);
+            setTimeout(() => { appendMessage(answer, 'ai-msg'); speakText(answer); }, 250);
+        }
+        function appendMessage(text, className) {
+            const container = document.getElementById('chat-messages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = \`msg \${className}\`;
+            msgDiv.innerHTML = text;
+            container.appendChild(msgDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text.replace(/<[^>]*>/g, ''));
+                utterance.lang = 'it-IT';
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        let recognition = null, isRecording = false;
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'it-IT';
+            recognition.onresult = (event) => { toggleMicState(false); sendMessage(event.results[0][0].transcript); };
+            recognition.onerror = () => toggleMicState(false);
+            recognition.onend = () => toggleMicState(false);
+        }
+
+        function toggleVoiceRecognition() {
+            if (!recognition) return alert("Sintesi vocale non supportata da questo browser.");
+            if (isRecording) { recognition.stop(); toggleMicState(false); }
+            else { recognition.start(); toggleMicState(true); }
+        }
+
+        function toggleMicState(recording) {
+            isRecording = recording;
+            const btn = document.getElementById('mic-btn');
+            if (recording) { btn.classList.add('recording'); btn.innerText = '🔴'; }
+            else { btn.classList.remove('recording'); btn.innerText = '🎙️'; }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => renderScene(activeSceneId));
+    <\/script>
+</body>
+</html>`;
+
+            const blob = new Blob([standaloneHTML], { type: 'text/html' });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+            a.download = 'tour_virtuale_360_con_avatar.html'; a.click();
+        }
+    </script>
+</body>
+</html>
