@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Territorio 3D - Mappa Mossa</title>
+    
+    <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+    <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body, html { width: 100%; height: 100%; overflow: hidden; font-family: system-ui, -apple-system, sans-serif; background-color: #000; color: #fff; }
+        #map { width: 100vw; height: 100vh; }
+
+        .custom-marker {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white; width: 34px; height: 34px; border-radius: 50%;
+            border: 2px solid #ffffff; display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            cursor: pointer; transition: transform 0.2s;
+        }
+        .custom-marker.first-marker { background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important; }
+        .custom-marker:hover { transform: scale(1.2); }
+
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(6px);
+            display: flex; align-items: center; justify-content: center; z-index: 100;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-card {
+            background: #1e293b; border: 1px solid #334155; width: 92%; max-width: 900px;
+            max-height: 90vh; border-radius: 14px; padding: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8); overflow-y: auto;
+            display: flex; flex-direction: column; gap: 14px;
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 12px; }
+        .modal-header h3 { font-size: 1.25rem; color: #38bdf8; }
+        .header-actions { display: flex; gap: 10px; align-items: center; }
+        
+        .btn-action {
+            background: #0284c7; color: #fff; border: none; padding: 8px 14px;
+            border-radius: 6px; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+            transition: background 0.2s;
+        }
+        .btn-action:hover { background: #0369a1; }
+        .btn-action.btn-cancel { background: #64748b; }
+        .btn-action.btn-cancel:hover { background: #475569; }
+
+        .close-btn { background: none; border: none; color: #94a3b8; font-size: 1.8rem; cursor: pointer; line-height: 1; }
+        .close-btn:hover { color: #fff; }
+        
+        .coords-badge {
+            background: #0f172a; border: 1px solid #334155; padding: 8px 12px;
+            border-radius: 6px; font-size: 0.85rem; color: #38bdf8; display: inline-block;
+            margin-bottom: 12px;
+        }
+
+        .modal-body-text { font-size: 1rem; color: #cbd5e1; line-height: 1.6; white-space: pre-wrap; margin-bottom: 12px; }
+
+        .media-preview { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+        .media-preview img, .media-preview iframe, .media-preview video {
+            width: 100%; height: 450px; border-radius: 8px; object-fit: cover; border: 1px solid #334155; background: #000;
+        }
+        .media-preview img { height: auto; max-height: 450px; }
+
+        .btn-media-link {
+            display: block; padding: 12px 18px; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600; text-align: center; font-size: 0.95rem; margin-top: 4px;
+        }
+        .btn-video-link { background: #cc181e; }
+        .btn-video-link:hover { background: #b31217; }
+        .btn-external-link { background: #0284c7; }
+        .btn-external-link:hover { background: #0369a1; }
+
+        /* Form di Modifica */
+        .edit-form { display: none; flex-direction: column; gap: 12px; margin-top: 10px; }
+        .edit-form.active { display: flex; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-group label { font-size: 0.85rem; color: #94a3b8; font-weight: 600; }
+        .form-group input, .form-group textarea, .form-group select {
+            background: #0f172a; border: 1px solid #334155; color: #fff; padding: 10px;
+            border-radius: 6px; font-size: 0.95rem; font-family: inherit;
+        }
+        .form-group textarea { min-height: 100px; resize: vertical; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .btn-save { background: #22c55e; color: #fff; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn-save:hover { background: #16a34a; }
+    </style>
+</head>
+<body>
+
+    <div id="map"></div>
+
+    <div id="modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="view-title"></h3>
+                <div class="header-actions">
+                    <button class="btn-action" id="toggle-edit-btn" onclick="requestEditAccess()">✏️ Modifica</button>
+                    <button class="close-btn" onclick="closeModal()">&times;</button>
+                </div>
+            </div>
+            
+            <!-- Vista Lettura (Default Visitatore) -->
+            <div id="view-mode-content"></div>
+
+            <!-- Form di Modifica (Attivato dopo Password) -->
+            <form id="edit-form" class="edit-form" onsubmit="submitEdit(event)">
+                <input type="hidden" id="edit-number" name="marker_number">
+                
+                <div class="form-group">
+                    <label>Titolo Marcatore</label>
+                    <input type="text" id="edit-title" name="title" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Descrizione / Testo</label>
+                    <textarea id="edit-text" name="text"></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>URL Immagine</label>
+                        <input type="url" id="edit-image" name="image" placeholder="https://...">
+                    </div>
+                    <div class="form-group">
+                        <label>URL Video (YouTube / MP4)</label>
+                        <input type="url" id="edit-video" name="video" placeholder="https://...">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Modalità Video</label>
+                        <select id="edit-videoMode" name="videoMode">
+                            <option value="embed">Incorporato (Embed)</option>
+                            <option value="external">Link Esterno</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>URL Sito Web / Tour Virtuale</label>
+                        <input type="url" id="edit-webUrl" name="webUrl" placeholder="https://...">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Modalità Web</label>
+                    <select id="edit-webMode" name="webMode">
+                        <option value="external">Link Esterno</option>
+                        <option value="embed">Incorporato (Embed)</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn-save">💾 Salva & Invia Modifica</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const EDITOR_PASSWORD = "unical2026";
+        let isEditorAuthenticated = false;
+        let currentMarkerData = null;
+
+        const DATA = {
+  "initialView": {
+    "center": [
+      16.35,
+      38.9
+    ],
+    "zoom": 7.8,
+    "pitch": 25,
+    "bearing": 0
+  },
+  "markers": [
+    {
+      "number": 1,
+      "coords": [
+        16.35,
+        38.9
+      ],
+      "title": "Punto 1 - Centro della Calabria",
+      "text": "Punto di partenza posizionato al centro della Regione Calabria.",
+      "image": "",
+      "video": "",
+      "videoMode": "embed",
+      "webUrl": "",
+      "webMode": "external"
+    },
+    {
+      "number": 2,
+      "coords": [
+        16.2485,
+        39.2381
+      ],
+      "title": "Museo del Rame e dei Coperai - Dipignano",
+      "text": "Tour virtuale UDHA dedicato alla secolare tradizione dei coperai (calderai) e all'antica arte della lavorazione artigianale del rame.",
+      "image": "",
+      "video": "",
+      "videoMode": "embed",
+      "webUrl": "https://udha.unical.it/tours-virtuali/",
+      "webMode": "external"
+    },
+    {
+      "number": 3,
+      "coords": [
+        16.3688,
+        39.0118
+      ],
+      "title": "Museo della Carta e della Stampa Rubbettino - Soveria Mannelli",
+      "text": "Tour virtuale UDHA dello spazio museale e polo culturale integrato nello stabilimento della casa editrice Rubbettino.",
+      "image": "",
+      "video": "",
+      "videoMode": "embed",
+      "webUrl": "https://udha.unical.it/tours-virtuali/",
+      "webMode": "external"
+    },
+    {
+      "number": 4,
+      "coords": [
+        16.3665,
+        39.0102
+      ],
+      "title": "Lanificio Leo - Soveria Mannelli",
+      "text": "Tour virtuale UDHA della più antica fabbrica tessile della Calabria (1873), impresa culturale e museo d'impresa.",
+      "image": "",
+      "video": "",
+      "videoMode": "embed",
+      "webUrl": "https://udha.unical.it/tours-virtuali/",
+      "webMode": "external"
+    },
+    {
+      "number": 5,
+      "coords": [
+        15.6482,
+        38.1092
+      ],
+      "title": "Museo del Bergamotto - Reggio Calabria",
+      "text": "Tour virtuale UDHA dedicato alla storia, alla coltivazione e ai metodi di estrazione dell'olio essenziale di bergamotto.",
+      "image": "",
+      "video": "",
+      "videoMode": "embed",
+      "webUrl": "https://udha.unical.it/tours-virtuali/",
+      "webMode": "external"
+    },
+    {
+      "number": 6,
+      "coords": [
+        17.115,
+        39.102
+      ],
+      "title": "Azienda Sacco - Crotone",
+      "text": "Tour virtuale UDHA della sede dell'azienda Sacco a Crotone.",
+      "image": "",
+      "video": "",
+      "videoMode": "embed",
+      "webUrl": "https://udha.unical.it/tours-virtuali/",
+      "webMode": "external"
+    },
+    {
+      "number": 7,
+      "coords": [
+        15.8285,
+        38.6248
+      ],
+      "title": "MuRi - Museo del Mare (Santa Maria di Ricadi)",
+      "text": "Sezione del Museo Diffuso di Ricadi (UDHA) dedicata alla cultura marinara e alla pesca tradizionale.",
+      "image": "",
+      "video": "",
+      "videoMode": "embed",
+      "webUrl": "https://udha.unical.it/tours-virtuali/",
+      "webMode": "external"
+    },
+    {
+      "number": 8,
+      "coords": [
+        15.836,
+        38.628
+      ],
+      "title": "MuRi - Museo della Cipolla Rossa e Civiltà Contadina (San Nicolò)",
+      "text": "Sezione del MuRi (UDHA) dedicata alla Cipolla Rossa IGP e alla storia della vita contadina locale.",
+      "image": "",
+      "video": "",
+      "videoMode": "embed",
+      "webUrl": "https://udha.unical.it/tours-virtuali/",
+      "webMode": "external"
+    },
+    {
+      "number": 9,
+      "coords": [
+        15.8528,
+        38.6255
+      ],
+      "title": "MuRi - Museo Paleontologico e della Caccia (Ricadi)",
+      "text": "Sezione del MuRi (UDHA) con reperti fossili del Miocene e documentazione sulla fauna di Capo Vaticano.",
+      "image": "",
+      "video": "",
+      "videoMode": "embed",
+      "webUrl": "https://udha.unical.it/tours-virtuali/",
+      "webMode": "external"
+    },
+    {
+      "number": 10,
+      "coords": [
+        15.858,
+        38.62
+      ],
+      "title": "MuRi - Parco Archeologico e Torre Marrana (Brivadi)",
+      "text": "Sezione del MuRi (UDHA) con la torre di vedetta e le evidenze archeologiche del territorio di Ricadi.",
+      "image": "",
+      "video": "",
+      "videoMode": "embed",
+      "webUrl": "https://udha.unical.it/tours-virtuali/",
+      "webMode": "external"
+    },
+    {
+      "number": 11,
+      "coords": [
+        16.2333,
+        39.2415
+      ],
+      "title": "Museo del Rame di Tessano - Dipignano",
+      "text": "Tour virtuale UDHA della sezione di Tessano dedicata alla lavorazione artigianale del rame.",
+      "image": "",
+      "video": "",
+      "videoMode": "embed",
+      "webUrl": "https://udha.unical.it/tours-virtuali/",
+      "webMode": "external"
+    },
+    {
+      "number": 12,
+      "coords": [
+        16.2465,
+        39.237
+      ],
+      "title": "Ex Convento dei Cappuccini - Dipignano",
+      "text": "Tour virtuale UDHA dello storico complesso monastico risalente al XVI secolo.",
+      "image": "",
+      "video": "",
+      "videoMode": "embed",
+      "webUrl": "https://udha.unical.it/tours-virtuali/",
+      "webMode": "external"
+    },
+    {
+      "number": 13,
+      "coords": [
+        16.2389,
+        39.1417
+      ],
+      "title": "Comune di Grimaldi",
+      "text": "Tour virtuale UDHA del borgo della Valle del Savuto, tra centro storico e patrimonio naturalistico.",
+      "image": "",
+      "video": "",
+      "videoMode": "embed",
+      "webUrl": "https://udha.unical.it/tours-virtuali/",
+      "webMode": "external"
+    },
+    {
+      "number": 14,
+      "coords": [
+        16.2514,
+        39.1308
+      ],
+      "title": "Comune di Altilia",
+      "text": "Tour virtuale UDHA del territorio comunale di Altilia e del Ponte di Annibale sul Savuto.",
+      "image": "",
+      "video": "",
+      "videoMode": "embed",
+      "webUrl": "https://udha.unical.it/tours-virtuali/",
+      "webMode": "external"
+    },
+    {
+      "number": 15,
+      "coords": [
+        16.3117,
+        39.1333
+      ],
+      "title": "Comune di Scigliano",
+      "text": "Tour virtuale UDHA dello storico centro della Valle del Savuto diviso nei suoi rioni tradizionali.",
+      "image": "",
+      "video": "",
+      "videoMode": "embed",
+      "webUrl": "https://udha.unical.it/tours-virtuali/",
+      "webMode": "external"
+    },
+    {
+      "number": 16,
+      "coords": [
+        16.1603,
+        39.1172
+      ],
+      "title": "Castello Normanno-Svevo di Aiello Calabro",
+      "text": "Tour virtuale UDHA dei resti dell'imponente fortezza medievale sopra il borgo di Aiello.",
+      "image": "",
+      "video": "",
+      "videoMode": "embed",
+      "webUrl": "https://udha.unical.it/tours-virtuali/",
+      "webMode": "external"
+    },
+    {
+      "number": 17,
+      "coords": [
+        16.1539,
+        39.0822
+      ],
+      "title": "Castello di Cleto (Petramala)",
+      "text": "Tour virtuale UDHA della fortezza normanna abbarbicata sulla roccia di Cleto.",
+      "image": "",
+      "video": "",
+      "videoMode": "embed",
+      "webUrl": "https://udha.unical.it/tours-virtuali/",
+      "webMode": "external"
+    },
+    {
+      "number": 18,
+      "coords": [
+        16.1825,
+        39.0858
+      ],
+      "title": "Castello Savuto - Cleto",
+      "text": "Tour virtuale UDHA del castello del XIII secolo situato nella frazione Savuto.",
+      "image": "",
+      "video": "",
+      "videoMode": "embed",
+      "webUrl": "https://udha.unical.it/tours-virtuali/",
+      "webMode": "external"
+    },
+    {
+      "number": 19,
+      "coords": [
+        16.262,
+        39.2919
+      ],
+      "title": "Villa Rendano - Cosenza",
+      "text": "Tour virtuale UDHA della dimora storica dell'Ottocento sul Colle Triglio, sede di Consentia Itinera.",
+      "image": "",
+      "video": "",
+      "videoMode": "embed",
+      "webUrl": "https://udha.unical.it/tours-virtuali/",
+      "webMode": "external"
+    },
+    {
+      "number": 20,
+      "coords": [
+        16.2268,
+        39.3602
+      ],
+      "title": "Laboratorio LMSV (Cubo 17B) - Università della Calabria",
+      "text": "Tour virtuale del Laboratorio di Modellizzazione, Simulazione e Visualizzazione nel Campus UNICAL.",
+      "image": "",
+      "video": "",
+      "videoMode": "embed",
+      "webUrl": "https://udha.unical.it/tours-virtuali/",
+      "webMode": "external"
+    },
+    {
+      "number": 21,
+      "coords": [
+        16.2085,
+        39.5265
+      ],
+      "title": "GIAS Experience - Mongrassano",
+      "text": "Tour virtuale UDHA del polo museale ed esperienziale sulla storia e innovazione della surgelazione ortofrutticola.",
+      "image": "",
+      "video": "",
+      "videoMode": "embed",
+      "webUrl": "https://udha.unical.it/tours-virtuali/",
+      "webMode": "external"
+    },
+    {
+      "number": 22,
+      "coords": [
+        16.1965,
+        39.2625
+      ],
+      "title": "Museo della Seta - Mendicino",
+      "text": "Tour virtuale UDHA allestito nella storica Filanda Gaudio, dedicato alla tradizione della bachi-gelsicoltura e alla filatura della seta.",
+      "image": "",
+      "video": "",
+      "videoMode": "embed",
+      "webUrl": "https://udha.unical.it/tours-virtuali/",
+      "webMode": "external"
+    },
+    {
+      "number": 23,
+      "coords": [
+        16.4329,
+        39.5843
+      ],
+      "title": "Chiese di S. Maria di Costantinopoli e Madonna del Rosario - Vaccarizzo Albanese",
+      "text": "Tour virtuale UDHA dei luoghi di culto di rito bizantino a Vaccarizzo Albanese, ricchi di icone e testimonianze della tradizione arbëreshë.",
+      "image": "",
+      "video": "",
+      "videoMode": "embed",
+      "webUrl": "https://udha.unical.it/tours-virtuali/",
+      "webMode": "external"
+    },
+    {
+      "number": 24,
+      "coords": [
+        16.433,
+        39.584
+      ],
+      "title": "Museo del Costume e degli Ori Arbëreshë - Vaccarizzo Albanese",
+      "text": "Tour virtuale UDHA del museo allestito a Palazzo Cumano che conserva i costumi tradizionali e i preziosi ori della comunità arbëreshë.",
+      "image": "",
+      "video": "",
+      "videoMode": "embed",
+      "webUrl": "https://udha.unical.it/tours-virtuali/",
+      "webMode": "external"
+    },
+    {
+      "number": 25,
+      "coords": [
+        16.3125,
+        39.8318
+      ],
+      "title": "Chiesa di Santa Maria Assunta - Civita",
+      "text": "Tour virtuale UDHA della chiesa parrocchiale di rito italo-albanese (bizantino) situata nel borgo di Civita, famosa per la sua iconostasi.",
+      "image": "",
+      "video": "",
+      "videoMode": "embed",
+      "webUrl": "https://udha.unical.it/tours-virtuali/",
+      "webMode": "external"
+    },
+    {
+      "number": 26,
+      "coords": [
+        16.2649,
+        39.83515
+      ],
+      "title": "Chiesa di Santa Maria Assunta - Frascineto",
+      "text": "Tour virtuale UDHA della chiesa parrocchiale di rito bizantino a Frascineto, importante centro di cultura arbëreshë ai piedi del Pollino.",
+      "image": "",
+      "video": "",
+      "videoMode": "embed",
+      "webUrl": "https://udha.unical.it/tours-virtuali/",
+      "webMode": "external"
+    },
+    {
+      "number": 27,
+      "coords": [
+        16.2657,
+        39.8352
+      ],
+      "title": "Museo delle Icone - Frascineto",
+      "text": "Tour virtuale UDHA del Museo delle Icone e della Tradizione Bizantina che raccoglie un'ampia collezione di icone antiche e moderne.",
+      "image": "",
+      "video": "",
+      "videoMode": "embed",
+      "webUrl": "https://udha.unical.it/tours-virtuali/",
+      "webMode": "external"
+    },
+    {
+      "number": 28,
+      "coords": [
+        16.4207,
+        39.5839
+      ],
+      "title": "Santuario SS. Cosma e Damiano - San Cosmo Albanese",
+      "text": "Tour virtuale UDHA del santuario meta di pellegrinaggi situato nel comune arbëreshë di San Cosmo Albanese.",
+      "image": "",
+      "video": "",
+      "videoMode": "embed",
+      "webUrl": "https://udha.unical.it/tours-virtuali/",
+      "webMode": "external"
+    },
+    {
+      "number": 29,
+      "coords": [
+        16.2602,
+        39.2923
+      ],
+      "title": "Chiesa SS. Salvatore - Cosenza",
+      "text": "Tour virtuale UDHA della chiesa di rito greco-bizantino nel centro storico di Cosenza (Corso Telesio), punto di riferimento per la comunità italo-albanese.",
+      "image": "",
+      "video": "",
+      "videoMode": "embed",
+      "webUrl": "https://udha.unical.it/tours-virtuali/",
+      "webMode": "external"
+    },
+    {
+      "number": 30,
+      "coords": [
+        16.4443,
+        39.3361
+      ],
+      "title": "Torre Camigliati - Camigliatello Silano",
+      "text": "Tour virtuale UDHA della storica dimora nobiliare fortificata del XVII secolo situata nel Parco Nazionale della Sila.",
+      "image": "",
+      "video": "",
+      "videoMode": "embed",
+      "webUrl": "https://udha.unical.it/tours-virtuali/",
+      "webMode": "external"
+    },
+    {
+      "number": 31,
+      "coords": [
+        15.9131,
+        38.6653
+      ],
+      "title": "Museo Civico di Drapia",
+      "text": "Tour virtuale UDHA del polo espositivo di Drapia che raccoglie e valorizza la memoria storica, archeologica e culturale del territorio vibonese.",
+      "image": "",
+      "video": "",
+      "videoMode": "embed",
+      "webUrl": "https://udha.unical.it/tours-virtuali/",
+      "webMode": "external"
+    },
+    {
+      "number": 32,
+      "coords": [
+        15.9082,
+        38.6534
+      ],
+      "title": "Necropoli protostorica e magno-greca in loc. Torre Galli - Drapia",
+      "text": "Tour virtuale UDHA del rilevante sito archeologico di Torre Galli a Drapia, celebre per le sepolture dell'Età del Ferro e dell'epoca magno-greca.",
+      "image": "",
+      "video": "",
+      "videoMode": "embed",
+      "webUrl": "https://udha.unical.it/tours-virtuali/",
+      "webMode": "external"
+    }
+  ]
+};
+
+        const initialView = DATA.initialView || { center: [16.3500, 38.9000], zoom: 7.8, pitch: 25, bearing: 0 };
+        const MARKERS_DATA = DATA.markers || DATA;
+
+        const map = new maplibregl.Map({
+            container: 'map',
+            zoom: initialView.zoom,
+            center: initialView.center,
+            pitch: initialView.pitch,
+            bearing: initialView.bearing,
+            style: {
+                version: 8,
+                sources: {
+                    'esri-sat': {
+                        type: 'raster',
+                        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+                        tileSize: 256
+                    },
+                    'terrain': {
+                        type: 'raster-dem',
+                        tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
+                        encoding: 'terrarium', tileSize: 256, maxzoom: 15
+                    }
+                },
+                layers: [{ id: 'sat-layer', type: 'raster', source: 'esri-sat' }],
+                terrain: { source: 'terrain', exaggeration: 1.4 }
+            }
+        });
+
+        map.addControl(new maplibregl.NavigationControl());
+
+        function extractYouTubeId(url) {
+            if (!url) return null;
+            const regExp = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+            const match = url.match(regExp);
+            return match ? match[1] : null;
+        }
+
+        map.on('load', () => {
+            MARKERS_DATA.forEach((data, index) => {
+                const el = document.createElement('div');
+                el.className = 'custom-marker';
+                if (index === 0) el.classList.add('first-marker');
+                el.innerText = data.number || (index + 1);
+
+                new maplibregl.Marker({ element: el })
+                    .setLngLat(data.coords)
+                    .addTo(map);
+
+                el.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    showDetails(data);
+                });
+            });
+        });
+
+        function showDetails(data) {
+            currentMarkerData = data;
+            
+            document.getElementById('view-title').innerText = `Marcatore #${data.number} - ${data.title || 'Senza Titolo'}`;
+            
+            const content = document.getElementById('view-mode-content');
+            content.innerHTML = '';
+
+            if (data.coords && data.coords.length === 2) {
+                const coordsDiv = document.createElement('div');
+                coordsDiv.className = 'coords-badge';
+                coordsDiv.innerHTML = `📍 <strong>Coordinate GPS:</strong> Lat ${data.coords[1]}, Lng ${data.coords[0]}`;
+                content.appendChild(coordsDiv);
+            }
+
+            if (data.text) {
+                const p = document.createElement('p');
+                p.className = 'modal-body-text';
+                p.innerText = data.text;
+                content.appendChild(p);
+            }
+
+            const mediaDiv = document.createElement('div');
+            mediaDiv.className = 'media-preview';
+
+            if (data.image && data.image.trim() !== '') {
+                const img = document.createElement('img');
+                img.src = data.image;
+                img.alt = data.title;
+                img.onerror = () => img.style.display = 'none';
+                mediaDiv.appendChild(img);
+            }
+
+            if (data.video && data.video.trim() !== '') {
+                if (data.videoMode === 'external') {
+                    const videoBtn = document.createElement('a');
+                    videoBtn.href = data.video;
+                    videoBtn.target = '_blank';
+                    videoBtn.className = 'btn-media-link btn-video-link';
+                    videoBtn.innerText = '▶️ Apri Video Esterno / YouTube';
+                    mediaDiv.appendChild(videoBtn);
+                } else {
+                    const ytId = extractYouTubeId(data.video);
+                    if (ytId) {
+                        const iframe = document.createElement('iframe');
+                        iframe.src = 'https://www.youtube-nocookie.com/embed/' + ytId;
+                        iframe.setAttribute('allowfullscreen', 'true');
+                        iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
+                        mediaDiv.appendChild(iframe);
+                    } else {
+                        const video = document.createElement('video');
+                        video.src = data.video;
+                        video.controls = true;
+                        mediaDiv.appendChild(video);
+                    }
+                }
+            }
+
+            if (data.webUrl && data.webUrl.trim() !== '') {
+                if (data.webMode === 'embed') {
+                    const iframe = document.createElement('iframe');
+                    iframe.src = data.webUrl;
+                    mediaDiv.appendChild(iframe);
+                } else {
+                    const linkBtn = document.createElement('a');
+                    linkBtn.href = data.webUrl;
+                    linkBtn.target = '_blank';
+                    linkBtn.className = 'btn-media-link btn-external-link';
+                    linkBtn.innerText = '🌐 Apri Tour Virtuale / Sito Web';
+                    mediaDiv.appendChild(linkBtn);
+                }
+            }
+
+            content.appendChild(mediaDiv);
+
+            document.getElementById('edit-number').value = data.number;
+            document.getElementById('edit-title').value = data.title || '';
+            document.getElementById('edit-text').value = data.text || '';
+            document.getElementById('edit-image').value = data.image || '';
+            document.getElementById('edit-video').value = data.video || '';
+            document.getElementById('edit-videoMode').value = data.videoMode || 'embed';
+            document.getElementById('edit-webUrl').value = data.webUrl || '';
+            document.getElementById('edit-webMode').value = data.webMode || 'external';
+
+            setEditFormVisible(false);
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function requestEditAccess() {
+            const form = document.getElementById('edit-form');
+            const isEditing = form.classList.contains('active');
+
+            if (isEditing) {
+                setEditFormVisible(false);
+                return;
+            }
+
+            if (!isEditorAuthenticated) {
+                const pass = prompt("Inserisci la password per modificare questa scheda:");
+                if (pass === EDITOR_PASSWORD) {
+                    isEditorAuthenticated = true;
+                    setEditFormVisible(true);
+                } else if (pass !== null) {
+                    alert("Password errata!");
+                }
+            } else {
+                setEditFormVisible(true);
+            }
+        }
+
+        function setEditFormVisible(showForm) {
+            const form = document.getElementById('edit-form');
+            const view = document.getElementById('view-mode-content');
+            const btn = document.getElementById('toggle-edit-btn');
+
+            if (showForm) {
+                form.classList.add('active');
+                view.style.display = 'none';
+                btn.innerText = '👁️ Torna alla Vista';
+                btn.classList.add('btn-cancel');
+            } else {
+                form.classList.remove('active');
+                view.style.display = 'block';
+                btn.innerText = '✏️ Modifica';
+                btn.classList.remove('btn-cancel');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        async function submitEdit(event) {
+            event.preventDefault();
+            
+            const formData = {
+                number: parseInt(document.getElementById('edit-number').value),
+                title: document.getElementById('edit-title').value,
+                text: document.getElementById('edit-text').value,
+                image: document.getElementById('edit-image').value,
+                video: document.getElementById('edit-video').value,
+                videoMode: document.getElementById('edit-videoMode').value,
+                webUrl: document.getElementById('edit-webUrl').value,
+                webMode: document.getElementById('edit-webMode').value
+            };
+
+            // 1. Aggiorna sia l'oggetto corrente sia la struttura dati globale DATA
+            if (currentMarkerData) {
+                Object.assign(currentMarkerData, formData);
+            }
+            const markerInList = DATA.markers.find(m => m.number === formData.number);
+            if (markerInList) {
+                Object.assign(markerInList, formData);
+            }
+
+            // 2. Genera il JSON completo aggiornato dell'intera mappa
+            const jsonCompleto = JSON.stringify(DATA, null, 2);
+
+            // 3. Prepara il payload per FormSubmit con il JSON pronto per l'uso
+            const emailPayload = {
+                _subject: `[Mappa Calabria 3D] Modifica scheda Marcatore #${formData.number}`,
+                _replyto: "noreply@unical.it",
+                marcatore_modificato: formData.number,
+                nuovo_titolo: formData.title,
+                _template: "box",
+                JSON_COMPLETO_PER_CONFIGURATORE: jsonCompleto
+            };
+
+            try {
+                const response = await fetch("https://formsubmit.co/ajax/pietro.pantano@unical.it", {
+                    method: "POST",
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(emailPayload)
+                });
+
+                if (response.ok) {
+                    alert("Modifica applicata! È stata inviata un'email a pietro.pantano@unical.it contenente il JSON completo aggiornato pronto per il configuratore.");
+                } else {
+                    alert("Modifica applicata localmente. Impossibile inviare l'email (verificare attivazione FormSubmit).");
+                }
+            } catch (error) {
+                console.error("Errore invio mail:", error);
+                alert("Modifica applicata localmente.");
+            }
+
+            // Aggiorna la vista scheda in tempo reale
+            showDetails(currentMarkerData);
+        }
+    </script>
+</body>
+</html>
