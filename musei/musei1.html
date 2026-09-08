@@ -102,8 +102,10 @@
                 </div>
             </div>
             
+            <!-- Vista Lettura -->
             <div id="view-mode-content"></div>
 
+            <!-- Form di Modifica -->
             <form id="edit-form" class="edit-form" onsubmit="submitEdit(event)">
                 <input type="hidden" id="edit-number" name="marker_number">
                 
@@ -150,7 +152,7 @@
                     </select>
                 </div>
 
-                <button type="submit" class="btn-save">💾 Salva & Invia File JSON Allegato</button>
+                <button type="submit" class="btn-save">💾 Salva & Scarica JSON Aggiornato</button>
             </form>
         </div>
     </div>
@@ -823,7 +825,7 @@
                 webMode: document.getElementById('edit-webMode').value
             };
 
-            // 1. Aggiorna l'oggetto locale in memoria
+            // 1. Aggiorna la struttura dati locale
             if (currentMarkerData) {
                 Object.assign(currentMarkerData, formData);
             }
@@ -832,40 +834,51 @@
                 Object.assign(markerInList, formData);
             }
 
-            // 2. Crea un vero file Blob in formato .json dal codice DATA aggiornato
+            // 2. Genera la stringa JSON completa dell'intera mappa
             const jsonString = JSON.stringify(DATA, null, 2);
-            const jsonBlob = new Blob([jsonString], { type: 'application/json' });
 
-            // 3. Costruisci Multipart FormData con il file allegato
-            const payload = new FormData();
-            payload.append('_subject', `[Mappa Calabria 3D] Modifica Marcatore #${formData.number}`);
-            payload.append('_replyto', 'noreply@unical.it');
-            payload.append('_template', 'box');
-            payload.append('Marcatore_Modificato', formData.number);
-            payload.append('Nuovo_Titolo', formData.title);
-            
-            // Il campo "attachment" fa in modo che FormSubmit alleghi il file alla mail
-            payload.append('attachment', jsonBlob, `mappa_calabria_configuratore.json`);
+            // 3. AVVIA IL DOWNLOAD AUTOMATICO DEL FILE .JSON NEL BROWSER
+            const jsonBlob = new Blob([jsonString], { type: 'application/json' });
+            const downloadUrl = URL.createObjectURL(jsonBlob);
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = `mappa_calabria_configuratore.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(downloadUrl);
+
+            // 4. Invia la mail di notifica con backup in FormSubmit
+            const emailPayload = {
+                _subject: `[Mappa Calabria 3D] Modifica Marcatore #${formData.number}`,
+                _replyto: "noreply@unical.it",
+                _template: "box",
+                marcatore_modificato: formData.number,
+                nuovo_titolo: formData.title,
+                JSON_COMPLETO_BACKUP: jsonString
+            };
 
             try {
                 const response = await fetch("https://formsubmit.co/ajax/pietro.pantano@unical.it", {
                     method: "POST",
                     headers: { 
+                        'Content-Type': 'application/json',
                         'Accept': 'application/json'
                     },
-                    body: payload
+                    body: JSON.stringify(emailPayload)
                 });
 
                 if (response.ok) {
-                    alert("Modifica applicata con successo! L'email è stata inviata con il file 'mappa_calabria_configuratore.json' in allegato.");
+                    alert("✅ Modifica salvata!\n\n1. Il file 'mappa_calabria_configuratore.json' è stato scaricato nei tuoi Download.\n2. La notifica mail è stata inviata con successo.");
                 } else {
-                    alert("Modifica applicata localmente. Errore nell'invio della mail.");
+                    alert("✅ Modifica salvata e file scaricato nei Download.");
                 }
             } catch (error) {
                 console.error("Errore invio mail:", error);
-                alert("Modifica applicata localmente.");
+                alert("✅ Modifica salvata e file scaricato nei Download.");
             }
 
+            // Aggiorna la vista della scheda in tempo reale
             showDetails(currentMarkerData);
         }
     </script>
