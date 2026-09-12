@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulatore Ecosistema EDUNEXT - Digital Education Hub</title>
+  <style>
+    :root {
+      --bg-color: #070a13;
+      --card-bg: #111827;
+      --accent-capofila: #ec4899;
+      --accent-ateneo: #3b82f6;
+      --accent-afam: #10b981;
+      --accent-tech: #8b5cf6;
+      --accent-pa: #f59e0b;
+      --text-color: #f9fafb;
+      --text-dim: #9ca3af;
+      --border-color: #1f2937;
+      --highlight: #facc15;
+      --proactive-glow: #06b6d4;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg-color); color: var(--text-color); display: flex; height: 100vh; overflow: hidden; }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 420px;
+      background: var(--card-bg);
+      border-right: 1px solid var(--border-color);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+      z-index: 10;
+    }
+
+    h1 { font-size: 1.1rem; text-transform: uppercase; letter-spacing: 0.8px; color: var(--proactive-glow); margin-bottom: 2px; }
+    p.desc { font-size: 0.74rem; color: var(--text-dim); line-height: 1.35; }
+
+    .section-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--highlight);
+      font-weight: bold;
+      margin-top: 4px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 4px;
+    }
+
+    .control-group {
+      background: rgba(0,0,0,0.3);
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+
+    .control-group label { display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: bold; margin-bottom: 6px; }
+    .control-group input[type="range"], select {
+      width: 100%;
+      background: #070a13;
+      border: 1px solid var(--border-color);
+      color: #fff;
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+    }
+
+    .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .btn {
+      background: var(--accent-ateneo);
+      color: #fff;
+      border: none;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 0.78rem;
+      text-align: center;
+    }
+    .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-secondary { background: #374151; color: #fff; }
+    .btn-danger { background: #ef4444; color: #fff; }
+    .btn-warning { background: var(--highlight); color: #000; }
+    .btn-proactive { background: var(--proactive-glow); color: #000; font-weight: bold; }
+
+    .kpi-container { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .kpi-card {
+      background: rgba(255,255,255,0.03);
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      text-align: center;
+    }
+    .kpi-value { font-size: 0.95rem; font-weight: bold; color: #fff; }
+    .kpi-label { font-size: 0.60rem; color: var(--text-dim); text-transform: uppercase; }
+
+    /* DRAWER NODO & INIZIATIVE PROATTIVE */
+    .node-drawer {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      width: 460px;
+      max-height: calc(100vh - 30px);
+      background: rgba(17, 24, 39, 0.97);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--proactive-glow);
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      z-index: 20;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+      overflow-y: auto;
+    }
+    .node-drawer.hidden { display: none; }
+
+    .drawer-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
+    .drawer-title { font-size: 0.95rem; font-weight: bold; color: var(--proactive-glow); }
+    .close-btn { background: none; border: none; color: var(--text-dim); font-size: 1.3rem; cursor: pointer; }
+
+    .badge-tier {
+      font-size: 0.65rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: bold;
+      text-transform: uppercase;
+      display: inline-block;
+      margin-top: 2px;
+    }
+    .tier-capofila { background: var(--accent-capofila); color: #fff; }
+    .tier-ateneo { background: var(--accent-ateneo); color: #fff; }
+    .tier-afam { background: var(--accent-afam); color: #000; }
+    .tier-tech { background: var(--accent-tech); color: #fff; }
+    .tier-pa { background: var(--accent-pa); color: #000; }
+
+    .conn-list { display: flex; flex-direction: column; gap: 6px; max-height: 150px; overflow-y: auto; margin-top: 4px; }
+    .conn-item {
+      background: rgba(7, 10, 19, 0.7);
+      border: 1px solid var(--border-color);
+      padding: 8px;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+    .conn-item.active { border-color: var(--highlight); background: rgba(250, 204, 21, 0.12); }
+    .conn-item:hover { border-color: var(--accent-ateneo); }
+
+    .proactive-box {
+      background: rgba(6, 182, 212, 0.1);
+      border: 1px solid var(--proactive-glow);
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      color: #ecfeff;
+    }
+    .proactive-box h4 { font-size: 0.78rem; color: var(--proactive-glow); text-transform: uppercase; margin-bottom: 4px; }
+
+    .initiative-card {
+      background: rgba(7, 10, 19, 0.8);
+      border: 1px dashed var(--accent-ateneo);
+      padding: 8px;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      color: #38bdf8;
+      cursor: pointer;
+      margin-top: 6px;
+      transition: background 0.2s;
+    }
+    .initiative-card:hover { background: rgba(56, 189, 248, 0.15); }
+
+    textarea.notes-area {
+      width: 100%;
+      height: 70px;
+      background: #070a13;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      color: #fff;
+      padding: 6px;
+      font-size: 0.75rem;
+      resize: vertical;
+    }
+
+    /* CANVAS MAP */
+    .main-content { flex: 1; display: flex; flex-direction: column; position: relative; cursor: grab; }
+    .main-content:active { cursor: grabbing; }
+    canvas { width: 100%; height: 100%; display: block; background: #030508; }
+
+    .map-controls {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      display: flex;
+      gap: 6px;
+      z-index: 5;
+    }
+    .control-btn {
+      width: 32px;
+      height: 32px;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      color: #fff;
+      font-size: 1.1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="sidebar">
+    <div>
+      <h1>Ecosistema EDUNEXT</h1>
+      <p class="desc">Rete Italiana per l'Innovazione della Formazione Digitale (MUR - PNRR). 35 Atenei, 5 AFAM, Modello ECOBI, AI e Micro-credential Open Badges.</p>
+    </div>
+
+    <!-- ENGINE PROATTIVO -->
+    <div class="section-title">💡 Engine Proattivo EDUNEXT</div>
+    <div class="control-group" style="border-color: var(--proactive-glow);">
+      <p class="desc" style="color: #ecfeff; margin-bottom: 8px;">L'algoritmo rileva automaticamente i nodi accademici/AFAM isolati e propone l'attivazione di Cluster ECOBI e percorsi Blended Intensive.</p>
+      <button class="btn btn-proactive" id="btn-proactive-optimize" style="width:100%;">⚡ Ottimizza Convenzioni Interateneo</button>
+    </div>
+
+    <div class="section-title">Corridoio Didattico & Tecnologico</div>
+    <div class="control-group">
+      <label>Matrice / Filone Formativo</label>
+      <select id="select-thematic-route">
+        <option value="tutti">🌐 Rete Completa (Tutti i Filoni EDUNEXT)</option>
+        <option value="ecobi">🎓 Modello ECOBI & Blended Intensive Programs (BIP)</option>
+        <option value="afam-music">🎭 Interconnessione AFAM & Musica (Yamaha Disklavier)</option>
+        <option value="ai-avatar">🤖 AI-Enhanced Learning & Avatar Didattici</option>
+        <option value="badges">🎖️ Micro-Credentials & Open Badges (ESCO)</option>
+      </select>
+    </div>
+
+    <div class="section-title">Selezione Rapida Nodo / Hub</div>
+    <div class="control-group">
+      <label>Istituzione / Piattaforma</label>
+      <select id="select-node-quick">
+        <option value="">-- Seleziona un nodo o clicca sulla mappa --</option>
+      </select>
+    </div>
+
+    <!-- KPI DASHBOARD -->
+    <div class="kpi-container">
+      <div class="kpi-card">
+        <div class="kpi-label">Flussi Didattici Attivi</div>
+        <div class="kpi-value" id="kpi-active">0</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Convenzioni Interateneo</div>
+        <div class="kpi-value" id="kpi-connections">0</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Integrazione Didattica Blended</div>
+        <div class="kpi-value" id="kpi-int-reach">0%</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Crediti ECTS & Badges Generati</div>
+        <div class="kpi-value" id="kpi-economic">0 pts</div>
+      </div>
+    </div>
+
+    <div class="section-title">Gestione Grafi & Export</div>
+    <div class="btn-grid">
+      <button class="btn btn-secondary" id="btn-save-json">💾 Salva JSON</button>
+      <button class="btn btn-secondary" id="btn-load-json-trigger">📂 Carica JSON</button>
+      <input type="file" id="input-load-json" accept=".json" style="display:none;">
+    </div>
+    <button class="btn btn-warning" id="btn-export-html">🚀 Esporta HTML Standalone</button>
+    <button class="btn btn-secondary" id="btn-reset-all" style="margin-top: 4px;">⟲ Reset Simulazione</button>
+  </div>
+
+  <div class="main-content" id="map-container">
+    <div class="map-controls">
+      <button class="control-btn" id="btn-zoom-in">+</button>
+      <button class="control-btn" id="btn-zoom-out">-</button>
+      <button class="control-btn" id="btn-zoom-reset">⟲</button>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <!-- DRAWER NODO -->
+    <div class="node-drawer hidden" id="node-drawer">
+      <div class="drawer-header">
+        <div>
+          <div class="drawer-title" id="drawer-node-name">Nome Nodo</div>
+          <div id="drawer-node-badge"></div>
+        </div>
+        <button class="close-btn" id="btn-close-drawer">&times;</button>
+      </div>
+
+      <!-- RACCOMANDAZIONE PROATTIVA -->
+      <div class="proactive-box" id="node-proactive-suggestion">
+        <h4>✨ Raccomandazione Proattiva</h4>
+        <div id="proactive-suggestion-text">Analisi della connettività didattica in corso...</div>
+        <button class="btn btn-proactive" id="btn-apply-proactive" style="margin-top:6px; width:100%; font-size:0.72rem; padding:4px;">Attiva Iniziativa Suggerita</button>
+      </div>
+
+      <!-- CONFIGURAZIONE CAPACITÀ DIDATTICA -->
+      <div class="control-group">
+        <label>
+          Capacità Erogazione Didattica (Moduli MOOC / ECTS)
+          <span id="val-node-capacity" style="color:var(--highlight); font-weight:bold;">10</span>
+        </label>
+        <input type="range" id="param-node-capacity" min="5" max="300" step="5" value="10">
+        <p class="desc" style="margin-top:2px;">Volume di contenuti e-learning, e-tivities e moduli didattici generati al mese.</p>
+      </div>
+
+      <!-- LEGAMI ATTIVI -->
+      <div>
+        <div style="font-size:0.75rem; font-weight:bold; color:#fff; margin-bottom:4px;">Convenzioni & Accordi Attivi</div>
+        <div class="conn-list" id="drawer-conn-list"></div>
+
+        <div style="display:flex; gap:6px; margin-top:8px;">
+          <select id="select-add-target" style="flex:1;">
+            <option value="">+ Crea Legame Formativo...</option>
+          </select>
+          <button class="btn btn-warning" id="btn-add-connection" style="white-space:nowrap;">Collega</button>
+        </div>
+      </div>
+
+      <!-- DETTAGLIO LEGAME ED ELABORAZIONE PROATTIVA -->
+      <div id="connection-strategy-panel" style="display:none; border-top:1px solid var(--border-color); padding-top:10px;">
+        <div style="font-size:0.8rem; font-weight:bold; color:var(--highlight);" id="strategy-conn-title">Dettaglio Convenzione Formativa</div>
+
+        <div class="control-group" style="margin-top:6px;">
+          <label>
+            Intensità Scambio ECTS / Didattico (Boost)
+            <span id="val-conn-boost" style="color:var(--highlight);">1.0x</span>
+          </label>
+          <input type="range" id="param-conn-boost" min="0.1" max="10.0" step="0.1" value="1.0">
+          <p class="desc">Aumenta il tasso di riconoscimento crediti e la mobilità virtuale di docenti e studenti.</p>
+        </div>
+
+        <div style="margin-top:6px;">
+          <div style="font-size:0.75rem; font-weight:bold; color:var(--proactive-glow);">Elabora Iniziativa Strategica EDUNEXT (1-Click)</div>
+          <div class="initiative-card" id="prompt-strategy-1">
+            📜 <strong>Iniziativa A: Educational Cluster ECOBI (12 ECTS)</strong><br>
+            <span style="color:var(--text-dim);">Creazione di un corso integrato interateneo con esame unico e boost 3.5x.</span>
+          </div>
+          <div class="initiative-card" id="prompt-strategy-2">
+            🤖 <strong>Iniziativa B: AI & Avatar Instructional Design</strong><br>
+            <span style="color:var(--text-dim);">Integrazione di docenti avatar e corsi multilingua trasversali con boost 4.5x.</span>
+          </div>
+          <div class="initiative-card" id="prompt-strategy-3">
+            🎹 <strong>Iniziativa C: Rete Digitale Musica AFAM (Yamaha Disklavier)</strong><br>
+            <span style="color:var(--text-dim);">Masterclass in streaming bidirezionale a bassa latenza con boost 5.0x.</span>
+          </div>
+        </div>
+
+        <div style="margin-top:8px;">
+          <div style="font-size:0.72rem; font-weight:bold; color:var(--text-dim); margin-bottom:2px;">Note / Protocollo d'Intesa</div>
+          <textarea class="notes-area" id="conn-notes-input" placeholder="La scheda dell'accordo di collaborazione verrà elaborata qui..."></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const mapContainer = document.getElementById('map-container');
+
+    let selectedNode = null;
+    let selectedConnectionKey = null;
+
+    // Pan & Zoom State
+    let zoomLevel = 1.0;
+    let offsetX = 0;
+    let offsetY = 0;
+    let isDragging = false;
+    let dragStart = { x: 0, y: 0 };
+    let hasDragged = false;
+
+    // DATASET EDUNEXT ECOSYSTEM
+    const rawNodes = [
+      // HUB CAPOFILA & COORDINAMENTO
+      { id: 1, name: "Unimore - Capofila EDUNEXT (Modena & Reggio E.)", tier: "capofila", coords: [0.45, 0.40], capacity: 200 },
+
+      // ATENEI PARTNER PRINCIPALI
+      { id: 2, name: "Università di Parma (Unipr - Modello ECOBI)", tier: "ateneo", coords: [0.40, 0.43], capacity: 150 },
+      { id: 3, name: "Università di Genova (Unige - UTLC)", tier: "ateneo", coords: [0.32, 0.48], capacity: 140 },
+      { id: 4, name: "Università di Siena (Unisi / UnisiAP)", tier: "ateneo", coords: [0.48, 0.55], capacity: 130 },
+      { id: 5, name: "Politecnico di Milano (Digital Learning)", tier: "ateneo", coords: [0.38, 0.30], capacity: 160 },
+      { id: 6, name: "Università di Bologna (UNIBO Hub)", tier: "ateneo", coords: [0.50, 0.42], capacity: 170 },
+      { id: 7, name: "Università di Napoli Federico II", tier: "ateneo", coords: [0.65, 0.70], capacity: 150 },
+      { id: 8, name: "Università di Torino (UniTo)", tier: "ateneo", coords: [0.25, 0.35], capacity: 120 },
+
+      // AFAM - ALTA FORMAZIONE ARTISTICA E MUSICALE
+      { id: 10, name: "Conservatorio Vecchi-Tonelli (Modena & Carpi)", tier: "afam", coords: [0.46, 0.42], capacity: 90 },
+      { id: 11, name: "Conservatorio Francesco Venezze (Rovigo)", tier: "afam", coords: [0.55, 0.36], capacity: 80 },
+      { id: 12, name: "Accademia Belle Arti Bologna", tier: "afam", coords: [0.51, 0.44], capacity: 85 },
+      { id: 13, name: "Conservatorio Giuseppe Verdi (Milano)", tier: "afam", coords: [0.39, 0.32], capacity: 95 },
+
+      // PIATTAFORME TECH & ARCHITETTURA EDUNEXT
+      { id: 20, name: "AI & Avatar Instructional Lab (Text-to-Video)", tier: "tech", coords: [0.30, 0.20], capacity: 180 },
+      { id: 21, name: "Open Badges & ESCO Engine (Micro-credentials)", tier: "tech", coords: [0.60, 0.25], capacity: 190 },
+      { id: 22, name: "Educational Content Library (MOOC/Videocast)", tier: "tech", coords: [0.45, 0.22], capacity: 220 },
+      { id: 23, name: "Yamaha Disklavier Live Music Network", tier: "tech", coords: [0.58, 0.38], capacity: 110 },
+      { id: 24, name: "BIP Blended Intensive Platform", tier: "tech", coords: [0.42, 0.52], capacity: 160 },
+
+      // STAKEHOLDER & PA / WORKFORCE
+      { id: 30, name: "Cluster Formazione PA & Innovazione Digitale", tier: "pa", coords: [0.62, 0.58], capacity: 130 },
+      { id: 31, name: "700k+ Studenti & 25k+ Docenti Community", tier: "pa", coords: [0.50, 0.65], capacity: 250 }
+    ];
+
+    let nodes = rawNodes.map(d => ({
+      id: d.id,
+      name: d.name,
+      tier: d.tier,
+      x: d.coords[0],
+      y: d.coords[1],
+      capacity: d.capacity,
+      culturalFlowsCount: 0
+    }));
+
+    let connections = {};
+    let culturalParticles = [];
+    let totalStats = { intReachCount: 0, scientificPoints: 0 };
+    let currentProactiveSuggestion = null;
+
+    function getKey(id1, id2) {
+      return id1 < id2 ? `${id1}-${id2}` : `${id2}-${id1}`;
+    }
+
+    function resize() {
+      canvas.width = mapContainer.clientWidth;
+      canvas.height = mapContainer.clientHeight;
+    }
+    window.addEventListener('resize', resize);
+
+    function toScreen(wx, wy) {
+      return {
+        x: wx * canvas.width * zoomLevel + offsetX,
+        y: wy * canvas.height * zoomLevel + offsetY
+      };
+    }
+
+    function toWorld(sx, sy) {
+      return {
+        x: (sx - offsetX) / (canvas.width * zoomLevel),
+        y: (sy - offsetY) / (canvas.height * zoomLevel)
+      };
+    }
+
+    function addConn(id1, id2, weight = 1.0, notes = '') {
+      const key = getKey(id1, id2);
+      connections[key] = { key, source: id1, target: id2, weight, notes };
+    }
+
+    function initDefaultConnections() {
+      connections = {};
+      // Hub Capofila Unimore verso Atenei partner
+      addConn(1, 2, 4.0, "Coordinamento Modello ECOBI Unimore-Unipr");
+      addConn(1, 3, 3.5, "Polo Didattico Digitale Unimore-Unige");
+      addConn(1, 4, 3.0, "Collaborazione UnisiAP e Portale EDUNEXT");
+      addConn(1, 5, 3.2, "Innovazione Didattica PoliMi e Unimore");
+      addConn(1, 6, 3.5, "Corridoio Didattico Emiliano Unimore-UNIBO");
+      addConn(1, 7, 2.5, "Rete Sud-Nord Federico II e Unimore");
+
+      // Integrazione AFAM
+      addConn(10, 1, 4.5, "Progetto Pilota Conservatorio Vecchi-Tonelli e Unimore");
+      addConn(10, 23, 5.0, "Infrastruttura Yamaha Disklavier Musica Digitale");
+      addConn(11, 23, 4.0, "Connessione Conservatorio Rovigo Disklavier");
+      addConn(13, 23, 3.5, "Rete Live Streaming Conservatorio Milano");
+      addConn(12, 6, 3.0, "Polo delle Arti e Design ABABO-UNIBO");
+
+      // Architettura Piattaforme Tech
+      addConn(20, 1, 4.0, "Generazione Avatar Didattici & AI Content");
+      addConn(21, 2, 4.5, "Riconoscimento Open Badges su Moduli ECOBI");
+      addConn(22, 1, 5.0, "Educational Content Library Nazionale");
+      addConn(24, 2, 4.0, "Piattaforma BIP (Blended Intensive Programs)");
+
+      // Formazione PA & Community
+      addConn(30, 2, 3.5, "Master Innovazione Amministrativa e PA");
+      addConn(31, 1, 4.0, "Fruizione Studenti e Docenti Hub Nazionale");
+
+      updateQuickSelect();
+    }
+
+    function getConnectionsForNode(nodeId) {
+      return Object.values(connections).filter(c => c.source === nodeId || c.target === nodeId);
+    }
+
+    function updateQuickSelect() {
+      const select = document.getElementById('select-node-quick');
+      select.innerHTML = '<option value="">-- Seleziona un nodo o clicca sulla mappa --</option>';
+
+      const tiers = [
+        { key: 'capofila', label: '⭐ Hub Capofila PNRR' },
+        { key: 'ateneo', label: '🎓 Atenei Universitari Partner' },
+        { key: 'afam', label: '🎭 Istituzioni AFAM (Arte & Musica)' },
+        { key: 'tech', label: '⚡ Piattaforme Tech & ECOBI' },
+        { key: 'pa', label: '👥 Community & PA Workforce' }
+      ];
+
+      tiers.forEach(t => {
+        const group = document.createElement('optgroup');
+        group.label = t.label;
+        nodes.filter(n => n.tier === t.key).forEach(n => {
+          const opt = document.createElement('option');
+          opt.value = n.id;
+          opt.innerText = `${n.name}`;
+          group.appendChild(opt);
+        });
+        select.appendChild(group);
+      });
+    }
+
+    // ANALISI PROATTIVA DEL NODO
+    function analyzeNodeProactively(node) {
+      const conns = getConnectionsForNode(node.id);
+      const targetBox = document.getElementById('proactive-suggestion-text');
+      const applyBtn = document.getElementById('btn-apply-proactive');
+
+      const connectedNodeIds = conns.map(c => c.source === node.id ? c.target : c.source);
+      const hasCapofila = connectedNodeIds.includes(1);
+      const hasTech = nodes.some(n => connectedNodeIds.includes(n.id) && n.tier === 'tech');
+
+      if (node.tier === 'afam' && !connectedNodeIds.includes(23)) {
+        const disklavierHub = nodes.find(n => n.id === 23);
+        currentProactiveSuggestion = {
+          sourceId: node.id,
+          targetId: 23,
+          weight: 4.5,
+          notes: `[PROATTIVO AFAM] Connessione del ${node.name} alla rete Yamaha Disklavier per masterclass in streaming a latenza zero.`
+        };
+        targetBox.innerHTML = `🎵 <strong>Opportunità Didattica AFAM!</strong><br>Collega questa istituzione alla rete <strong>${disklavierHub.name}</strong> per la formazione musicale a distanza.`;
+        applyBtn.style.display = 'block';
+      } else if ((node.tier === 'ateneo' || node.tier === 'afam') && !connectedNodeIds.includes(21)) {
+        const badgeHub = nodes.find(n => n.id === 21);
+        currentProactiveSuggestion = {
+          sourceId: node.id,
+          targetId: 21,
+          weight: 4.0,
+          notes: `[PROATTIVO BADGES] Integrazione del sistema Micro-credentials Open Badges ESCO per i corsi di ${node.name}.`
+        };
+        targetBox.innerHTML = `🎖️ <strong>Micro-Credentials Mancanti.</strong><br>Attiva l'erogazione di Open Badges con <strong>${badgeHub.name}</strong> per certificare le competenze ESCO.`;
+        applyBtn.style.display = 'block';
+      } else if (!hasCapofila && node.id !== 1) {
+        currentProactiveSuggestion = {
+          sourceId: node.id,
+          targetId: 1,
+          weight: 3.5,
+          notes: `[PROATTIVO NETWORK] Convenzione di mobilità e scambio didattico con l'Hub Capofila Unimore.`
+        };
+        targetBox.innerHTML = `⚠️ <strong>Nodo con scarso legame centrale.</strong><br>Si raccomanda di attivare un accordo quadro con l'Hub Capofila Unimore.`;
+        applyBtn.style.display = 'block';
+      } else {
+        targetBox.innerHTML = `✅ <strong>Integrazione Formativa Ottimale.</strong> Questo nodo è pienamente interconnesso all'ecosistema EDUNEXT.`;
+        applyBtn.style.display = 'none';
+        currentProactiveSuggestion = null;
+      }
+    }
+
+    function openNodeDrawer(node) {
+      selectedNode = node;
+      selectedConnectionKey = null;
+
+      document.getElementById('drawer-node-name').innerText = node.name;
+      document.getElementById('drawer-node-badge').innerHTML = `<span class="badge-tier tier-${node.tier}">${node.tier}</span>`;
+      document.getElementById('param-node-capacity').value = node.capacity;
+      document.getElementById('val-node-capacity').innerText = node.capacity;
+
+      analyzeNodeProactively(node);
+      renderConnectionList();
+      populateAddTargetDropdown();
+      document.getElementById('connection-strategy-panel').style.display = 'none';
+      document.getElementById('node-drawer').classList.remove('hidden');
+    }
+
+    function renderConnectionList() {
+      if (!selectedNode) return;
+      const container = document.getElementById('drawer-conn-list');
+      container.innerHTML = '';
+
+      const nodeConns = getConnectionsForNode(selectedNode.id);
+
+      if (nodeConns.length === 0) {
+        container.innerHTML = '<div style="font-size:0.72rem; color:var(--text-dim);">Nessun accordo attivo per questo nodo.</div>';
+        return;
+      }
+
+      nodeConns.forEach(conn => {
+        const targetId = conn.source === selectedNode.id ? conn.target : conn.source;
+        const targetNode = nodes.find(n => n.id === targetId);
+
+        const div = document.createElement('div');
+        div.className = `conn-item ${selectedConnectionKey === conn.key ? 'active' : ''}`;
+        div.innerHTML = `
+          <div>
+            <strong>↔ ${targetNode.name}</strong>
+            <div style="font-size:0.65rem; color:var(--text-dim);">
+              <span class="badge-tier tier-${targetNode.tier}">${targetNode.tier}</span> | Scambio: ${conn.weight}x ${conn.notes ? '📝' : ''}
+            </div>
+          </div>
+          <button class="btn btn-danger" style="padding:2px 6px; font-size:0.65rem;" onclick="event.stopPropagation(); removeConnection('${conn.key}');">Elimina</button>
+        `;
+
+        div.addEventListener('click', () => selectConnectionForStrategy(conn, targetNode));
+        container.appendChild(div);
+      });
+
+      document.getElementById('kpi-connections').innerText = Object.keys(connections).length;
+    }
+
+    function populateAddTargetDropdown() {
+      if (!selectedNode) return;
+      const select = document.getElementById('select-add-target');
+      select.innerHTML = '<option value="">+ Crea Legame Formativo...</option>';
+
+      const existingConnTargetIds = getConnectionsForNode(selectedNode.id).map(c => c.source === selectedNode.id ? c.target : c.source);
+
+      nodes.forEach(n => {
+        if (n.id !== selectedNode.id && !existingConnTargetIds.includes(n.id)) {
+          const opt = document.createElement('option');
+          opt.value = n.id;
+          opt.innerText = `[${n.tier.toUpperCase()}] ${n.name}`;
+          select.appendChild(opt);
+        }
+      });
+    }
+
+    function selectConnectionForStrategy(conn, targetNode) {
+      selectedConnectionKey = conn.key;
+      renderConnectionList();
+
+      const panel = document.getElementById('connection-strategy-panel');
+      panel.style.display = 'block';
+
+      document.getElementById('strategy-conn-title').innerText = `Asse Didattico: ${selectedNode.name} ↔ ${targetNode.name}`;
+      document.getElementById('param-conn-boost').value = conn.weight;
+      document.getElementById('val-conn-boost').innerText = conn.weight + 'x';
+      document.getElementById('conn-notes-input').value = conn.notes || '';
+
+      document.getElementById('prompt-strategy-1').onclick = () => {
+        conn.weight = 3.5;
+        document.getElementById('param-conn-boost').value = 3.5;
+        document.getElementById('val-conn-boost').innerText = '3.5x';
+        document.getElementById('conn-notes-input').value = `[INIZIATIVA ECOBI] CORSO INTEGRATO 12 ECTS\n- Asse: ${selectedNode.name} ↔ ${targetNode.name}\n- Struttura: Moduli da 3 ECTS erogati in modalità Blended Intensive Program (BIP) ed esame finale unico in presenza.`;
+        conn.notes = document.getElementById('conn-notes-input').value;
+        renderConnectionList();
+      };
+
+      document.getElementById('prompt-strategy-2').onclick = () => {
+        conn.weight = 4.5;
+        document.getElementById('param-conn-boost').value = 4.5;
+        document.getElementById('val-conn-boost').innerText = '4.5x';
+        document.getElementById('conn-notes-input').value = `[INIZIATIVA AI & AVATAR] INSTRUCTIONAL DESIGN AVANZATO\n- Asse: ${selectedNode.name} ↔ ${targetNode.name}\n- Struttura: Utilizzo di docenti avatar per lezioni multilingua (Text-to-Video) e e-tivities di gruppo con supporto AI.`;
+        conn.notes = document.getElementById('conn-notes-input').value;
+        renderConnectionList();
+      };
+
+      document.getElementById('prompt-strategy-3').onclick = () => {
+        conn.weight = 5.0;
+        document.getElementById('param-conn-boost').value = 5.0;
+        document.getElementById('val-conn-boost').innerText = '5.0x';
+        document.getElementById('conn-notes-input').value = `[INIZIATIVA AFAM] MUSICA & TECNOLOGIA DISKLAVIER\n- Asse: ${selectedNode.name} ↔ ${targetNode.name}\n- Struttura: Esecuzione musicale integrata e masterclass inter-conservatorio in tempo reale.`;
+        conn.notes = document.getElementById('conn-notes-input').value;
+        renderConnectionList();
+      };
+    }
+
+    function removeConnection(key) {
+      delete connections[key];
+      if (selectedConnectionKey === key) {
+        selectedConnectionKey = null;
+        document.getElementById('connection-strategy-panel').style.display = 'none';
+      }
+      renderConnectionList();
+      populateAddTargetDropdown();
+      if (selectedNode) analyzeNodeProactively(selectedNode);
+    }
+
+    document.getElementById('btn-apply-proactive').addEventListener('click', () => {
+      if (currentProactiveSuggestion) {
+        addConn(
+          currentProactiveSuggestion.sourceId,
+          currentProactiveSuggestion.targetId,
+          currentProactiveSuggestion.weight,
+          currentProactiveSuggestion.notes
+        );
+        analyzeNodeProactively(selectedNode);
+        renderConnectionList();
+        populateAddTargetDropdown();
+      }
+    });
+
+    // OTTIMIZZATORE PROATTIVO EDUNEXT
+    document.getElementById('btn-proactive-optimize').addEventListener('click', () => {
+      let createdCount = 0;
+
+      nodes.forEach(node => {
+        const conns = getConnectionsForNode(node.id);
+        if (conns.length <= 1) {
+          const targetHub = node.tier === 'afam' ? nodes.find(n => n.id === 23) : nodes.find(n => n.id === 1 || n.id === 2);
+          if (targetHub && node.id !== targetHub.id) {
+            addConn(
+              node.id,
+              targetHub.id,
+              3.5,
+              `[OTTIMIZZAZIONE PROATTIVA] Protocollo d'intesa automatico EDUNEXT tra ${node.name} e ${targetHub.name}.`
+            );
+            createdCount++;
+          }
+        }
+      });
+
+      alert(`⚡ Ottimizzazione completata! Attivati proattivamente ${createdCount} nuovi accordi formativi nella rete EDUNEXT.`);
+      updateQuickSelect();
+    });
+
+    // EVENTI INTERFACCIA
+    document.getElementById('param-node-capacity').addEventListener('input', (e) => {
+      if (selectedNode) {
+        selectedNode.capacity = parseInt(e.target.value);
+        document.getElementById('val-node-capacity').innerText = selectedNode.capacity;
+        updateQuickSelect();
+      }
+    });
+
+    document.getElementById('btn-add-connection').addEventListener('click', () => {
+      const select = document.getElementById('select-add-target');
+      const targetId = parseInt(select.value);
+      if (selectedNode && targetId) {
+        const key = getKey(selectedNode.id, targetId);
+        connections[key] = { key, source: selectedNode.id, target: targetId, weight: 1.0, notes: 'Accordo Quadro EDUNEXT' };
+        renderConnectionList();
+        populateAddTargetDropdown();
+        analyzeNodeProactively(selectedNode);
+      }
+    });
+
+    document.getElementById('param-conn-boost').addEventListener('input', (e) => {
+      if (selectedConnectionKey && connections[selectedConnectionKey]) {
+        connections[selectedConnectionKey].weight = parseFloat(e.target.value);
+        document.getElementById('val-conn-boost').innerText = e.target.value + 'x';
+        renderConnectionList();
+      }
+    });
+
+    document.getElementById('conn-notes-input').addEventListener('input', (e) => {
+      if (selectedConnectionKey && connections[selectedConnectionKey]) {
+        connections[selectedConnectionKey].notes = e.target.value;
+      }
+    });
+
+    document.getElementById('btn-close-drawer').addEventListener('click', () => {
+      document.getElementById('node-drawer').classList.add('hidden');
+      selectedNode = null;
+    });
+
+    document.getElementById('select-node-quick').addEventListener('change', (e) => {
+      const nodeId = parseInt(e.target.value);
+      const node = nodes.find(n => n.id === nodeId);
+      if (node) openNodeDrawer(node);
+    });
+
+    // MATRICE DIDATTICA E FILONI
+    document.getElementById('select-thematic-route').addEventListener('change', (e) => {
+      const val = e.target.value;
+      if (val === 'tutti') {
+        initDefaultConnections();
+      } else if (val === 'ecobi') {
+        if (connections[getKey(1, 2)]) connections[getKey(1, 2)].weight = 6.0;
+        if (connections[getKey(2, 24)]) connections[getKey(2, 24)].weight = 5.0;
+      } else if (val === 'afam-music') {
+        if (connections[getKey(10, 23)]) connections[getKey(10, 23)].weight = 6.0;
+        if (connections[getKey(11, 23)]) connections[getKey(11, 23)].weight = 5.5;
+        if (connections[getKey(13, 23)]) connections[getKey(13, 23)].weight = 5.0;
+      } else if (val === 'ai-avatar') {
+        if (connections[getKey(20, 1)]) connections[getKey(20, 1)].weight = 6.0;
+        if (connections[getKey(22, 1)]) connections[getKey(22, 1)].weight = 5.0;
+      } else if (val === 'badges') {
+        if (connections[getKey(21, 2)]) connections[getKey(21, 2)].weight = 6.0;
+      }
+    });
+
+    // SIMULATORE FLUSSI DIDATTICI (PARTICELLE DI SCOPERTA / ECTS)
+    class EducationalFlowParticle {
+      constructor(startNode) {
+        this.startTier = startNode.tier;
+        this.currentNode = startNode;
+        this.currentNode.culturalFlowsCount++;
+        this.targetNode = null;
+        this.progress = 0;
+        this.speed = 0.006 + Math.random() * 0.006;
+        this.history = [this.currentNode.id];
+        this.active = true;
+      }
+
+      step() {
+        if (!this.active) return;
+
+        if (!this.targetNode) {
+          const nodeConns = getConnectionsForNode(this.currentNode.id);
+          if (nodeConns.length === 0 || this.history.length > 5) {
+            this.active = false;
+            return;
+          }
+
+          let totalWeight = 0;
+          const options = nodeConns.map(c => {
+            const nextId = c.source === this.currentNode.id ? c.target : c.source;
+            const nextNode = nodes.find(n => n.id === nextId);
+            const visited = this.history.includes(nextId);
+            let w = (c.weight || 1.0) * (visited ? 0.1 : 2.5);
+            totalWeight += w;
+            return { node: nextNode, weight: w };
+          });
+
+          let rnd = Math.random() * totalWeight;
+          for (let opt of options) {
+            rnd -= opt.weight;
+            if (rnd <= 0) {
+              this.targetNode = opt.node;
+              break;
+            }
+          }
+          if (!this.targetNode) this.targetNode = options[0].node;
+        }
+
+        this.progress += this.speed;
+
+        if (this.progress >= 1) {
+          this.currentNode = this.targetNode;
+          this.currentNode.culturalFlowsCount++;
+          this.history.push(this.currentNode.id);
+          this.targetNode = null;
+          this.progress = 0;
+
+          if (this.currentNode.tier === 'tech' || this.currentNode.tier === 'pa') {
+            totalStats.intReachCount++;
+            totalStats.scientificPoints += 30;
+          } else {
+            totalStats.scientificPoints += 10;
+          }
+        }
+      }
+
+      draw() {
+        if (!this.active) return;
+
+        let wx = this.currentNode.x;
+        let wy = this.currentNode.y;
+
+        if (this.targetNode) {
+          wx = this.currentNode.x + (this.targetNode.x - this.currentNode.x) * this.progress;
+          wy = this.currentNode.y + (this.targetNode.y - this.currentNode.y) * this.progress;
+        }
+
+        const p = toScreen(wx, wy);
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, Math.max(3, 4.5 * Math.sqrt(zoomLevel)), 0, Math.PI * 2);
+        ctx.fillStyle = this.startTier === 'capofila' ? '#ec4899' : (this.startTier === 'afam' ? '#10b981' : (this.startTier === 'tech' ? '#8b5cf6' : '#3b82f6'));
+        ctx.fill();
+      }
+    }
+
+    // MAP INTERACTION (PAN & ZOOM)
+    mapContainer.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
+      const newZoom = Math.min(Math.max(zoomLevel * zoomFactor, 0.5), 5.0);
+
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      offsetX = mouseX - (mouseX - offsetX) * (newZoom / zoomLevel);
+      offsetY = mouseY - (mouseY - offsetY) * (newZoom / zoomLevel);
+      zoomLevel = newZoom;
+    }, { passive: false });
+
+    mapContainer.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      hasDragged = false;
+      dragStart = { x: e.clientX - offsetX, y: e.clientY - offsetY };
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (isDragging) {
+        const dx = Math.abs(e.clientX - offsetX - dragStart.x);
+        const dy = Math.abs(e.clientY - offsetY - dragStart.y);
+        if (dx > 4 || dy > 4) hasDragged = true;
+
+        offsetX = e.clientX - dragStart.x;
+        offsetY = e.clientY - dragStart.y;
+      }
+    });
+
+    window.addEventListener('mouseup', (e) => {
+      if (isDragging && !hasDragged) {
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        const worldPos = toWorld(mouseX, mouseY);
+
+        let clickedNode = null;
+        let minDist = 30 / (zoomLevel * Math.min(canvas.width, canvas.height));
+
+        nodes.forEach(n => {
+          const dist = Math.hypot(n.x - worldPos.x, n.y - worldPos.y);
+          if (dist < minDist) {
+            minDist = dist;
+            clickedNode = n;
+          }
+        });
+
+        if (clickedNode) openNodeDrawer(clickedNode);
+      }
+      isDragging = false;
+    });
+
+    // SALVATAGGIO & EXPORT
+    document.getElementById('btn-save-json').addEventListener('click', () => {
+      const data = {
+        nodes: nodes.map(n => ({ id: n.id, capacity: n.capacity, tier: n.tier })),
+        connections: connections
+      };
+
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `edunext_ecosistema_grafo.json`;
+      a.click();
+    });
+
+    document.getElementById('btn-load-json-trigger').addEventListener('click', () => {
+      document.getElementById('input-load-json').click();
+    });
+
+    document.getElementById('input-load-json').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const data = JSON.parse(event.target.result);
+          if (data.nodes) {
+            data.nodes.forEach(savedNode => {
+              const n = nodes.find(node => node.id === savedNode.id);
+              if (n) n.capacity = savedNode.capacity;
+            });
+          }
+          if (data.connections) connections = data.connections;
+
+          updateQuickSelect();
+          alert("Ecosistema EDUNEXT caricato con successo!");
+        } catch (err) {
+          alert("Errore nel caricamento del file JSON.");
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    document.getElementById('btn-export-html').addEventListener('click', () => {
+      const exportState = { nodes: nodes, connections: connections };
+      const blob = new Blob([`<!-- EDUNEXT Standalone Simulator -->\n<script>const data=${JSON.stringify(exportState)};<\/script>`], { type: 'text/html' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `edunext_ecosistema_standalone.html`;
+      a.click();
+    });
+
+    document.getElementById('btn-reset-all').addEventListener('click', () => {
+      culturalParticles = [];
+      nodes.forEach(n => n.culturalFlowsCount = 0);
+      totalStats = { intReachCount: 0, scientificPoints: 0 };
+    });
+
+    document.getElementById('btn-zoom-in').onclick = () => zoomLevel = Math.min(zoomLevel * 1.25, 5.0);
+    document.getElementById('btn-zoom-out').onclick = () => zoomLevel = Math.max(zoomLevel / 1.25, 0.5);
+    document.getElementById('btn-zoom-reset').onclick = () => { zoomLevel = 1.0; offsetX = 0; offsetY = 0; };
+
+    resize();
+    initDefaultConnections();
+
+    function getNodeColor(tier) {
+      if (tier === 'capofila') return '#ec4899';
+      if (tier === 'ateneo') return '#3b82f6';
+      if (tier === 'afam') return '#10b981';
+      if (tier === 'tech') return '#8b5cf6';
+      return '#f59e0b';
+    }
+
+    // MAIN RENDER LOOP
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      nodes.forEach(node => {
+        if (Math.random() < (node.capacity * 0.0003) && culturalParticles.length < 200) {
+          culturalParticles.push(new EducationalFlowParticle(node));
+        }
+      });
+
+      // CONNETTORI / ACCORDI
+      Object.values(connections).forEach(conn => {
+        const source = nodes.find(n => n.id === conn.source);
+        const target = nodes.find(n => n.id === conn.target);
+        if (!source || !target) return;
+
+        const p1 = toScreen(source.x, source.y);
+        const p2 = toScreen(target.x, target.y);
+
+        const isSelectedConn = selectedConnectionKey === conn.key;
+        const isNodeConn = selectedNode && (source.id === selectedNode.id || target.id === selectedNode.id);
+
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+
+        if (isSelectedConn) {
+          ctx.strokeStyle = '#facc15';
+          ctx.lineWidth = Math.max(3, 4 * zoomLevel);
+        } else if (isNodeConn) {
+          ctx.strokeStyle = '#06b6d4';
+          ctx.lineWidth = Math.max(2, 3 * zoomLevel);
+        } else {
+          ctx.strokeStyle = conn.weight > 3.0 ? 'rgba(139, 92, 246, 0.5)' : 'rgba(31, 41, 55, 0.6)';
+          ctx.lineWidth = Math.max(1, (1 + conn.weight * 0.3) * zoomLevel);
+        }
+        ctx.stroke();
+      });
+
+      // NODI INSTITUZIONALI / TECH
+      nodes.forEach(node => {
+        const p = toScreen(node.x, node.y);
+        const isSelected = selectedNode && selectedNode.id === node.id;
+
+        let baseRadius = 6;
+        if (node.tier === 'capofila') baseRadius = 13;
+        else if (node.tier === 'tech') baseRadius = 9.5;
+        else if (node.tier === 'ateneo') baseRadius = 8;
+        else if (node.tier === 'afam') baseRadius = 7;
+
+        let radius = baseRadius * Math.sqrt(zoomLevel);
+        if (isSelected) radius *= 1.3;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+        ctx.fillStyle = isSelected ? '#facc15' : getNodeColor(node.tier);
+        ctx.fill();
+
+        if (node.tier === 'capofila') {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, radius + 5 * zoomLevel, 0, Math.PI * 2);
+          ctx.strokeStyle = 'rgba(236, 72, 153, 0.5)';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+
+        if (zoomLevel > 0.85 || node.tier === 'capofila' || node.tier === 'tech' || isSelected) {
+          ctx.fillStyle = isSelected ? '#facc15' : '#f9fafb';
+          ctx.font = isSelected ? 'bold 11px sans-serif' : '9.5px sans-serif';
+          ctx.fillText(node.name, p.x + radius + 5, p.y + 3);
+        }
+      });
+
+      // PARTICELLE DI FLUSSO
+      culturalParticles.forEach(v => {
+        v.step();
+        v.draw();
+      });
+
+      culturalParticles = culturalParticles.filter(v => v.active);
+
+      // KPI UPDATES
+      document.getElementById('kpi-active').innerText = culturalParticles.length;
+      const totalFlows = nodes.reduce((acc, n) => acc + n.culturalFlowsCount, 0);
+      document.getElementById('kpi-int-reach').innerText = totalFlows > 0 ? Math.round((totalStats.intReachCount / totalFlows) * 100) + '%' : '0%';
+      document.getElementById('kpi-economic').innerText = totalStats.scientificPoints + ' ECTS/pts';
+
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+  </script>
+</body>
+</html>

@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulatore Rete Culturale Scale-Free - Modello Barabási & Engine Proattivo</title>
+  <style>
+    :root {
+      --bg-color: #0b0f19;
+      --card-bg: #1e293b;
+      --accent-local: #f43f5e;
+      --accent-regional: #38bdf8;
+      --accent-national: #a855f7;
+      --accent-international: #f59e0b;
+      --text-color: #f8fafc;
+      --text-dim: #94a3b8;
+      --border-color: #334155;
+      --highlight: #eab308;
+      --proactive-glow: #10b981;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg-color); color: var(--text-color); display: flex; height: 100vh; overflow: hidden; }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 410px;
+      background: var(--card-bg);
+      border-right: 1px solid var(--border-color);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+      z-index: 10;
+    }
+
+    h1 { font-size: 1.05rem; text-transform: uppercase; letter-spacing: 1px; color: var(--accent-regional); margin-bottom: 2px; }
+    p.desc { font-size: 0.74rem; color: var(--text-dim); line-height: 1.35; }
+
+    .section-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--highlight);
+      font-weight: bold;
+      margin-top: 4px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 4px;
+    }
+
+    .control-group {
+      background: rgba(0,0,0,0.3);
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+
+    .control-group label { display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: bold; margin-bottom: 6px; }
+    .control-group input[type="range"], select {
+      width: 100%;
+      background: #0b0f19;
+      border: 1px solid var(--border-color);
+      color: #fff;
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+    }
+
+    .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .btn {
+      background: var(--accent-regional);
+      color: #000;
+      border: none;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 0.78rem;
+      text-align: center;
+    }
+    .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-secondary { background: #334155; color: #fff; }
+    .btn-danger { background: var(--accent-local); color: #fff; }
+    .btn-warning { background: var(--highlight); color: #000; }
+    .btn-proactive { background: var(--proactive-glow); color: #000; font-weight: bold; }
+
+    .kpi-container { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .kpi-card {
+      background: rgba(255,255,255,0.03);
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      text-align: center;
+    }
+    .kpi-value { font-size: 0.95rem; font-weight: bold; color: #fff; }
+    .kpi-label { font-size: 0.60rem; color: var(--text-dim); text-transform: uppercase; }
+
+    /* DRAWER SCHEDA NODO E PROACTIVE INITIATIVES */
+    .node-drawer {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      width: 450px;
+      max-height: calc(100vh - 30px);
+      background: rgba(30, 41, 59, 0.97);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--highlight);
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      z-index: 20;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+      overflow-y: auto;
+    }
+    .node-drawer.hidden { display: none; }
+
+    .drawer-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
+    .drawer-title { font-size: 0.95rem; font-weight: bold; color: var(--highlight); }
+    .close-btn { background: none; border: none; color: var(--text-dim); font-size: 1.3rem; cursor: pointer; }
+
+    .badge-tier {
+      font-size: 0.65rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: bold;
+      text-transform: uppercase;
+      display: inline-block;
+      margin-top: 2px;
+    }
+    .tier-locale { background: var(--accent-local); color: #fff; }
+    .tier-regionale { background: var(--accent-regional); color: #000; }
+    .tier-nazionale { background: var(--accent-national); color: #fff; }
+    .tier-internazionale { background: var(--accent-international); color: #000; }
+
+    .conn-list { display: flex; flex-direction: column; gap: 6px; max-height: 150px; overflow-y: auto; margin-top: 4px; }
+    .conn-item {
+      background: rgba(11, 15, 25, 0.7);
+      border: 1px solid var(--border-color);
+      padding: 8px;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+    .conn-item.active { border-color: var(--highlight); background: rgba(234, 179, 8, 0.12); }
+    .conn-item:hover { border-color: var(--accent-regional); }
+
+    .proactive-box {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid var(--proactive-glow);
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      color: #ecfdf5;
+    }
+    .proactive-box h4 { font-size: 0.78rem; color: var(--proactive-glow); text-transform: uppercase; margin-bottom: 4px; }
+
+    .initiative-card {
+      background: rgba(11, 15, 25, 0.8);
+      border: 1px dashed var(--accent-regional);
+      padding: 8px;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      color: #38bdf8;
+      cursor: pointer;
+      margin-top: 6px;
+      transition: background 0.2s;
+    }
+    .initiative-card:hover { background: rgba(56, 189, 248, 0.15); }
+
+    textarea.notes-area {
+      width: 100%;
+      height: 70px;
+      background: #0b0f19;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      color: #fff;
+      padding: 6px;
+      font-size: 0.75rem;
+      resize: vertical;
+    }
+
+    /* CANVAS AREA */
+    .main-content { flex: 1; display: flex; flex-direction: column; position: relative; cursor: grab; }
+    .main-content:active { cursor: grabbing; }
+    canvas { width: 100%; height: 100%; display: block; background: #05070a; }
+
+    .map-controls {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      display: flex;
+      gap: 6px;
+      z-index: 5;
+    }
+    .control-btn {
+      width: 32px;
+      height: 32px;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      color: #fff;
+      font-size: 1.1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="sidebar">
+    <div>
+      <h1>Rete Culturale Scale-Free</h1>
+      <p class="desc">Modello Barabási: Connessione dei presidi regionali e locali con Hub Nazionali e Super-Hub Globali con Modulo Proattivo per l'Elaborazione Iniziative.</p>
+    </div>
+
+    <!-- ENGINE PROATTIVO DI RETE -->
+    <div class="section-title">💡 Engine Proattivo & Strategia Rete</div>
+    <div class="control-group" style="border-color: var(--proactive-glow);">
+      <p class="desc" style="color: #ecfdf5; margin-bottom: 8px;">L'algoritmo rileva automaticamente i presidi con scarso livello di connessione e propone iniziative per collegarli ai Super-Hub.</p>
+      <button class="btn btn-proactive" id="btn-proactive-optimize" style="width:100%;">⚡ Ottimizza Rete Proattivamente</button>
+    </div>
+
+    <div class="section-title">Corridoio Scientifico / Tematico</div>
+    <div class="control-group">
+      <label>Matrice Culturale Attiva</label>
+      <select id="select-thematic-route">
+        <option value="tutti">🌐 Tutti i Filoni Attivi (Rete Completa)</option>
+        <option value="magna-graecia">🏺 Rotta Magna Grecia (MARRC ↔ MANN ↔ Louvre/British)</option>
+        <option value="bizantino">☦️ Asse Bizantino & Icone (Frascineto/Rossano ↔ Vaticani)</option>
+        <option value="tessile-manifattura">🧵 Manifattura & Tessile (Lanificio Leo ↔ Triennale ↔ V&A)</option>
+        <option value="metallurgia">🏺 Metallurgia & Restauro (Dipignano ↔ UNICAL)</option>
+      </select>
+    </div>
+
+    <div class="section-title">Selezione Rapida Presidio</div>
+    <div class="control-group">
+      <label>Istituzione / Museo</label>
+      <select id="select-node-quick">
+        <option value="">-- Seleziona un nodo o clicca sulla mappa --</option>
+      </select>
+    </div>
+
+    <!-- KPI DASHBOARD -->
+    <div class="kpi-container">
+      <div class="kpi-card">
+        <div class="kpi-label">Flussi Culturali Attivi</div>
+        <div class="kpi-value" id="kpi-active">0</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Legami / Accordi Attivi</div>
+        <div class="kpi-value" id="kpi-connections">0</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Connessione Global/Locale</div>
+        <div class="kpi-value" id="kpi-int-reach">0%</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Valore Scientifico Generato</div>
+        <div class="kpi-value" id="kpi-economic">0 pts</div>
+      </div>
+    </div>
+
+    <div class="section-title">Gestione Grafi & Export</div>
+    <div class="btn-grid">
+      <button class="btn btn-secondary" id="btn-save-json">💾 Salva JSON</button>
+      <button class="btn btn-secondary" id="btn-load-json-trigger">📂 Carica JSON</button>
+      <input type="file" id="input-load-json" accept=".json" style="display:none;">
+    </div>
+    <button class="btn btn-warning" id="btn-export-html">🚀 Esporta HTML Read-Only</button>
+    <button class="btn btn-secondary" id="btn-reset-all" style="margin-top: 4px;">⟲ Reset Simulazione</button>
+  </div>
+
+  <div class="main-content" id="map-container">
+    <div class="map-controls">
+      <button class="control-btn" id="btn-zoom-in">+</button>
+      <button class="control-btn" id="btn-zoom-out">-</button>
+      <button class="control-btn" id="btn-zoom-reset">⟲</button>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <!-- SCHEDA GESTIONE SINGOLO NODO ED ELABORATORE PROATTIVO INIZIATIVE -->
+    <div class="node-drawer hidden" id="node-drawer">
+      <div class="drawer-header">
+        <div>
+          <div class="drawer-title" id="drawer-node-name">Nome Nodo</div>
+          <div id="drawer-node-badge"></div>
+        </div>
+        <button class="close-btn" id="btn-close-drawer">&times;</button>
+      </div>
+
+      <!-- SUGGERIMENTO PROATTIVO SPECIFICO PER IL NODO SELEZIONATO -->
+      <div class="proactive-box" id="node-proactive-suggestion">
+        <h4>✨ Raccomandazione Proattiva</h4>
+        <div id="proactive-suggestion-text">Analisi della connettività in corso...</div>
+        <button class="btn btn-proactive" id="btn-apply-proactive" style="margin-top:6px; width:100%; font-size:0.72rem; padding:4px;">Applica Iniziativa Suggerita</button>
+      </div>
+
+      <!-- CONFIGURAZIONE CAPACITÀ GENERATIVA / PRESTITI -->
+      <div class="control-group">
+        <label>
+          Capacità Generativa / Prestiti (Opere/Anno)
+          <span id="val-node-capacity" style="color:var(--highlight); font-weight:bold;">10</span>
+        </label>
+        <input type="range" id="param-node-capacity" min="0" max="300" step="5" value="10">
+        <p class="desc" style="margin-top:2px;">Frequenza con cui questo presidio produce mostre, prestiti di reperti o progetti di ricerca coordinati.</p>
+      </div>
+
+      <!-- ANALISI E MODIFICA CONNESIONI DEL NODO -->
+      <div>
+        <div style="font-size:0.75rem; font-weight:bold; color:#fff; margin-bottom:4px;">Legami Culturali Attivi</div>
+        <div class="conn-list" id="drawer-conn-list"></div>
+
+        <!-- AGGIUNTA NUOVA CONNESIONE -->
+        <div style="display:flex; gap:6px; margin-top:8px;">
+          <select id="select-add-target" style="flex:1;">
+            <option value="">+ Crea Legame Culturale...</option>
+          </select>
+          <button class="btn btn-warning" id="btn-add-connection" style="white-space:nowrap;">Collega</button>
+        </div>
+      </div>
+
+      <!-- ELABORATORE PROATTIVO SUL LEGAME SELEZIONATO -->
+      <div id="connection-strategy-panel" style="display:none; border-top:1px solid var(--border-color); padding-top:10px;">
+        <div style="font-size:0.8rem; font-weight:bold; color:var(--highlight);" id="strategy-conn-title">Dettaglio Legame Culturale</div>
+
+        <div class="control-group" style="margin-top:6px;">
+          <label>
+            Intensità dello Scambio Scientifico (Boost)
+            <span id="val-conn-boost" style="color:var(--highlight);">1.0x</span>
+          </label>
+          <input type="range" id="param-conn-boost" min="0.1" max="10.0" step="0.1" value="1.0">
+          <p class="desc">Aumentare il valore incrementa la probabilità di trasferimento di reperti e ricerca condivisa su questo asse.</p>
+        </div>
+
+        <div style="margin-top:6px;">
+          <div style="font-size:0.75rem; font-weight:bold; color:var(--proactive-glow);">Elabora Iniziativa Strategica (1-Click)</div>
+          <div class="initiative-card" id="prompt-strategy-1">
+            📜 <strong>Iniziativa A: Co-Curatela e Catalogo LOD Condiviso</strong><br>
+            <span style="color:var(--text-dim);">Elabora un protocollo d'intesa pluriennale e porta il boost a 3.0x.</span>
+          </div>
+          <div class="initiative-card" id="prompt-strategy-2">
+            🚚 <strong>Iniziativa B: Mostra Dossier & Prestito d'Eccellenza</strong><br>
+            <span style="color:var(--text-dim);">Pianifica il trasferimento temporaneo di opere cardine con boost a 4.5x.</span>
+          </div>
+          <div class="initiative-card" id="prompt-strategy-3">
+            🔬 <strong>Iniziativa C: Cantiere di Restauro e Residenza d'Artista</strong><br>
+            <span style="color:var(--text-dim);">Attiva un progetto di ricerca integrato UNICAL/Poli e porta il boost a 5.0x.</span>
+          </div>
+        </div>
+
+        <div style="margin-top:8px;">
+          <div style="font-size:0.72rem; font-weight:bold; color:var(--text-dim); margin-bottom:2px;">Progetto Elaborato / Note della Convenzione</div>
+          <textarea class="notes-area" id="conn-notes-input" placeholder="Il modulo proattivo genererà qui la scheda sintetica dell'iniziativa..."></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const mapContainer = document.getElementById('map-container');
+
+    let selectedNode = null;
+    let selectedConnectionKey = null;
+
+    // Zoom & Pan
+    let zoomLevel = 1.0;
+    let offsetX = 0;
+    let offsetY = 0;
+    let isDragging = false;
+    let dragStart = { x: 0, y: 0 };
+    let hasDragged = false;
+
+    // DATASET GRAFO CULTURALE SCALE-FREE (MODELLO BARABÁSI)
+    const rawNodes = [
+      // SUPER-HUB INTERNAZIONALI
+      { id: 101, name: "Musée du Louvre (Parigi)", tier: "internazionale", coords: [0.15, 0.15], capacity: 150 },
+      { id: 102, name: "British Museum (Londra)", tier: "internazionale", coords: [0.12, 0.28], capacity: 160 },
+      { id: 103, name: "Metropolitan Museum (New York)", tier: "internazionale", coords: [0.05, 0.45], capacity: 180 },
+      { id: 104, name: "V&A Museum Tessile (Londra)", tier: "internazionale", coords: [0.18, 0.35], capacity: 110 },
+
+      // HUB NAZIONALI DI SMISTAMENTO SCIENTIFICO
+      { id: 201, name: "MANN - Museo Archeologico (Napoli)", tier: "nazionale", coords: [0.55, 0.58], capacity: 120 },
+      { id: 202, name: "Musei Vaticani & MAXXI (Roma)", tier: "nazionale", coords: [0.50, 0.46], capacity: 140 },
+      { id: 203, name: "Gallerie degli Uffizi (Firenze)", tier: "nazionale", coords: [0.44, 0.38], capacity: 130 },
+      { id: 204, name: "Triennale & Brera (Milano)", tier: "nazionale", coords: [0.36, 0.28], capacity: 100 },
+
+      // HUB REGIONALI E PRESIDI TERRITORIALI
+      { id: 1, name: "MARRC - Museo Reggio C. (Bronzi)", tier: "regionale", coords: [0.62, 0.88], capacity: 90 },
+      { id: 2, name: "Museo del Rame (Dipignano)", tier: "locale", coords: [0.71, 0.64], capacity: 20 },
+      { id: 3, name: "Rubbettino Editore (Soveria M.)", tier: "locale", coords: [0.76, 0.67], capacity: 25 },
+      { id: 4, name: "Lanificio Leo (Soveria M.)", tier: "regionale", coords: [0.77, 0.68], capacity: 45 },
+      { id: 5, name: "Museo Bergamotto (Reggio C.)", tier: "locale", coords: [0.63, 0.89], capacity: 20 },
+      { id: 6, name: "Maison Gerardo Sacco (Crotone)", tier: "regionale", coords: [0.88, 0.65], capacity: 40 },
+      { id: 7, name: "MuRi - Santa Maria di Ricadi", tier: "regionale", coords: [0.60, 0.77], capacity: 35 },
+      { id: 8, name: "MuRi Cipolla IGP (San Nicolò)", tier: "locale", coords: [0.61, 0.78], capacity: 15 },
+      { id: 9, name: "MuRi Paleontologico (Ricadi)", tier: "locale", coords: [0.62, 0.775], capacity: 20 },
+      { id: 10, name: "MuRi Torre Marrana", tier: "locale", coords: [0.625, 0.785], capacity: 15 },
+      { id: 11, name: "Museo Rame (Tessano)", tier: "locale", coords: [0.70, 0.635], capacity: 15 },
+      { id: 12, name: "Ex Convento Cappuccini (Dipignano)", tier: "locale", coords: [0.715, 0.645], capacity: 20 },
+      { id: 13, name: "Borgo Storico Grimaldi", tier: "locale", coords: [0.70, 0.68], capacity: 15 },
+      { id: 14, name: "Borgo Altilia", tier: "locale", coords: [0.71, 0.69], capacity: 15 },
+      { id: 15, name: "Borgo Scigliano", tier: "locale", coords: [0.73, 0.685], capacity: 15 },
+      { id: 16, name: "Castello Aiello Calabro", tier: "locale", coords: [0.67, 0.70], capacity: 20 },
+      { id: 17, name: "Castello Cleto", tier: "locale", coords: [0.66, 0.72], capacity: 25 },
+      { id: 18, name: "Castello Savuto Cleto", tier: "locale", coords: [0.67, 0.725], capacity: 15 },
+      { id: 19, name: "Villa Rendano (Cosenza)", tier: "regionale", coords: [0.71, 0.62], capacity: 50 },
+      { id: 20, name: "LMSV UNICAL (Rende)", tier: "regionale", coords: [0.69, 0.59], capacity: 70 },
+      { id: 21, name: "Polo GIAS (Mongrassano)", tier: "locale", coords: [0.68, 0.54], capacity: 20 },
+      { id: 22, name: "Museo Seta (Mendicino)", tier: "locale", coords: [0.68, 0.63], capacity: 25 },
+      { id: 23, name: "Chiese Bizantine (Vaccarizzo)", tier: "locale", coords: [0.78, 0.52], capacity: 20 },
+      { id: 24, name: "Museo Costume Arbëreshë", tier: "regionale", coords: [0.785, 0.525], capacity: 35 },
+      { id: 25, name: "Chiesa S. Maria Civita", tier: "locale", coords: [0.72, 0.44], capacity: 15 },
+      { id: 26, name: "Chiesa Bizantina (Frascineto)", tier: "locale", coords: [0.73, 0.435], capacity: 20 },
+      { id: 27, name: "Museo Icone Bizantine (Frascineto)", tier: "regionale", coords: [0.735, 0.43], capacity: 50 },
+      { id: 28, name: "Santuario San Cosmo A.", tier: "locale", coords: [0.77, 0.53], capacity: 20 },
+      { id: 29, name: "Chiesa SS. Salvatore (Cosenza)", tier: "locale", coords: [0.715, 0.625], capacity: 20 },
+      { id: 30, name: "Torre Camigliati (Sila)", tier: "regionale", coords: [0.79, 0.61], capacity: 40 },
+      { id: 31, name: "Museo Civico Drapia", tier: "locale", coords: [0.63, 0.76], capacity: 20 },
+      { id: 32, name: "Necropoli Torre Galli (Drapia)", tier: "regionale", coords: [0.625, 0.755], capacity: 35 }
+    ];
+
+    let nodes = rawNodes.map(d => ({
+      id: d.id,
+      name: d.name,
+      tier: d.tier,
+      x: d.coords[0],
+      y: d.coords[1],
+      capacity: d.capacity,
+      culturalFlowsCount: 0
+    }));
+
+    let connections = {};
+    let culturalParticles = [];
+    let totalStats = { intReachCount: 0, scientificPoints: 0 };
+    let currentProactiveSuggestion = null;
+
+    function getKey(id1, id2) {
+      return id1 < id2 ? `${id1}-${id2}` : `${id2}-${id1}`;
+    }
+
+    function resize() {
+      canvas.width = mapContainer.clientWidth;
+      canvas.height = mapContainer.clientHeight;
+    }
+    window.addEventListener('resize', resize);
+
+    function toScreen(wx, wy) {
+      return {
+        x: wx * canvas.width * zoomLevel + offsetX,
+        y: wy * canvas.height * zoomLevel + offsetY
+      };
+    }
+
+    function toWorld(sx, sy) {
+      return {
+        x: (sx - offsetX) / (canvas.width * zoomLevel),
+        y: (sy - offsetY) / (canvas.height * zoomLevel)
+      };
+    }
+
+    function addConn(id1, id2, weight = 1.0, notes = '') {
+      const key = getKey(id1, id2);
+      connections[key] = { key, source: id1, target: id2, weight, notes };
+    }
+
+    function initDefaultConnections() {
+      connections = {};
+      addConn(1, 201, 3.5, "Asse Archeologico Reggio-Napoli (Magna Grecia)");
+      addConn(201, 101, 2.5, "Accordo Prestiti MANN - Louvre");
+      addConn(1, 102, 2.0, "Ricerca Congiunta Bronzi & Statuaria col British Museum");
+      addConn(32, 1, 2.0, "Corridoio Protostorico Necropoli Torre Galli ↔ MARRC");
+      addConn(31, 32, 1.5, "Polo Archeologico Drapia");
+      addConn(7, 32, 1.8, "Rete Museale Tropea-Ricadi-Drapia");
+
+      addConn(4, 204, 3.0, "Design Industriale Soveria Mannelli ↔ Triennale Milano");
+      addConn(4, 104, 2.5, "Archivio Tessile Lanificio Leo ↔ V&A Museum Londra");
+      addConn(3, 4, 2.0, "Polo Editoriale e Tessile Soveria Mannelli");
+      addConn(22, 4, 1.8, "Asse della Seta Mendicino ↔ Soveria");
+      addConn(6, 204, 2.2, "Oreficeria Gerardo Sacco ↔ Triennale");
+
+      addConn(27, 202, 3.0, "Tutela Icone Bizantine Frascineto ↔ Musei Vaticani");
+      addConn(24, 27, 2.5, "Rete Museale Arbëreshë (S. Sofia - Frascineto)");
+      addConn(23, 24, 1.8, "Chiese Bizantine Vaccarizzo ↔ Museo Costume");
+      addConn(26, 27, 2.0, "Presidio Bizantino Frascineto");
+
+      addConn(2, 20, 2.5, "Analisi Metallurgica Rame Dipignano ↔ UNICAL Rende");
+      addConn(11, 2, 1.8, "Rete Artigiana Rame Tessano-Dipignano");
+      addConn(12, 2, 1.5, "Ex Convento Cappuccini ↔ Museo Rame");
+      addConn(19, 20, 2.2, "Polo Museale e Scientifico Cosenza-Rende");
+      addConn(30, 20, 1.8, "Ecomuseo Camigliati Sila ↔ UNICAL");
+
+      addConn(17, 18, 1.8, "Sistema Castelli Cleto e Savuto");
+      addConn(16, 17, 1.5, "Circuito Castelli Aiello-Cleto");
+      addConn(13, 14, 1.2, "Borgi Storici Grimaldi-Altilia");
+      addConn(14, 15, 1.2, "Rete Borghi del Savuto");
+
+      updateQuickSelect();
+    }
+
+    function getConnectionsForNode(nodeId) {
+      return Object.values(connections).filter(c => c.source === nodeId || c.target === nodeId);
+    }
+
+    function updateQuickSelect() {
+      const select = document.getElementById('select-node-quick');
+      select.innerHTML = '<option value="">-- Seleziona un nodo o clicca sulla mappa --</option>';
+
+      const tiers = [
+        { key: 'internazionale', label: '🌍 Super-Hub Globali' },
+        { key: 'nazionale', label: '🇮🇹 Poli Museali Nazionali' },
+        { key: 'regionale', label: '🏛️ Hub Regionali & Parchi' },
+        { key: 'locale', label: '📍 Presidi Culturali Locali' }
+      ];
+
+      tiers.forEach(t => {
+        const group = document.createElement('optgroup');
+        group.label = t.label;
+        nodes.filter(n => n.tier === t.key).forEach(n => {
+          const opt = document.createElement('option');
+          opt.value = n.id;
+          opt.innerText = `${n.name}`;
+          group.appendChild(opt);
+        });
+        select.appendChild(group);
+      });
+    }
+
+    // MODULO PROATTIVO: ANALISI DEL NODO E RILEVAMENTO INIZIATIVE MANCANTI
+    function analyzeNodeProactively(node) {
+      const conns = getConnectionsForNode(node.id);
+      const targetBox = document.getElementById('proactive-suggestion-text');
+      const applyBtn = document.getElementById('btn-apply-proactive');
+
+      const connectedNodeIds = conns.map(c => c.source === node.id ? c.target : c.source);
+      const hasInternational = nodes.some(n => connectedNodeIds.includes(n.id) && n.tier === 'internazionale');
+      const hasNational = nodes.some(n => connectedNodeIds.includes(n.id) && n.tier === 'nazionale');
+
+      if (node.tier === 'locale' && !hasNational && !hasInternational) {
+        // Cerca l'hub nazionale o regionale più pertinente
+        let suggestedHub = nodes.find(n => n.tier === 'nazionale' && n.id === 201) || nodes[0];
+        if (node.id === 2 || node.id === 11) suggestedHub = nodes.find(n => n.id === 20) || suggestedHub; // UNICAL
+        if (node.id === 26 || node.id === 23) suggestedHub = nodes.find(n => n.id === 202) || suggestedHub; // Vaticani
+
+        currentProactiveSuggestion = {
+          sourceId: node.id,
+          targetId: suggestedHub.id,
+          weight: 3.5,
+          notes: `[PROATTIVO] Protocollo d'Intesa Strategico: Collegamento diretto tra ${node.name} e ${suggestedHub.name} per valorizzazione integrata.`
+        };
+
+        targetBox.innerHTML = `⚠️ <strong>Presidio periferico con basso grado di connessione.</strong><br>
+        Si raccomanda di attivare un'iniziativa con <strong>${suggestedHub.name}</strong> per incrementare il valore scientifico (+45%).`;
+        applyBtn.style.display = 'block';
+      } else if (!hasInternational && (node.tier === 'regionale' || node.tier === 'nazionale')) {
+        let suggestedGlobal = nodes.find(n => n.tier === 'internazionale' && n.id === 101);
+        currentProactiveSuggestion = {
+          sourceId: node.id,
+          targetId: suggestedGlobal.id,
+          weight: 4.0,
+          notes: `[PROATTIVO GLOBAL] Accordo per mostre dossier e co-curatela internazionale con ${suggestedGlobal.name}.`
+        };
+
+        targetBox.innerHTML = `🌟 <strong>Potenziale Internazionale Inespresso!</strong><br>
+        Collega questo Hub a <strong>${suggestedGlobal.name}</strong> per espandere il raggio d'azione della rete su scala globale.`;
+        applyBtn.style.display = 'block';
+      } else {
+        targetBox.innerHTML = `✅ <strong>Connettività Ottimale.</strong> Questo presidio possiede già legami ad alto impatto con gli hub principali.`;
+        applyBtn.style.display = 'none';
+        currentProactiveSuggestion = null;
+      }
+    }
+
+    // APERTURA DRAWER NODO
+    function openNodeDrawer(node) {
+      selectedNode = node;
+      selectedConnectionKey = null;
+
+      document.getElementById('drawer-node-name').innerText = node.name;
+      document.getElementById('drawer-node-badge').innerHTML = `<span class="badge-tier tier-${node.tier}">${node.tier}</span>`;
+      document.getElementById('param-node-capacity').value = node.capacity;
+      document.getElementById('val-node-capacity').innerText = node.capacity;
+
+      analyzeNodeProactively(node);
+      renderConnectionList();
+      populateAddTargetDropdown();
+      document.getElementById('connection-strategy-panel').style.display = 'none';
+      document.getElementById('node-drawer').classList.remove('hidden');
+    }
+
+    function renderConnectionList() {
+      if (!selectedNode) return;
+      const container = document.getElementById('drawer-conn-list');
+      container.innerHTML = '';
+
+      const nodeConns = getConnectionsForNode(selectedNode.id);
+
+      if (nodeConns.length === 0) {
+        container.innerHTML = '<div style="font-size:0.72rem; color:var(--text-dim);">Nessun legame culturale attivo per questo nodo.</div>';
+        return;
+      }
+
+      nodeConns.forEach(conn => {
+        const targetId = conn.source === selectedNode.id ? conn.target : conn.source;
+        const targetNode = nodes.find(n => n.id === targetId);
+
+        const div = document.createElement('div');
+        div.className = `conn-item ${selectedConnectionKey === conn.key ? 'active' : ''}`;
+        div.innerHTML = `
+          <div>
+            <strong>↔ ${targetNode.name}</strong>
+            <div style="font-size:0.65rem; color:var(--text-dim);">
+              <span class="badge-tier tier-${targetNode.tier}">${targetNode.tier}</span> | Boost: ${conn.weight}x ${conn.notes ? '📝' : ''}
+            </div>
+          </div>
+          <button class="btn btn-danger" style="padding:2px 6px; font-size:0.65rem;" onclick="event.stopPropagation(); removeConnection('${conn.key}');">Elimina</button>
+        `;
+
+        div.addEventListener('click', () => selectConnectionForStrategy(conn, targetNode));
+        container.appendChild(div);
+      });
+
+      document.getElementById('kpi-connections').innerText = Object.keys(connections).length;
+    }
+
+    function populateAddTargetDropdown() {
+      if (!selectedNode) return;
+      const select = document.getElementById('select-add-target');
+      select.innerHTML = '<option value="">+ Crea Legame Culturale...</option>';
+
+      const existingConnTargetIds = getConnectionsForNode(selectedNode.id).map(c => c.source === selectedNode.id ? c.target : c.source);
+
+      nodes.forEach(n => {
+        if (n.id !== selectedNode.id && !existingConnTargetIds.includes(n.id)) {
+          const opt = document.createElement('option');
+          opt.value = n.id;
+          opt.innerText = `[${n.tier.toUpperCase()}] ${n.name}`;
+          select.appendChild(opt);
+        }
+      });
+    }
+
+    function selectConnectionForStrategy(conn, targetNode) {
+      selectedConnectionKey = conn.key;
+      renderConnectionList();
+
+      const panel = document.getElementById('connection-strategy-panel');
+      panel.style.display = 'block';
+
+      document.getElementById('strategy-conn-title').innerText = `Asse Culturale: ${selectedNode.name} ↔ ${targetNode.name}`;
+      document.getElementById('param-conn-boost').value = conn.weight;
+      document.getElementById('val-conn-boost').innerText = conn.weight + 'x';
+      document.getElementById('conn-notes-input').value = conn.notes || '';
+
+      // ELABORAZIONE PROATTIVA INIZIATIVE SU CLICK
+      document.getElementById('prompt-strategy-1').onclick = () => {
+        conn.weight = 3.0;
+        document.getElementById('param-conn-boost').value = 3.0;
+        document.getElementById('val-conn-boost').innerText = '3.0x';
+        document.getElementById('conn-notes-input').value = `[INIZIATIVA A] PROTOCOLLO D'INTESA & CO-CURATELA\n- Asse: ${selectedNode.name} ↔ ${targetNode.name}\n- Obiettivo: Realizzazione di un catalogo integrato Linked Open Data e mostre condivise.\n- Impatto Scientifico: Boost elevato (+3.0x).`;
+        conn.notes = document.getElementById('conn-notes-input').value;
+        renderConnectionList();
+      };
+
+      document.getElementById('prompt-strategy-2').onclick = () => {
+        conn.weight = 4.5;
+        document.getElementById('param-conn-boost').value = 4.5;
+        document.getElementById('val-conn-boost').innerText = '4.5x';
+        document.getElementById('conn-notes-input').value = `[INIZIATIVA B] MOSTRA DOSSIER & PRESTITO D'ECCELLENZA\n- Asse: ${selectedNode.name} ↔ ${targetNode.name}\n- Obiettivo: Trasferimento temporaneo di opere iconiche con percorso didattico d'eccellenza.\n- Impatto Scientifico: Boost molto alto (+4.5x).`;
+        conn.notes = document.getElementById('conn-notes-input').value;
+        renderConnectionList();
+      };
+
+      document.getElementById('prompt-strategy-3').onclick = () => {
+        conn.weight = 5.0;
+        document.getElementById('param-conn-boost').value = 5.0;
+        document.getElementById('val-conn-boost').innerText = '5.0x';
+        document.getElementById('conn-notes-input').value = `[INIZIATIVA C] CANTIERE DI RESTAURO & DIGITAL TWIN\n- Asse: ${selectedNode.name} ↔ ${targetNode.name}\n- Obiettivo: Laboratorio aperto di diagnostica, digitalizzazione 3D e residenze d'artista.\n- Impatto Scientifico: Boost massimo (+5.0x).`;
+        conn.notes = document.getElementById('conn-notes-input').value;
+        renderConnectionList();
+      };
+    }
+
+    function removeConnection(key) {
+      delete connections[key];
+      if (selectedConnectionKey === key) {
+        selectedConnectionKey = null;
+        document.getElementById('connection-strategy-panel').style.display = 'none';
+      }
+      renderConnectionList();
+      populateAddTargetDropdown();
+      if (selectedNode) analyzeNodeProactively(selectedNode);
+    }
+
+    // APPLICAZIONE RACCAMANDAZIONE PROATTIVA
+    document.getElementById('btn-apply-proactive').addEventListener('click', () => {
+      if (currentProactiveSuggestion) {
+        addConn(
+          currentProactiveSuggestion.sourceId,
+          currentProactiveSuggestion.targetId,
+          currentProactiveSuggestion.weight,
+          currentProactiveSuggestion.notes
+        );
+        analyzeNodeProactively(selectedNode);
+        renderConnectionList();
+        populateAddTargetDropdown();
+      }
+    });
+
+    // OTTIMIZZATORE PROATTIVO GLOBALE DI RETE (ALGORITMO BARABÁSI PREFERENTIAL ATTACHMENT)
+    document.getElementById('btn-proactive-optimize').addEventListener('click', () => {
+      let createdCount = 0;
+
+      nodes.forEach(node => {
+        const conns = getConnectionsForNode(node.id);
+        if (conns.length <= 1) {
+          // Identifica l'hub a più alto grado di connessione
+          const hubCandidates = nodes.filter(n => n.tier === 'nazionale' || n.tier === 'internazionale');
+          const targetHub = hubCandidates[Math.floor(Math.random() * hubCandidates.length)];
+
+          if (targetHub && node.id !== targetHub.id) {
+            addConn(
+              node.id,
+              targetHub.id,
+              3.0,
+              `[OTTIMIZZAZIONE PROATTIVA] Ponte strategico automatico creato tra presidio ${node.name} e hub ${targetHub.name}.`
+            );
+            createdCount++;
+          }
+        }
+      });
+
+      alert(`⚡ Ottimizzazione completata! Sono stati elaborati e attivati proattivamente ${createdCount} nuovi legami strategici.`);
+      updateQuickSelect();
+    });
+
+    // EVENTI INTERFACCIA
+    document.getElementById('param-node-capacity').addEventListener('input', (e) => {
+      if (selectedNode) {
+        selectedNode.capacity = parseInt(e.target.value);
+        document.getElementById('val-node-capacity').innerText = selectedNode.capacity;
+        updateQuickSelect();
+      }
+    });
+
+    document.getElementById('btn-add-connection').addEventListener('click', () => {
+      const select = document.getElementById('select-add-target');
+      const targetId = parseInt(select.value);
+      if (selectedNode && targetId) {
+        const key = getKey(selectedNode.id, targetId);
+        connections[key] = { key, source: selectedNode.id, target: targetId, weight: 1.0, notes: 'Protocollo d\'Intesa Culturale' };
+        renderConnectionList();
+        populateAddTargetDropdown();
+        analyzeNodeProactively(selectedNode);
+      }
+    });
+
+    document.getElementById('param-conn-boost').addEventListener('input', (e) => {
+      if (selectedConnectionKey && connections[selectedConnectionKey]) {
+        connections[selectedConnectionKey].weight = parseFloat(e.target.value);
+        document.getElementById('val-conn-boost').innerText = e.target.value + 'x';
+        renderConnectionList();
+      }
+    });
+
+    document.getElementById('conn-notes-input').addEventListener('input', (e) => {
+      if (selectedConnectionKey && connections[selectedConnectionKey]) {
+        connections[selectedConnectionKey].notes = e.target.value;
+      }
+    });
+
+    document.getElementById('btn-close-drawer').addEventListener('click', () => {
+      document.getElementById('node-drawer').classList.add('hidden');
+      selectedNode = null;
+    });
+
+    document.getElementById('select-node-quick').addEventListener('change', (e) => {
+      const nodeId = parseInt(e.target.value);
+      const node = nodes.find(n => n.id === nodeId);
+      if (node) openNodeDrawer(node);
+    });
+
+    // EVIDENZIAZIONE CORRIDOI TEMATICI
+    document.getElementById('select-thematic-route').addEventListener('change', (e) => {
+      const val = e.target.value;
+      if (val === 'tutti') {
+        initDefaultConnections();
+      } else if (val === 'magna-graecia') {
+        if (connections[getKey(1, 201)]) connections[getKey(1, 201)].weight = 6.0;
+        if (connections[getKey(201, 101)]) connections[getKey(201, 101)].weight = 5.0;
+        if (connections[getKey(1, 102)]) connections[getKey(1, 102)].weight = 4.5;
+        if (connections[getKey(32, 1)]) connections[getKey(32, 1)].weight = 4.0;
+      } else if (val === 'bizantino') {
+        if (connections[getKey(27, 202)]) connections[getKey(27, 202)].weight = 6.0;
+        if (connections[getKey(24, 27)]) connections[getKey(24, 27)].weight = 5.0;
+      } else if (val === 'tessile-manifattura') {
+        if (connections[getKey(4, 204)]) connections[getKey(4, 204)].weight = 6.0;
+        if (connections[getKey(4, 104)]) connections[getKey(4, 104)].weight = 5.0;
+        if (connections[getKey(6, 204)]) connections[getKey(6, 204)].weight = 4.0;
+      } else if (val === 'metallurgia') {
+        if (connections[getKey(2, 20)]) connections[getKey(2, 20)].weight = 6.0;
+      }
+    });
+
+    // SIMULATORE DI FLUSSI CULTURALI (PARTICELLE DI SCIENZA / PRESTITI)
+    class CulturalParticle {
+      constructor(startNode) {
+        this.startTier = startNode.tier;
+        this.currentNode = startNode;
+        this.currentNode.culturalFlowsCount++;
+        this.targetNode = null;
+        this.progress = 0;
+        this.speed = 0.005 + Math.random() * 0.005;
+        this.history = [this.currentNode.id];
+        this.active = true;
+      }
+
+      step() {
+        if (!this.active) return;
+
+        if (!this.targetNode) {
+          const nodeConns = getConnectionsForNode(this.currentNode.id);
+          if (nodeConns.length === 0 || this.history.length > 5) {
+            this.active = false;
+            return;
+          }
+
+          let totalWeight = 0;
+          const options = nodeConns.map(c => {
+            const nextId = c.source === this.currentNode.id ? c.target : c.source;
+            const nextNode = nodes.find(n => n.id === nextId);
+            const visited = this.history.includes(nextId);
+            let w = (c.weight || 1.0) * (visited ? 0.1 : 2.5);
+            totalWeight += w;
+            return { node: nextNode, weight: w };
+          });
+
+          let rnd = Math.random() * totalWeight;
+          for (let opt of options) {
+            rnd -= opt.weight;
+            if (rnd <= 0) {
+              this.targetNode = opt.node;
+              break;
+            }
+          }
+          if (!this.targetNode) this.targetNode = options[0].node;
+        }
+
+        this.progress += this.speed;
+
+        if (this.progress >= 1) {
+          this.currentNode = this.targetNode;
+          this.currentNode.culturalFlowsCount++;
+          this.history.push(this.currentNode.id);
+          this.targetNode = null;
+          this.progress = 0;
+
+          if (this.startTier === 'internazionale' && (this.currentNode.tier === 'locale' || this.currentNode.tier === 'regionale')) {
+            totalStats.intReachCount++;
+            totalStats.scientificPoints += 50;
+          } else {
+            totalStats.scientificPoints += 10;
+          }
+        }
+      }
+
+      draw() {
+        if (!this.active) return;
+
+        let wx = this.currentNode.x;
+        let wy = this.currentNode.y;
+
+        if (this.targetNode) {
+          wx = this.currentNode.x + (this.targetNode.x - this.currentNode.x) * this.progress;
+          wy = this.currentNode.y + (this.targetNode.y - this.currentNode.y) * this.progress;
+        }
+
+        const p = toScreen(wx, wy);
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, Math.max(3, 4.5 * Math.sqrt(zoomLevel)), 0, Math.PI * 2);
+        ctx.fillStyle = this.startTier === 'internazionale' ? '#f59e0b' : (this.startTier === 'nazionale' ? '#a855f7' : '#38bdf8');
+        ctx.fill();
+      }
+    }
+
+    // CANVAS MOUSE EVENTS (PAN & ZOOM)
+    mapContainer.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
+      const newZoom = Math.min(Math.max(zoomLevel * zoomFactor, 0.5), 5.0);
+
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      offsetX = mouseX - (mouseX - offsetX) * (newZoom / zoomLevel);
+      offsetY = mouseY - (mouseY - offsetY) * (newZoom / zoomLevel);
+      zoomLevel = newZoom;
+    }, { passive: false });
+
+    mapContainer.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      hasDragged = false;
+      dragStart = { x: e.clientX - offsetX, y: e.clientY - offsetY };
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (isDragging) {
+        const dx = Math.abs(e.clientX - offsetX - dragStart.x);
+        const dy = Math.abs(e.clientY - offsetY - dragStart.y);
+        if (dx > 4 || dy > 4) hasDragged = true;
+
+        offsetX = e.clientX - dragStart.x;
+        offsetY = e.clientY - dragStart.y;
+      }
+    });
+
+    window.addEventListener('mouseup', (e) => {
+      if (isDragging && !hasDragged) {
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        const worldPos = toWorld(mouseX, mouseY);
+
+        let clickedNode = null;
+        let minDist = 30 / (zoomLevel * Math.min(canvas.width, canvas.height));
+
+        nodes.forEach(n => {
+          const dist = Math.hypot(n.x - worldPos.x, n.y - worldPos.y);
+          if (dist < minDist) {
+            minDist = dist;
+            clickedNode = n;
+          }
+        });
+
+        if (clickedNode) openNodeDrawer(clickedNode);
+      }
+      isDragging = false;
+    });
+
+    // SALVATAGGIO JSON ED ESPORTAZIONE HTML
+    document.getElementById('btn-save-json').addEventListener('click', () => {
+      const data = {
+        nodes: nodes.map(n => ({ id: n.id, capacity: n.capacity, tier: n.tier })),
+        connections: connections
+      };
+
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `rete_culturale_barabasi_proattiva.json`;
+      a.click();
+    });
+
+    document.getElementById('btn-load-json-trigger').addEventListener('click', () => {
+      document.getElementById('input-load-json').click();
+    });
+
+    document.getElementById('input-load-json').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const data = JSON.parse(event.target.result);
+          if (data.nodes) {
+            data.nodes.forEach(savedNode => {
+              const n = nodes.find(node => node.id === savedNode.id);
+              if (n) n.capacity = savedNode.capacity;
+            });
+          }
+          if (data.connections) connections = data.connections;
+
+          updateQuickSelect();
+          alert("Grafo Culturale Proattivo caricato con successo!");
+        } catch (err) {
+          alert("Errore durante il caricamento del file JSON.");
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    document.getElementById('btn-export-html').addEventListener('click', () => {
+      const exportState = {
+        nodes: nodes,
+        connections: connections
+      };
+
+      const htmlContent = `<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Rete Culturale Scale-Free (Read-Only)</title>
+  <style>
+    body { margin: 0; background: #05070a; color: #fff; font-family: sans-serif; overflow: hidden; display: flex; height: 100vh; }
+    #canvas { width: 100%; height: 100%; display: block; }
+    .badge { position: absolute; top: 15px; left: 15px; background: rgba(30,41,59,0.92); padding: 12px 18px; border-radius: 8px; border: 1px solid #10b981; }
+    .badge h2 { font-size: 0.95rem; margin: 0 0 4px 0; color: #10b981; text-transform: uppercase; }
+    .badge p { font-size: 0.75rem; margin: 0; color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <div class="badge">
+    <h2>Rete Culturale Scale-Free & Engine Proattivo</h2>
+    <p>Flussi immateriali, prestiti e iniziative elaborate tra presidi e hub globali.</p>
+  </div>
+  <canvas id="canvas"></canvas>
+  <script>
+    const config = ${JSON.stringify(exportState)};
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let particles = [];
+    class Particle {
+      constructor(startNode) {
+        this.currentNode = startNode;
+        this.startTier = startNode.tier;
+        this.targetNode = null;
+        this.progress = 0;
+        this.active = true;
+      }
+      step() {
+        if (!this.targetNode) {
+          const conns = Object.values(config.connections).filter(c => c.source === this.currentNode.id || c.target === this.currentNode.id);
+          if (conns.length === 0) { this.active = false; return; }
+          const c = conns[Math.floor(Math.random() * conns.length)];
+          const nextId = c.source === this.currentNode.id ? c.target : c.source;
+          this.targetNode = config.nodes.find(n => n.id === nextId);
+        }
+        this.progress += 0.006;
+        if (this.progress >= 1) {
+          this.currentNode = this.targetNode;
+          this.targetNode = null;
+          this.progress = 0;
+        }
+      }
+      draw() {
+        if (!this.active) return;
+        let wx = this.currentNode.x, wy = this.currentNode.y;
+        if (this.targetNode) {
+          wx = this.currentNode.x + (this.targetNode.x - this.currentNode.x) * this.progress;
+          wy = this.currentNode.y + (this.targetNode.y - this.currentNode.y) * this.progress;
+        }
+        ctx.beginPath();
+        ctx.arc(wx * canvas.width, wy * canvas.height, 4, 0, Math.PI * 2);
+        ctx.fillStyle = this.startTier === 'internazionale' ? '#f59e0b' : (this.startTier === 'nazionale' ? '#a855f7' : '#38bdf8');
+        ctx.fill();
+      }
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      config.nodes.forEach(n => {
+        if (Math.random() < (n.capacity * 0.0003) && particles.length < 200) {
+          particles.push(new Particle(n));
+        }
+      });
+
+      Object.values(config.connections).forEach(c => {
+        const n1 = config.nodes.find(n => n.id === c.source);
+        const n2 = config.nodes.find(n => n.id === c.target);
+        if(!n1 || !n2) return;
+        ctx.beginPath();
+        ctx.moveTo(n1.x * canvas.width, n1.y * canvas.height);
+        ctx.lineTo(n2.x * canvas.width, n2.y * canvas.height);
+        ctx.strokeStyle = c.weight > 2.0 ? 'rgba(168, 85, 247, 0.5)' : 'rgba(51, 65, 85, 0.5)';
+        ctx.lineWidth = Math.min(4, 1 + c.weight * 0.5);
+        ctx.stroke();
+      });
+
+      config.nodes.forEach(n => {
+        ctx.beginPath();
+        let r = n.tier === 'internazionale' ? 10 : (n.tier === 'nazionale' ? 8 : 5);
+        ctx.arc(n.x * canvas.width, n.y * canvas.height, r, 0, Math.PI * 2);
+        ctx.fillStyle = n.tier === 'internazionale' ? '#f59e0b' : (n.tier === 'nazionale' ? '#a855f7' : (n.tier === 'regionale' ? '#38bdf8' : '#f43f5e'));
+        ctx.fill();
+        ctx.fillStyle = '#f0f6fc';
+        ctx.font = '10px sans-serif';
+        ctx.fillText(n.name, n.x * canvas.width + r + 4, n.y * canvas.height + 3);
+      });
+
+      particles.forEach(p => { p.step(); p.draw(); });
+      particles = particles.filter(p => p.active);
+      requestAnimationFrame(animate);
+    }
+    animate();
+  <\/script>
+</body>
+</html>`;
+
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `simulazione_rete_culturale_proattiva.html`;
+      a.click();
+    });
+
+    document.getElementById('btn-reset-all').addEventListener('click', () => {
+      culturalParticles = [];
+      nodes.forEach(n => n.culturalFlowsCount = 0);
+      totalStats = { intReachCount: 0, scientificPoints: 0 };
+    });
+
+    document.getElementById('btn-zoom-in').onclick = () => zoomLevel = Math.min(zoomLevel * 1.25, 5.0);
+    document.getElementById('btn-zoom-out').onclick = () => zoomLevel = Math.max(zoomLevel / 1.25, 0.5);
+    document.getElementById('btn-zoom-reset').onclick = () => { zoomLevel = 1.0; offsetX = 0; offsetY = 0; };
+
+    resize();
+    initDefaultConnections();
+
+    function getNodeColor(tier) {
+      if (tier === 'internazionale') return '#f59e0b';
+      if (tier === 'nazionale') return '#a855f7';
+      if (tier === 'regionale') return '#38bdf8';
+      return '#f43f5e';
+    }
+
+    // LOOP DI RENDER PRINCIPALE
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      nodes.forEach(node => {
+        if (Math.random() < (node.capacity * 0.0003) && culturalParticles.length < 200) {
+          culturalParticles.push(new CulturalParticle(node));
+        }
+      });
+
+      // 1. ARCHI / CONNESIONI CULTURALI
+      Object.values(connections).forEach(conn => {
+        const source = nodes.find(n => n.id === conn.source);
+        const target = nodes.find(n => n.id === conn.target);
+        if (!source || !target) return;
+
+        const p1 = toScreen(source.x, source.y);
+        const p2 = toScreen(target.x, target.y);
+
+        const isSelectedConn = selectedConnectionKey === conn.key;
+        const isNodeConn = selectedNode && (source.id === selectedNode.id || target.id === selectedNode.id);
+
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+
+        if (isSelectedConn) {
+          ctx.strokeStyle = '#eab308';
+          ctx.lineWidth = Math.max(3, 4 * zoomLevel);
+        } else if (isNodeConn) {
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = Math.max(2, 3 * zoomLevel);
+        } else {
+          ctx.strokeStyle = conn.weight > 2.0 ? 'rgba(168, 85, 247, 0.4)' : 'rgba(51, 65, 85, 0.5)';
+          ctx.lineWidth = Math.max(1, (1 + conn.weight * 0.3) * zoomLevel);
+        }
+        ctx.stroke();
+      });
+
+      // 2. NODI CULTURALI (MUSEI E PRESIDI)
+      nodes.forEach(node => {
+        const p = toScreen(node.x, node.y);
+        const isSelected = selectedNode && selectedNode.id === node.id;
+
+        let baseRadius = 5;
+        if (node.tier === 'internazionale') baseRadius = 11;
+        else if (node.tier === 'nazionale') baseRadius = 8.5;
+        else if (node.tier === 'regionale') baseRadius = 6.5;
+
+        let radius = baseRadius * Math.sqrt(zoomLevel);
+        if (isSelected) radius *= 1.3;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+        ctx.fillStyle = isSelected ? '#eab308' : getNodeColor(node.tier);
+        ctx.fill();
+
+        if (node.tier === 'internazionale') {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, radius + 4 * zoomLevel, 0, Math.PI * 2);
+          ctx.strokeStyle = 'rgba(245, 158, 11, 0.4)';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+
+        if (zoomLevel > 0.85 || node.tier === 'internazionale' || node.tier === 'nazionale' || isSelected) {
+          ctx.fillStyle = isSelected ? '#eab308' : '#f0f6fc';
+          ctx.font = isSelected ? 'bold 11px sans-serif' : '9px sans-serif';
+          ctx.fillText(node.name, p.x + radius + 5, p.y + 3);
+        }
+      });
+
+      // 3. PARTICELLE DI FLUSSO CULTURALE
+      culturalParticles.forEach(v => {
+        v.step();
+        v.draw();
+      });
+
+      culturalParticles = culturalParticles.filter(v => v.active);
+
+      // AGGIORNAMENTO KPI
+      document.getElementById('kpi-active').innerText = culturalParticles.length;
+      const totalFlows = nodes.reduce((acc, n) => acc + n.culturalFlowsCount, 0);
+      document.getElementById('kpi-int-reach').innerText = totalFlows > 0 ? Math.round((totalStats.intReachCount / totalFlows) * 100) + '%' : '0%';
+      document.getElementById('kpi-economic').innerText = totalStats.scientificPoints + ' pts';
+
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+  </script>
+</body>
+</html>

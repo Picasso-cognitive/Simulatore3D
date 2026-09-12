@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configuratore Avanzato Rete Museale - Gestione per Nodo</title>
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: #1e293b;
+      --accent-hub: #38bdf8;
+      --accent-periphery: #f43f5e;
+      --accent-summer: #f59e0b;
+      --accent-winter: #3b82f6;
+      --accent-digital: #06b6d4;
+      --text-color: #f8fafc;
+      --text-dim: #94a3b8;
+      --border-color: #334155;
+      --highlight: #eab308;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg-color); color: var(--text-color); display: flex; height: 100vh; overflow: hidden; }
+
+    .sidebar {
+      width: 380px;
+      background: var(--card-bg);
+      border-right: 1px solid var(--border-color);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+      z-index: 10;
+    }
+
+    h1 { font-size: 1.05rem; text-transform: uppercase; letter-spacing: 1px; color: var(--accent-hub); margin-bottom: 2px; }
+    p.desc { font-size: 0.75rem; color: var(--text-dim); line-height: 1.35; }
+
+    .section-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--highlight);
+      font-weight: bold;
+      margin-top: 4px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 4px;
+    }
+
+    .control-group {
+      background: rgba(0,0,0,0.25);
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+
+    .control-group label { display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: bold; margin-bottom: 6px; }
+    .control-group input[type="range"], .control-group input[type="number"], select {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid var(--border-color);
+      color: #fff;
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+    }
+
+    .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .btn {
+      background: var(--accent-hub);
+      color: #000;
+      border: none;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      font-size: 0.78rem;
+      text-align: center;
+    }
+    .btn:hover { opacity: 0.9; }
+    .btn-secondary { background: #334155; color: #fff; }
+    .btn-danger { background: var(--accent-periphery); color: #fff; }
+    .btn-warning { background: var(--highlight); color: #000; }
+
+    .kpi-container { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .kpi-card {
+      background: rgba(255,255,255,0.03);
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      text-align: center;
+    }
+    .kpi-value { font-size: 1rem; font-weight: bold; color: #fff; }
+    .kpi-label { font-size: 0.62rem; color: var(--text-dim); text-transform: uppercase; }
+
+    /* PANNELLO PANNELLO DETTAGLIO NODO E CONNESIONI */
+    .node-drawer {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      width: 420px;
+      max-height: calc(100vh - 30px);
+      background: rgba(30, 41, 59, 0.96);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--highlight);
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      z-index: 20;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      overflow-y: auto;
+    }
+    .node-drawer.hidden { display: none; }
+
+    .drawer-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
+    .drawer-title { font-size: 0.95rem; font-weight: bold; color: var(--highlight); }
+    .close-btn { background: none; border: none; color: var(--text-dim); font-size: 1.3rem; cursor: pointer; }
+
+    .conn-list { display: flex; flex-direction: column; gap: 6px; max-height: 180px; overflow-y: auto; margin-top: 4px; }
+    .conn-item {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border-color);
+      padding: 8px;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+    .conn-item.active { border-color: var(--highlight); background: rgba(234, 179, 8, 0.1); }
+    .conn-item:hover { border-color: var(--accent-hub); }
+
+    .prompt-box {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px dashed var(--accent-hub);
+      padding: 8px;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      color: #38bdf8;
+      cursor: pointer;
+      margin-top: 4px;
+    }
+    .prompt-box:hover { background: rgba(56, 189, 248, 0.15); }
+
+    textarea.notes-area {
+      width: 100%;
+      height: 60px;
+      background: #0f172a;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      color: #fff;
+      padding: 6px;
+      font-size: 0.75rem;
+      resize: vertical;
+    }
+
+    /* CANVAS */
+    .main-content { flex: 1; display: flex; flex-direction: column; position: relative; cursor: grab; }
+    .main-content:active { cursor: grabbing; }
+    canvas { width: 100%; height: 100%; display: block; background: #0b0f19; }
+
+    .map-controls {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      display: flex;
+      gap: 6px;
+      z-index: 5;
+    }
+    .control-btn {
+      width: 32px;
+      height: 32px;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      color: #fff;
+      font-size: 1.1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="sidebar">
+    <div>
+      <h1>Configuratore Rete Museale</h1>
+      <p class="desc">Clicca su qualsiasi nodo per gestirne visitatori, analizzare ed editare connessioni ed elaborare strategie.</p>
+    </div>
+
+    <div class="section-title">Scenario Stagionale</div>
+    <div class="control-group">
+      <label>Regime Flussi Attivo</label>
+      <select id="select-season">
+        <option value="estate">☀️ Flusso Estivo</option>
+        <option value="inverno">❄️ Flusso Invernale</option>
+        <option value="digitale">💻 Flusso Digitale</option>
+      </select>
+    </div>
+
+    <div class="section-title">Seleziona Nodo Rapido</div>
+    <div class="control-group">
+      <label>Seleziona Museo/Nodo</label>
+      <select id="select-node-quick">
+        <option value="">-- Clicca sulla mappa o scegli qui --</option>
+      </select>
+    </div>
+
+    <!-- KPI DASHBOARD -->
+    <div class="kpi-container">
+      <div class="kpi-card">
+        <div class="kpi-label">Visitatori In Mappa</div>
+        <div class="kpi-value" id="kpi-active">0</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Connessioni Attive</div>
+        <div class="kpi-value" id="kpi-connections">0</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Reach Periferia</div>
+        <div class="kpi-value" id="kpi-periphery">0%</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Impatto Econ. (€)</div>
+        <div class="kpi-value" id="kpi-economic">0€</div>
+      </div>
+    </div>
+
+    <div class="section-title">Salvataggio & Esportazione</div>
+    <div class="btn-grid">
+      <button class="btn btn-secondary" id="btn-save-json">💾 Salva JSON</button>
+      <button class="btn btn-secondary" id="btn-load-json-trigger">📂 Carica JSON</button>
+      <input type="file" id="input-load-json" accept=".json" style="display:none;">
+    </div>
+    <button class="btn btn-warning" id="btn-export-html">🚀 Esporta HTML Read-Only</button>
+    <button class="btn btn-secondary" id="btn-reset-all" style="margin-top: 4px;">⟲ Reset Simulazione</button>
+  </div>
+
+  <div class="main-content" id="map-container">
+    <div class="map-controls">
+      <button class="control-btn" id="btn-zoom-in">+</button>
+      <button class="control-btn" id="btn-zoom-out">-</button>
+      <button class="control-btn" id="btn-zoom-reset">⟲</button>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <!-- SCHEDA GESTIONE SINGOLO NODO E LE SUE CONNESIONI -->
+    <div class="node-drawer hidden" id="node-drawer">
+      <div class="drawer-header">
+        <div>
+          <div class="drawer-title" id="drawer-node-name">Nome Nodo</div>
+          <span style="font-size:0.68rem; color:var(--text-dim);" id="drawer-node-type">Tipologia</span>
+        </div>
+        <button class="close-btn" id="btn-close-drawer">&times;</button>
+      </div>
+
+      <!-- A) CONFIGURAZIONE VISITATORI SINGOLO NODO -->
+      <div class="control-group">
+        <label>
+          Inflow Visitatori Generati/Ora
+          <span id="val-node-visitors" style="color:var(--highlight); font-weight:bold;">10</span>
+        </label>
+        <input type="range" id="param-node-visitors" min="0" max="100" value="10">
+        <p class="desc" style="margin-top:2px;">Definisce quanti visitatori iniziano il percorso da questo specifico nodo.</p>
+      </div>
+
+      <!-- B) ANALISI E MODIFICA CONNESIONI DEL NODO -->
+      <div>
+        <div style="font-size:0.75rem; font-weight:bold; color:#fff; margin-bottom:4px; display:flex; justify-content:space-between;">
+          <span>Connessioni Dirette (${selectedNode ? getConnectionsForNode(selectedNode.id).length : 0})</span>
+        </div>
+        
+        <div class="conn-list" id="drawer-conn-list"></div>
+
+        <!-- AGGIUNTA NUOVA CONNESIONE -->
+        <div style="display:flex; gap:6px; margin-top:8px;">
+          <select id="select-add-target" style="flex:1;">
+            <option value="">+ Connetti a un altro nodo...</option>
+          </select>
+          <button class="btn btn-warning" id="btn-add-connection" style="white-space:nowrap;">Aggiungi</button>
+        </div>
+      </div>
+
+      <!-- C) STRATEGIE E PROMPT PER AUMENTARE FLUSSO SU CONNESIONE SELEZIONATA -->
+      <div id="connection-strategy-panel" style="display:none; border-top:1px solid var(--border-color); padding-top:10px;">
+        <div style="font-size:0.8rem; font-weight:bold; color:var(--highlight);" id="strategy-conn-title">Strategia Connessione</div>
+
+        <div class="control-group" style="margin-top:6px;">
+          <label>
+            Moltiplicatore Flusso / Boost
+            <span id="val-conn-boost" style="color:var(--highlight);">1.0x</span>
+          </label>
+          <input type="range" id="param-conn-boost" min="0.1" max="5.0" step="0.1" value="1.0">
+          <p class="desc">Aumentare questo valore incrementa la probabilità che i visitatori scelgano questo arco.</p>
+        </div>
+
+        <div style="margin-top:6px;">
+          <div style="font-size:0.72rem; font-weight:bold; color:var(--text-dim);">Prompt Strategici Consigliati</div>
+          <div class="prompt-box" id="prompt-strategy-1">
+            🎟️ <strong>Biglietto Unico:</strong> Progetta una promozione integrata per attrarre visitatori sulla tratta.
+          </div>
+          <div class="prompt-box" id="prompt-strategy-2">
+            🚌 <strong>Servizio Shuttle:</strong> Organizza orari di trasporto dedicati tra i due punti.
+          </div>
+        </div>
+
+        <div style="margin-top:8px;">
+          <div style="font-size:0.72rem; font-weight:bold; color:var(--text-dim); margin-bottom:2px;">Appunti / Azioni Strategiche</div>
+          <textarea class="notes-area" id="conn-notes-input" placeholder="Scrivi qui gli accordi, le idee di marketing o le note per questa connessione..."></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const mapContainer = document.getElementById('map-container');
+
+    const summerHubIds = [5, 16, 17, 18, 7];
+    const winterHubIds = [5, 19, 2, 11, 12];
+    const digitalHubIds = [6, 20, 3, 23, 24, 27];
+
+    let currentSeason = 'estate';
+    let selectedNode = null;
+    let selectedConnectionKey = null;
+
+    // Zoom & Pan
+    let zoomLevel = 1.0;
+    let offsetX = 0;
+    let offsetY = 0;
+    let isDragging = false;
+    let dragStart = { x: 0, y: 0 };
+    let hasDragged = false;
+
+    // Dataset Musei
+    const rawNodes = [
+      { id: 1, name: "Centro Calabria", coords: [16.35, 38.9] },
+      { id: 2, name: "Museo Rame Dipignano", coords: [16.2485, 39.2381] },
+      { id: 3, name: "Rubbettino Soveria M.", coords: [16.3688, 39.0118] },
+      { id: 4, name: "Lanificio Leo", coords: [16.3665, 39.0102] },
+      { id: 5, name: "Museo Bergamotto Reggio C.", coords: [15.6482, 38.1092] },
+      { id: 6, name: "Gerardo Sacco Crotone", coords: [17.115, 39.102] },
+      { id: 7, name: "MuRi Sta Maria di Ricadi", coords: [15.8285, 38.6248] },
+      { id: 8, name: "MuRi San Nicolò (Cipolla IGP)", coords: [15.836, 38.628] },
+      { id: 9, name: "MuRi Ricadi Paleontologico", coords: [15.8528, 38.6255] },
+      { id: 10, name: "MuRi Torre Marrana", coords: [15.858, 38.62] },
+      { id: 11, name: "Museo Rame Tessano", coords: [16.2333, 39.2415] },
+      { id: 12, name: "Ex Convento Cappuccini Dipignano", coords: [16.2465, 39.237] },
+      { id: 13, name: "Borgo Grimaldi", coords: [16.2389, 39.1417] },
+      { id: 14, name: "Borgo Altilia", coords: [16.2514, 39.1308] },
+      { id: 15, name: "Borgo Scigliano", coords: [16.3117, 39.1333] },
+      { id: 16, name: "Castello Aiello Calabro", coords: [16.1603, 39.1172] },
+      { id: 17, name: "Castello Cleto", coords: [16.1539, 39.0822] },
+      { id: 18, name: "Castello Savuto Cleto", coords: [16.1825, 39.0858] },
+      { id: 19, name: "Villa Rendano Cosenza", coords: [16.262, 39.2919] },
+      { id: 20, name: "LMSV UNICAL Rende", coords: [16.2268, 39.3602] },
+      { id: 21, name: "GIAS Mongrassano", coords: [16.2085, 39.5265] },
+      { id: 22, name: "Museo Seta Mendicino", coords: [16.1965, 39.2625] },
+      { id: 23, name: "Chiese Bizantine Vaccarizzo", coords: [16.4329, 39.5843] },
+      { id: 24, name: "Museo Costume Arbëreshë", coords: [16.433, 39.584] },
+      { id: 25, name: "Chiesa S. Maria Civita", coords: [16.3125, 39.8318] },
+      { id: 26, name: "Chiesa Bizantina Frascineto", coords: [16.2649, 39.83515] },
+      { id: 27, name: "Museo Icone Frascineto", coords: [16.2657, 39.8352] },
+      { id: 28, name: "Santuario San Cosmo A.", coords: [16.4207, 39.5839] },
+      { id: 29, name: "Chiesa SS. Salvatore Cosenza", coords: [16.2602, 39.2923] },
+      { id: 30, name: "Torre Camigliati Sila", coords: [16.4443, 39.3361] },
+      { id: 31, name: "Museo Civico Drapia", coords: [15.9131, 38.6653] },
+      { id: 32, name: "Necropoli Torre Galli Drapia", coords: [15.9082, 38.6534] }
+    ];
+
+    const minLng = 15.5, maxLng = 17.2;
+    const minLat = 38.0, maxLat = 39.9;
+
+    let nodes = rawNodes.map(d => {
+      const x = 0.12 + ((d.coords[0] - minLng) / (maxLng - minLng)) * 0.76;
+      const y = 0.12 + ((maxLat - d.coords[1]) / (maxLat - minLat)) * 0.76;
+      return {
+        id: d.id,
+        name: d.name,
+        x: parseFloat(x.toFixed(4)),
+        y: parseFloat(y.toFixed(4)),
+        visitorInflow: summerHubIds.includes(d.id) ? 30 : 5, // Configurazione visitatori per singolo nodo
+        visits: 0
+      };
+    });
+
+    // Mappa Connessioni: key: "id1-id2" -> { key, source, target, weight, notes }
+    let connections = {};
+    let visitors = [];
+    let totalStats = { peripheryVisits: 0, revenue: 0 };
+
+    function getKey(id1, id2) {
+      return id1 < id2 ? `${id1}-${id2}` : `${id2}-${id1}`;
+    }
+
+    function resize() {
+      canvas.width = mapContainer.clientWidth;
+      canvas.height = mapContainer.clientHeight;
+    }
+    window.addEventListener('resize', resize);
+
+    function toScreen(wx, wy) {
+      return {
+        x: wx * canvas.width * zoomLevel + offsetX,
+        y: wy * canvas.height * zoomLevel + offsetY
+      };
+    }
+
+    function toWorld(sx, sy) {
+      return {
+        x: (sx - offsetX) / (canvas.width * zoomLevel),
+        y: (sy - offsetY) / (canvas.height * zoomLevel)
+      };
+    }
+
+    function getActiveHubIds() {
+      if (currentSeason === 'estate') return summerHubIds;
+      if (currentSeason === 'inverno') return winterHubIds;
+      if (currentSeason === 'digitale') return digitalHubIds;
+      return summerHubIds;
+    }
+
+    // Inizializza o aggiorna le connessioni predefinite di rete
+    function initDefaultConnections() {
+      const activeHubs = nodes.filter(n => getActiveHubIds().includes(n.id));
+      for (let i = 0; i < activeHubs.length; i++) {
+        for (let j = i + 1; j < activeHubs.length; j++) {
+          const key = getKey(activeHubs[i].id, activeHubs[j].id);
+          if (!connections[key]) {
+            connections[key] = { key, source: activeHubs[i].id, target: activeHubs[j].id, weight: 1.0, notes: '' };
+          }
+        }
+      }
+
+      // Connessioni di prossimità geografica
+      nodes.forEach(n1 => {
+        nodes.forEach(n2 => {
+          if (n1.id < n2.id) {
+            const dist = Math.hypot(n1.x - n2.x, n1.y - n2.y);
+            const key = getKey(n1.id, n2.id);
+            if (dist <= 0.12 && !connections[key]) {
+              connections[key] = { key, source: n1.id, target: n2.id, weight: 1.0, notes: '' };
+            }
+          }
+        });
+      });
+      updateQuickSelect();
+    }
+
+    function getConnectionsForNode(nodeId) {
+      return Object.values(connections).filter(c => c.source === nodeId || c.target === nodeId);
+    }
+
+    function updateQuickSelect() {
+      const select = document.getElementById('select-node-quick');
+      select.innerHTML = '<option value="">-- Clicca sulla mappa o scegli qui --</option>';
+      nodes.forEach(n => {
+        const opt = document.createElement('option');
+        opt.value = n.id;
+        opt.innerText = `${n.id}. ${n.name} (${n.visitorInflow} vis/ora)`;
+        select.appendChild(opt);
+      });
+    }
+
+    // APRE LA SCHEDA DEL NODO SELEZIONATO
+    function openNodeDrawer(node) {
+      selectedNode = node;
+      selectedConnectionKey = null;
+
+      document.getElementById('drawer-node-name').innerText = `${node.id}. ${node.name}`;
+      document.getElementById('drawer-node-type').innerText = getActiveHubIds().includes(node.id) ? "HUB ATTIVO NEL REGIME" : "NODO PERIFERICO";
+      document.getElementById('param-node-visitors').value = node.visitorInflow;
+      document.getElementById('val-node-visitors').innerText = node.visitorInflow;
+
+      renderConnectionList();
+      populateAddTargetDropdown();
+
+      document.getElementById('connection-strategy-panel').style.display = 'none';
+      document.getElementById('node-drawer').classList.remove('hidden');
+    }
+
+    function renderConnectionList() {
+      if (!selectedNode) return;
+      const container = document.getElementById('drawer-conn-list');
+      container.innerHTML = '';
+
+      const nodeConns = getConnectionsForNode(selectedNode.id);
+
+      if (nodeConns.length === 0) {
+        container.innerHTML = '<div style="font-size:0.72rem; color:var(--text-dim);">Nessuna connessione attiva per questo nodo.</div>';
+        return;
+      }
+
+      nodeConns.forEach(conn => {
+        const targetId = conn.source === selectedNode.id ? conn.target : conn.source;
+        const targetNode = nodes.find(n => n.id === targetId);
+
+        const div = document.createElement('div');
+        div.className = `conn-item ${selectedConnectionKey === conn.key ? 'active' : ''}`;
+        div.innerHTML = `
+          <div>
+            <strong>↔ ${targetNode.name}</strong>
+            <div style="font-size:0.65rem; color:var(--text-dim);">Boost: ${conn.weight}x ${conn.notes ? '📝 Note' : ''}</div>
+          </div>
+          <button class="btn btn-danger" style="padding:2px 6px; font-size:0.65rem;" onclick="event.stopPropagation(); removeConnection('${conn.key}');">Rimuovi</button>
+        `;
+
+        div.addEventListener('click', () => selectConnectionForStrategy(conn, targetNode));
+        container.appendChild(div);
+      });
+
+      document.getElementById('kpi-connections').innerText = Object.keys(connections).length;
+    }
+
+    function populateAddTargetDropdown() {
+      if (!selectedNode) return;
+      const select = document.getElementById('select-add-target');
+      select.innerHTML = '<option value="">+ Connetti a un altro nodo...</option>';
+
+      const existingConnTargetIds = getConnectionsForNode(selectedNode.id).map(c => c.source === selectedNode.id ? c.target : c.source);
+
+      nodes.forEach(n => {
+        if (n.id !== selectedNode.id && !existingConnTargetIds.includes(n.id)) {
+          const opt = document.createElement('option');
+          opt.value = n.id;
+          opt.innerText = n.name;
+          select.appendChild(opt);
+        }
+      });
+    }
+
+    function selectConnectionForStrategy(conn, targetNode) {
+      selectedConnectionKey = conn.key;
+      renderConnectionList();
+
+      const panel = document.getElementById('connection-strategy-panel');
+      panel.style.display = 'block';
+
+      document.getElementById('strategy-conn-title').innerText = `Strategia: ${selectedNode.name} ↔ ${targetNode.name}`;
+      document.getElementById('param-conn-boost').value = conn.weight;
+      document.getElementById('val-conn-boost').innerText = conn.weight + 'x';
+      document.getElementById('conn-notes-input').value = conn.notes || '';
+
+      document.getElementById('prompt-strategy-1').onclick = () => {
+        document.getElementById('conn-notes-input').value += `\n[PROMPT TICKET]: Progetta pacchetto integrato ${selectedNode.name} e ${targetNode.name}.`;
+      };
+      document.getElementById('prompt-strategy-2').onclick = () => {
+        document.getElementById('conn-notes-input').value += `\n[PROMPT SHUTTLE]: Definire orari e fermate per collegare ${selectedNode.name} -> ${targetNode.name}.`;
+      };
+    }
+
+    function removeConnection(key) {
+      delete connections[key];
+      if (selectedConnectionKey === key) {
+        selectedConnectionKey = null;
+        document.getElementById('connection-strategy-panel').style.display = 'none';
+      }
+      renderConnectionList();
+      populateAddTargetDropdown();
+    }
+
+    // EVENTI PANNELLO NODO
+    document.getElementById('param-node-visitors').addEventListener('input', (e) => {
+      if (selectedNode) {
+        selectedNode.visitorInflow = parseInt(e.target.value);
+        document.getElementById('val-node-visitors').innerText = selectedNode.visitorInflow;
+        updateQuickSelect();
+      }
+    });
+
+    document.getElementById('btn-add-connection').addEventListener('click', () => {
+      const select = document.getElementById('select-add-target');
+      const targetId = parseInt(select.value);
+      if (selectedNode && targetId) {
+        const key = getKey(selectedNode.id, targetId);
+        connections[key] = { key, source: selectedNode.id, target: targetId, weight: 1.0, notes: '' };
+        renderConnectionList();
+        populateAddTargetDropdown();
+      }
+    });
+
+    document.getElementById('param-conn-boost').addEventListener('input', (e) => {
+      if (selectedConnectionKey && connections[selectedConnectionKey]) {
+        connections[selectedConnectionKey].weight = parseFloat(e.target.value);
+        document.getElementById('val-conn-boost').innerText = e.target.value + 'x';
+        renderConnectionList();
+      }
+    });
+
+    document.getElementById('conn-notes-input').addEventListener('input', (e) => {
+      if (selectedConnectionKey && connections[selectedConnectionKey]) {
+        connections[selectedConnectionKey].notes = e.target.value;
+      }
+    });
+
+    document.getElementById('btn-close-drawer').addEventListener('click', () => {
+      document.getElementById('node-drawer').classList.add('hidden');
+      selectedNode = null;
+    });
+
+    document.getElementById('select-node-quick').addEventListener('change', (e) => {
+      const nodeId = parseInt(e.target.value);
+      const node = nodes.find(n => n.id === nodeId);
+      if (node) openNodeDrawer(node);
+    });
+
+    // CLASSE VISITATORE
+    class Visitor {
+      constructor(startNode) {
+        this.currentNode = startNode;
+        this.currentNode.visits++;
+        this.targetNode = null;
+        this.progress = 0;
+        this.speed = 0.008 + Math.random() * 0.006;
+        this.history = [this.currentNode.id];
+        this.active = true;
+      }
+
+      step() {
+        if (!this.active) return;
+
+        if (!this.targetNode) {
+          const nodeConns = getConnectionsForNode(this.currentNode.id);
+          if (nodeConns.length === 0 || this.history.length > 5) {
+            this.active = false;
+            return;
+          }
+
+          let totalWeight = 0;
+          const options = nodeConns.map(c => {
+            const nextId = c.source === this.currentNode.id ? c.target : c.source;
+            const nextNode = nodes.find(n => n.id === nextId);
+            const visited = this.history.includes(nextId);
+            let w = (c.weight || 1.0) * (visited ? 0.2 : 1.5);
+            totalWeight += w;
+            return { node: nextNode, weight: w };
+          });
+
+          let rnd = Math.random() * totalWeight;
+          for (let opt of options) {
+            rnd -= opt.weight;
+            if (rnd <= 0) {
+              this.targetNode = opt.node;
+              break;
+            }
+          }
+          if (!this.targetNode) this.targetNode = options[0].node;
+        }
+
+        this.progress += this.speed;
+
+        if (this.progress >= 1) {
+          this.currentNode = this.targetNode;
+          this.currentNode.visits++;
+          this.history.push(this.currentNode.id);
+          this.targetNode = null;
+          this.progress = 0;
+
+          if (!getActiveHubIds().includes(this.currentNode.id)) {
+            totalStats.peripheryVisits++;
+            totalStats.revenue += Math.round(15 + Math.random() * 25);
+          }
+        }
+      }
+
+      draw() {
+        if (!this.active) return;
+
+        let wx = this.currentNode.x;
+        let wy = this.currentNode.y;
+
+        if (this.targetNode) {
+          wx = this.currentNode.x + (this.targetNode.x - this.currentNode.x) * this.progress;
+          wy = this.currentNode.y + (this.targetNode.y - this.currentNode.y) * this.progress;
+        }
+
+        const p = toScreen(wx, wy);
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, Math.max(3, 4.5 * Math.sqrt(zoomLevel)), 0, Math.PI * 2);
+        ctx.fillStyle = '#eab308';
+        ctx.fill();
+      }
+    }
+
+    // CANVAS MOUSE EVENTS
+    mapContainer.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
+      const newZoom = Math.min(Math.max(zoomLevel * zoomFactor, 0.6), 5.0);
+
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      offsetX = mouseX - (mouseX - offsetX) * (newZoom / zoomLevel);
+      offsetY = mouseY - (mouseY - offsetY) * (newZoom / zoomLevel);
+      zoomLevel = newZoom;
+    }, { passive: false });
+
+    mapContainer.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      hasDragged = false;
+      dragStart = { x: e.clientX - offsetX, y: e.clientY - offsetY };
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (isDragging) {
+        const dx = Math.abs(e.clientX - offsetX - dragStart.x);
+        const dy = Math.abs(e.clientY - offsetY - dragStart.y);
+        if (dx > 4 || dy > 4) hasDragged = true;
+
+        offsetX = e.clientX - dragStart.x;
+        offsetY = e.clientY - dragStart.y;
+      }
+    });
+
+    window.addEventListener('mouseup', (e) => {
+      if (isDragging && !hasDragged) {
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        const worldPos = toWorld(mouseX, mouseY);
+
+        let clickedNode = null;
+        let minDist = 25 / (zoomLevel * Math.min(canvas.width, canvas.height));
+
+        nodes.forEach(n => {
+          const dist = Math.hypot(n.x - worldPos.x, n.y - worldPos.y);
+          if (dist < minDist) {
+            minDist = dist;
+            clickedNode = n;
+          }
+        });
+
+        if (clickedNode) openNodeDrawer(clickedNode);
+      }
+      isDragging = false;
+    });
+
+    // SALVATAGGIO ED ESPORTAZIONE
+    document.getElementById('select-season').addEventListener('change', (e) => {
+      currentSeason = e.target.value;
+      initDefaultConnections();
+    });
+
+    document.getElementById('btn-save-json').addEventListener('click', () => {
+      const data = {
+        season: currentSeason,
+        nodes: nodes.map(n => ({ id: n.id, visitorInflow: n.visitorInflow })),
+        connections: connections
+      };
+
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `configurazione_rete_nodo_${currentSeason}.json`;
+      a.click();
+    });
+
+    document.getElementById('btn-load-json-trigger').addEventListener('click', () => {
+      document.getElementById('input-load-json').click();
+    });
+
+    document.getElementById('input-load-json').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const data = JSON.parse(event.target.result);
+          if (data.season) {
+            currentSeason = data.season;
+            document.getElementById('select-season').value = data.season;
+          }
+          if (data.nodes) {
+            data.nodes.forEach(savedNode => {
+              const n = nodes.find(node => node.id === savedNode.id);
+              if (n) n.visitorInflow = savedNode.visitorInflow;
+            });
+          }
+          if (data.connections) connections = data.connections;
+
+          updateQuickSelect();
+          alert("Configurazione caricata correttamente!");
+        } catch (err) {
+          alert("Errore durante il caricamento del file JSON.");
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    document.getElementById('btn-export-html').addEventListener('click', () => {
+      const exportState = {
+        season: currentSeason,
+        nodes: nodes,
+        connections: connections
+      };
+
+      const htmlContent = `<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Simulazione Rete Museale (Read-Only)</title>
+  <style>
+    body { margin: 0; background: #0f172a; color: #fff; font-family: sans-serif; overflow: hidden; display: flex; height: 100vh; }
+    #canvas { width: 100%; height: 100%; display: block; }
+    .badge { position: absolute; top: 15px; left: 15px; background: rgba(30,41,59,0.9); padding: 10px 16px; border-radius: 8px; border: 1px solid #334155; }
+    .badge h2 { font-size: 0.95rem; margin: 0 0 4px 0; color: #38bdf8; }
+    .badge p { font-size: 0.75rem; margin: 0; color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <div class="badge">
+    <h2>Simulazione Rete Museale (Modalità Presentazione)</h2>
+    <p>Regime Stagionale: <strong>${exportState.season.toUpperCase()}</strong></p>
+  </div>
+  <canvas id="canvas"></canvas>
+  <script>
+    const config = ${JSON.stringify(exportState)};
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let visitors = [];
+    class Visitor {
+      constructor(startNode) {
+        this.currentNode = startNode;
+        this.targetNode = null;
+        this.progress = 0;
+        this.active = true;
+      }
+      step() {
+        if (!this.targetNode) {
+          const conns = Object.values(config.connections).filter(c => c.source === this.currentNode.id || c.target === this.currentNode.id);
+          if (conns.length === 0) { this.active = false; return; }
+          const c = conns[Math.floor(Math.random() * conns.length)];
+          const nextId = c.source === this.currentNode.id ? c.target : c.source;
+          this.targetNode = config.nodes.find(n => n.id === nextId);
+        }
+        this.progress += 0.008;
+        if (this.progress >= 1) {
+          this.currentNode = this.targetNode;
+          this.targetNode = null;
+          this.progress = 0;
+        }
+      }
+      draw() {
+        if (!this.active) return;
+        let wx = this.currentNode.x, wy = this.currentNode.y;
+        if (this.targetNode) {
+          wx = this.currentNode.x + (this.targetNode.x - this.currentNode.x) * this.progress;
+          wy = this.currentNode.y + (this.targetNode.y - this.currentNode.y) * this.progress;
+        }
+        ctx.beginPath();
+        ctx.arc(wx * canvas.width, wy * canvas.height, 4, 0, Math.PI * 2);
+        ctx.fillStyle = '#eab308';
+        ctx.fill();
+      }
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      config.nodes.forEach(n => {
+        if (Math.random() < (n.visitorInflow * 0.0005) && visitors.length < 150) {
+          visitors.push(new Visitor(n));
+        }
+      });
+
+      Object.values(config.connections).forEach(c => {
+        const n1 = config.nodes.find(n => n.id === c.source);
+        const n2 = config.nodes.find(n => n.id === c.target);
+        ctx.beginPath();
+        ctx.moveTo(n1.x * canvas.width, n1.y * canvas.height);
+        ctx.lineTo(n2.x * canvas.width, n2.y * canvas.height);
+        ctx.strokeStyle = c.weight > 1.0 ? '#eab308' : 'rgba(51, 65, 85, 0.6)';
+        ctx.lineWidth = Math.min(4, c.weight * 1.5);
+        ctx.stroke();
+      });
+
+      config.nodes.forEach(n => {
+        ctx.beginPath();
+        ctx.arc(n.x * canvas.width, n.y * canvas.height, 6, 0, Math.PI * 2);
+        ctx.fillStyle = '#38bdf8';
+        ctx.fill();
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '10px sans-serif';
+        ctx.fillText(n.name, n.x * canvas.width + 8, n.y * canvas.height + 3);
+      });
+
+      visitors.forEach(v => { v.step(); v.draw(); });
+      visitors = visitors.filter(v => v.active);
+      requestAnimationFrame(animate);
+    }
+    animate();
+  <\/script>
+</body>
+</html>`;
+
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `simulazione_presentazione_${currentSeason}.html`;
+      a.click();
+    });
+
+    document.getElementById('btn-reset-all').addEventListener('click', () => {
+      visitors = [];
+      nodes.forEach(n => n.visits = 0);
+      totalStats = { peripheryVisits: 0, revenue: 0 };
+    });
+
+    document.getElementById('btn-zoom-in').onclick = () => zoomLevel = Math.min(zoomLevel * 1.25, 5.0);
+    document.getElementById('btn-zoom-out').onclick = () => zoomLevel = Math.max(zoomLevel / 1.25, 0.6);
+    document.getElementById('btn-zoom-reset').onclick = () => { zoomLevel = 1.0; offsetX = 0; offsetY = 0; };
+
+    resize();
+    initDefaultConnections();
+
+    // LOOP DI RENDER PRINCIPALE
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Generazione visitatori basata sui tassi impostati per i singoli nodi
+      nodes.forEach(node => {
+        if (Math.random() < (node.visitorInflow * 0.0006) && visitors.length < 150) {
+          visitors.push(new Visitor(node));
+        }
+      });
+
+      // 1. DISEGNA CONNESIONI
+      Object.values(connections).forEach(conn => {
+        const source = nodes.find(n => n.id === conn.source);
+        const target = nodes.find(n => n.id === conn.target);
+        const p1 = toScreen(source.x, source.y);
+        const p2 = toScreen(target.x, target.y);
+
+        const isSelectedConn = selectedConnectionKey === conn.key;
+        const isNodeConn = selectedNode && (source.id === selectedNode.id || target.id === selectedNode.id);
+
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+
+        if (isSelectedConn) {
+          ctx.strokeStyle = '#eab308';
+          ctx.lineWidth = Math.max(3, 4 * zoomLevel);
+        } else if (isNodeConn) {
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = Math.max(2, 2.5 * zoomLevel);
+        } else {
+          ctx.strokeStyle = 'rgba(51, 65, 85, 0.5)';
+          ctx.lineWidth = Math.max(1, 1.2 * zoomLevel);
+        }
+        ctx.stroke();
+      });
+
+      // 2. DISEGNA NODI
+      const activeIds = getActiveHubIds();
+      nodes.forEach(node => {
+        const p = toScreen(node.x, node.y);
+        const isActiveHub = activeIds.includes(node.id);
+        const isSelected = selectedNode && selectedNode.id === node.id;
+
+        let radius = (isActiveHub ? 8 : 5) * Math.sqrt(zoomLevel);
+        if (isSelected) radius *= 1.3;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+
+        if (isSelected) {
+          ctx.fillStyle = '#eab308';
+          ctx.shadowColor = '#eab308';
+          ctx.shadowBlur = 12;
+        } else if (isActiveHub) {
+          ctx.fillStyle = currentSeason === 'estate' ? '#f59e0b' : (currentSeason === 'inverno' ? '#3b82f6' : '#06b6d4');
+          ctx.shadowBlur = 0;
+        } else {
+          ctx.fillStyle = '#f43f5e';
+          ctx.shadowBlur = 0;
+        }
+
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        if (zoomLevel > 1.3 || isActiveHub || isSelected) {
+          ctx.fillStyle = isSelected ? '#eab308' : (isActiveHub ? '#f8fafc' : '#94a3b8');
+          ctx.font = isSelected ? 'bold 11px sans-serif' : '9px sans-serif';
+          ctx.fillText(`${node.id}. ${node.name}`, p.x + radius + 4, p.y + 3);
+        }
+      });
+
+      // 3. DISEGNA VISITATORI
+      visitors.forEach(v => {
+        v.step();
+        v.draw();
+      });
+
+      visitors = visitors.filter(v => v.active);
+
+      // KPI Update
+      document.getElementById('kpi-active').innerText = visitors.length;
+      const totalVisits = nodes.reduce((acc, n) => acc + n.visits, 0);
+      const peripheryVisits = nodes.filter(n => !activeIds.includes(n.id)).reduce((acc, n) => acc + n.visits, 0);
+      document.getElementById('kpi-periphery').innerText = totalVisits > 0 ? Math.round((peripheryVisits / totalVisits) * 100) + '%' : '0%';
+      document.getElementById('kpi-economic').innerText = totalStats.revenue.toLocaleString('it-IT') + ' €';
+
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+  </script>
+</body>
+</html>

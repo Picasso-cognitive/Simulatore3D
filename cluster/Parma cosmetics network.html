@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rete della Cosmetica & Profumeria - Parma Hub</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #06080d; color: #f8fafc; overflow: hidden; }
+        #canvas-container { width: 100vw; height: 100vh; position: relative; }
+        canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+        canvas:active { cursor: grabbing; }
+        
+        /* Control Panel UI */
+        .ui-panel { position: absolute; top: 16px; left: 16px; background: rgba(10, 14, 23, 0.92); backdrop-filter: blur(14px); border: 1px solid #1e293b; padding: 18px; border-radius: 12px; width: 360px; box-shadow: 0 12px 32px rgba(0,0,0,0.7); z-index: 10; max-height: 95vh; overflow-y: auto; }
+        .ui-panel h1 { font-size: 1.15rem; font-weight: 700; margin-bottom: 4px; color: #c084fc; letter-spacing: -0.02em; }
+        .ui-panel p { font-size: 0.78rem; color: #94a3b8; margin-bottom: 12px; line-height: 1.35; }
+        .ui-panel .hint { font-size: 0.72rem; color: #c084fc; background: rgba(192, 132, 252, 0.1); padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(192, 132, 252, 0.25); margin-bottom: 14px; }
+        
+        .control-group { margin-bottom: 12px; }
+        .control-group label { display: block; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; margin-bottom: 4px; font-weight: 600; }
+        input[type="text"], select { width: 100%; padding: 8px 10px; background: #020617; border: 1px solid #334155; border-radius: 6px; color: #fff; font-size: 0.82rem; outline: none; transition: border-color 0.2s; }
+        input[type="text"]:focus, select:focus { border-color: #c084fc; }
+        select { cursor: pointer; }
+        input[type="range"] { width: 100%; accent-color: #c084fc; cursor: pointer; }
+        
+        /* Sim Control Bar */
+        .sim-control-bar { display: flex; align-items: center; justify-content: space-between; background: #020617; padding: 8px 12px; border-radius: 8px; border: 1px solid #1e293b; margin-bottom: 12px; }
+        .sim-status { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 600; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; }
+        .status-dot.paused { background: #ef4444; }
+        .btn-toggle { background: #c084fc; color: #020617; border: none; padding: 5px 10px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+        .btn-toggle:hover { background: #a855f7; color: #fff; }
+
+        /* Legend Grid */
+        .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 12px 0; padding: 8px; background: rgba(2, 6, 23, 0.6); border-radius: 6px; border: 1px solid #1e293b; }
+        .legend-item { display: flex; align-items: center; font-size: 0.68rem; color: #cbd5e1; }
+        .legend-color { width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; flex-shrink: 0; }
+
+        .stats { display: flex; justify-content: space-between; font-size: 0.72rem; color: #94a3b8; padding-top: 10px; border-top: 1px solid #1e293b; }
+        
+        /* Info Card Panel */
+        #info-card { position: absolute; bottom: 20px; right: 20px; background: rgba(10, 14, 23, 0.94); backdrop-filter: blur(14px); border: 1px solid #334155; padding: 18px; border-radius: 12px; width: 340px; display: none; z-index: 10; box-shadow: 0 10px 25px rgba(0,0,0,0.6); }
+        #info-card h2 { font-size: 1.1rem; color: #f8fafc; margin-bottom: 4px; line-height: 1.2; }
+        #info-card .category-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.68rem; font-weight: 600; margin-bottom: 8px; text-transform: uppercase; }
+        #info-card .meta { font-size: 0.8rem; color: #c084fc; font-weight: 500; margin-bottom: 10px; }
+        #info-card .details { font-size: 0.76rem; color: #cbd5e1; line-height: 1.5; }
+        #info-card .partners { margin-top: 8px; padding-top: 8px; border-top: 1px solid #334155; font-size: 0.72rem; color: #94a3b8; }
+
+        /* Context Menu Modal */
+        #work-modal { position: absolute; display: none; background: rgba(10, 14, 23, 0.96); backdrop-filter: blur(16px); border: 1px solid #c084fc; border-radius: 12px; padding: 18px; width: 330px; box-shadow: 0 15px 35px rgba(0,0,0,0.85); z-index: 100; animation: popup 0.15s ease-out; }
+        @keyframes popup { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+        #work-modal .close-btn { position: absolute; top: 10px; right: 12px; background: none; border: none; color: #64748b; font-size: 1.2rem; cursor: pointer; }
+        #work-modal .close-btn:hover { color: #fff; }
+        #work-modal h3 { font-size: 1.05rem; color: #f8fafc; margin-bottom: 2px; padding-right: 20px; }
+        #work-modal .designer-sub { font-size: 0.75rem; color: #c084fc; margin-bottom: 12px; font-weight: 500; }
+        #work-modal .work-box { background: #020617; border: 1px solid #1e293b; padding: 12px; border-radius: 8px; margin-bottom: 14px; }
+        #work-modal .work-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 4px; font-weight: 700; }
+        #work-modal .work-title { font-size: 0.88rem; color: #f1f5f9; font-weight: 600; line-height: 1.35; }
+        #work-modal .open-link-btn { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 10px; background: #9333ea; color: #fff; border: none; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: background 0.2s; text-decoration: none; }
+        #work-modal .open-link-btn:hover { background: #7e22ce; }
+    </style>
+</head>
+<body>
+
+<div id="canvas-container">
+    <canvas id="networkCanvas"></canvas>
+    
+    <div class="ui-panel">
+        <h1>Parma Cosmetics Network</h1>
+        <p>Mappa concettuale dei 200 nodi del Distretto della Cosmetica e Profumeria con Parma come epicentro: eredità storica, filiera, packaging, brand e ricerca.</p>
+        <div class="hint">💡 <strong>Tasto Destro:</strong> Clicca su un nodo per avviare una ricerca di approfondimento sul distretto di Parma.</div>
+
+        <div class="sim-control-bar">
+            <div class="sim-status">
+                <span id="status-dot" class="status-dot"></span>
+                <span id="status-text">Simulazione Attiva</span>
+            </div>
+            <button id="toggleSimBtn" class="btn-toggle" onclick="toggleSimulation()">Pausa</button>
+        </div>
+
+        <div class="control-group">
+            <label for="layoutSelect">Modalità di Visualizzazione</label>
+            <select id="layoutSelect" onchange="changeLayout(this.value)">
+                <option value="radial">Radiale (Parma al Centro)</option>
+                <option value="force">Fisica Dinamica (Force-Directed)</option>
+                <option value="cluster">Cluster per Categoria Tematica</option>
+                <option value="circular">Anello Circolare Perimetrale</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="categorySelect">Filtra per Categoria</label>
+            <select id="categorySelect">
+                <option value="ALL">Tutte le Categorie</option>
+                <option value="HISTORY_HERITAGE">Storia, Miti & Violetta di Parma</option>
+                <option value="INDUSTRIES_BRANDS">Brand & Industrie Cosmetiche</option>
+                <option value="SUPPLY_CHAIN">Packaging, Vetro & Filiera</option>
+                <option value="RESEARCH_ACADEMIA">Ricerca, Formazione & Ateneo</option>
+                <option value="CULTURE_TOURISM">Cultura, Musei & Mostre</option>
+                <option value="TERRITORY_HUB">Polo Nazionale & Relazioni</option>
+                <option value="INGREDIENTS_SUSTAINABILITY">Bio-Biotecnologie & Sostenibilità</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="searchInput">Cerca Azienda, Molecola, Storia o Luogo</label>
+            <input type="text" id="searchInput" placeholder="es. Violetta, Davines, Bormioli, Maria Luigia, Ateneo...">
+        </div>
+
+        <div class="legend">
+            <div class="legend-item"><div class="legend-color" style="background:#a855f7"></div>Storia & Heritage</div>
+            <div class="legend-item"><div class="legend-color" style="background:#f59e0b"></div>Brand & Industrie</div>
+            <div class="legend-item"><div class="legend-color" style="background:#06b6d4"></div>Filiera & Vetro</div>
+            <div class="legend-item"><div class="legend-color" style="background:#3b82f6"></div>Ricerca & Ateneo</div>
+            <div class="legend-item"><div class="legend-color" style="background:#ec4899"></div>Cultura & Eventi</div>
+            <div class="legend-item"><div class="legend-color" style="background:#84cc16"></div>Polo Cosmestico</div>
+            <div class="legend-item" style="grid-column: span 2;"><div class="legend-color" style="background:#10b981"></div>Chimica Verde & Bio</div>
+        </div>
+        
+        <div class="control-group" id="repulsionControl" style="display:none;">
+            <label for="repulsionSlider">Forza di Repulsione Fisica</label>
+            <input type="range" id="repulsionSlider" min="50" max="600" value="260">
+        </div>
+
+        <div class="stats">
+            <span>Nodi Connessi: <strong id="stat-nodes">200</strong></span>
+            <span>Relazioni: <strong id="stat-edges">0</strong></span>
+            <span>FPS: <strong id="stat-fps">60</strong></span>
+        </div>
+    </div>
+
+    <!-- Info Card Panel -->
+    <div id="info-card">
+        <h2 id="card-title">-</h2>
+        <span id="card-badge" class="category-badge">-</span>
+        <div id="card-meta" class="meta">-</div>
+        <div id="card-details" class="details"></div>
+        <div id="card-partners" class="partners"></div>
+    </div>
+
+    <!-- Right-Click Modal -->
+    <div id="work-modal">
+        <button class="close-btn" onclick="closeWorkModal()">&times;</button>
+        <h3 id="modal-node-name">Nome Nodo</h3>
+        <div id="modal-node-meta" class="designer-sub">Categoria • Rilevanza</div>
+        <div class="work-box">
+            <div class="work-label">Profilo Storico/Industriale</div>
+            <div id="modal-node-title" class="work-title">Dettaglio approfondito dell'ecosistema parmense</div>
+        </div>
+        <a id="modal-web-link" href="#" target="_blank" class="open-link-btn">
+            🔍 Approfondisci su Parma Cosmetica ↗
+        </a>
+    </div>
+</div>
+
+<script>
+// --- CATEGORIE DELL'ECOSISTEMA COSMETICO DI PARMA ---
+const CATEGORIES = {
+    HISTORY_HERITAGE: { name: 'Storia & Violetta di Parma', color: '#a855f7' },
+    INDUSTRIES_BRANDS: { name: 'Brand & Industrie', color: '#f59e0b' },
+    SUPPLY_CHAIN: { name: 'Packaging & Filiera', color: '#06b6d4' },
+    RESEARCH_ACADEMIA: { name: 'Ricerca & Formazione', color: '#3b82f6' },
+    CULTURE_TOURISM: { name: 'Cultura & Musei', color: '#ec4899' },
+    TERRITORY_HUB: { name: 'Polo & Relazioni Nazionali', color: '#84cc16' },
+    INGREDIENTS_SUSTAINABILITY: { name: 'Chimica Verde & Bio', color: '#10b981' }
+};
+
+// --- DATASET SEED PARMA COSMETICS (48 NODI ICONICI FONDAMENTALI) ---
+const SEED_NODES = [
+    { name: "Parma - Capitale della Cosmetica", category: "TERRITORY_HUB", relevance: 1, sub: "Epicentro Storico e Industriale", details: "Capitale della profumeria d'autore fin dal '1800, oggi cuore pulsante della Beauty Valley emiliana con un'infrastruttura completa che va dalla formulazione al packaging di lusso.", connections: ["Violetta di Parma", "Duchessa Maria Luigia", "Borsari 1870", "Davines Group", "Bormioli Luigi (Vetro Cosmestico)", "Università degli Studi di Parma", "CNA Cosmetica Parma", "Mostra Parma Città dei Profumi", "Cosmetica Italia"] },
+    
+    // STORIA & HERITAGE
+    { name: "Violetta di Parma", category: "HISTORY_HERITAGE", relevance: 1, sub: "Viola odorata ducalis", details: "Simbolo supremo della tradizione olfattiva di Parma. Fiore amato dalla duchessa Maria Luigia, le cui essenze vennero estratte dai frati alchimisti per creare l'iconico profumo.", connections: ["Parma - Capitale della Cosmetica", "Duchessa Maria Luigia", "Monastero della SS. Annunziata", "Borsari 1870", "Ione / Alpha-Ionone"] },
+    { name: "Duchessa Maria Luigia d'Austria", category: "HISTORY_HERITAGE", relevance: 1, sub: "Patrona dell'Arte Profumiera", details: "Moglie di Napoleone e sovrana di Parma dal 1816. Incentivò la coltivazione della Violetta e incoraggiò la prima distillazione artigianale dell'essenza reale.", connections: ["Parma - Capitale della Cosmetica", "Violetta di Parma", "Museo Glauco Lombardi", "Palazzo Ducale del Giardino"] },
+    { name: "Borsari 1870", category: "HISTORY_HERITAGE", relevance: 1, sub: "Prima Casa di Profumi Italiana", details: "Ludovico Borsari custodì la ricetta segreta della Violetta e fondò la prima vera industria profumiera d'Italia, celebre per le boccette d'epoca e lo stile Liberty.", connections: ["Parma - Capitale della Cosmetica", "Violetta di Parma", "Collezione Storica Borsari", "Grafica Liberty & Etichette"] },
+    { name: "Monastero della SS. Annunziata", category: "HISTORY_HERITAGE", relevance: 2, sub: "Origini della Distillazione", details: "Luogo sacro dove i Frati Francescani Minori distillavano per primi le viole per la Duchessa Maria Luigia usando antichi alambicchi di rame.", connections: ["Violetta di Parma", "Ione / Alpha-Ionone"] },
+    { name: "Collezione Storica Borsari", category: "HISTORY_HERITAGE", relevance: 2, sub: "Patrimonio Industriale", details: "Archivio storico di boccette, flaconi in vetro lavorato, bozzetti pubblicitari e strumenti di laboratorio della storica maison parmense.", connections: ["Borsari 1870", "Museo Glauco Lombardi"] },
+
+    // BRAND & INDUSTRIE
+    { name: "Davines Group", category: "INDUSTRIES_BRANDS", relevance: 1, sub: "Eccellenza Haircare & Skincare", details: "Multinazionale B-Corp fondata a Parma dalla famiglia Bollati. Leader mondiale nella cosmesi professionale sostenibile e nell'alta cura dei capelli.", connections: ["Parma - Capitale della Cosmetica", "Comfort Zone", "Davines Village", "Agroecologia Cosmetica", "B-Corp Certification"] },
+    { name: "Comfort Zone", category: "INDUSTRIES_BRANDS", relevance: 1, sub: "Skincare Professionale Spa", details: "Divisione cosmetica del Gruppo Davines dedicata alla cura della pelle in spa e centri estetici di lusso a livello internazionale.", connections: ["Davines Group", "Davines Village", "Fitocosmesi Avanzata"] },
+    { name: "Morris Profumi", category: "INDUSTRIES_BRANDS", relevance: 1, sub: "Nobilita Essenziera dal 1946", details: "Fondata da Giuseppe Borri, storica azienda parmense pioniera nella produzione e licenza di fragranze di lusso internazionali.", connections: ["Parma - Capitale della Cosmetica", "Essenze di Lusso", "Terzismo Formulatorio Parmense"] },
+    { name: "Chiesi Farmaceutici (Divisione Dermocosmesi)", category: "INDUSTRIES_BRANDS", relevance: 2, sub: "Pharma & Skin Health", details: "Colosso farmaceutico parmense con avanzata ricerca applicata alla dermocosmesi e alla salute cutanea.", connections: ["Parma - Capitale della Cosmetica", "Dermatologia Clinica", "Ateneo di Parma"] },
+    { name: "Parfums de Parma / Agaton", category: "INDUSTRIES_BRANDS", relevance: 2, sub: "Profumeria Nicchia & Heritage", details: "Maison di profumeria artigianale che ripropone in chiave moderna le antiche formule delle acque odorose della tradizione ducale.", connections: ["Violetta di Parma", "Essenze di Lusso"] },
+
+    // PACKAGING, VETRO & FILIERA
+    { name: "Bormioli Luigi (Vetro Cosmestico)", category: "SUPPLY_CHAIN", relevance: 1, sub: "Leader Mondiale Flaconnerie de Luxe", details: "Vetreria d'eccellenza con sede a Parma, fornitore globale dei più famosi brand di alta profumeria per flaconi in vetro cristallino e decorato.", connections: ["Parma - Capitale della Cosmetica", "Vetro Neutro & Cristallo", "Decorazione & Smerigliatura", "Packaging di Lusso"] },
+    { name: "Bormioli Rocco Packaging", category: "SUPPLY_CHAIN", relevance: 2, sub: "Polo Packaging Farmaceutico & Cosmetico", details: "Storico gruppo vetraio parmense specializzato in contenitori per cosmesi, integratori e farmaceutica.", connections: ["Bormioli Luigi (Vetro Cosmestico)", "Flaconeria & Dispensing"] },
+    { name: "Terzismo Formulatorio Parmense", category: "SUPPLY_CHAIN", relevance: 2, sub: "Contratto di Produzione Cosmetica", details: "Network di laboratori terzisti nel territorio di Parma specializzati nella miscelazione, riempimento e confezionamento di cosmesi conto terzi.", connections: ["Parma - Capitale della Cosmetica", "Morris Profumi", "Controllo Qualità ISO"] },
+    { name: "Cartotecnica & Labeling Lusso", category: "SUPPLY_CHAIN", relevance: 2, sub: "Astucceria & Stampa Pregiata", details: "Distretto di aziende di grafica e packaging secondario a Parma specializzate in fustellatura, lamine oro e astucci per profumi.", connections: ["Borsari 1870", "Packaging di Lusso"] },
+    { name: "Flaconeria & Dispensing Pumps", category: "SUPPLY_CHAIN", relevance: 3, sub: "Componentistica Erogatori", details: "Aziende del territorio dedicate alla produzione di pompe spray, contagocce e capsule di chiusura per profumeria.", connections: ["Bormioli Luigi (Vetro Cosmestico)"] },
+
+    // RICERCA & FORMAZIONE
+    { name: "Università degli Studi di Parma", category: "RESEARCH_ACADEMIA", relevance: 1, sub: "Master & Laurea in Scienza Cosmetica", details: "Ateneo centenario e polo accademico di riferimento nazionale per la formazione di chimici cosmetologi, formulatori e responsabili R&D.", connections: ["Parma - Capitale della Cosmetica", "Cosmetica Italia Education", "Davines Village", "Laboratorio Formulativo UNIPR"] },
+    { name: "Davines Village", category: "RESEARCH_ACADEMIA", relevance: 1, sub: "Centro Ricerche & Giardino Botanico", details: "Complesso architettonico sostenibile alle porte di Parma dedicato a R&D cosmetica, serra scientifica e biodiversità.", connections: ["Davines Group", "Agroecologia Cosmetica", "Orto Botanico di Parma"] },
+    { name: "Laboratorio Formulativo UNIPR", category: "RESEARCH_ACADEMIA", relevance: 2, sub: "Dipartimento di Scienza del Farmaco", details: "Laboratori universitari dove si sviluppano test di stabilità, reologia ed efficacia dermatologica dei prodotti cosmetici.", connections: ["Università degli Studi di Parma", "Chiesi Farmaceutici (Divisione Dermocosmesi)"] },
+
+    // CULTURA, MUSEI & EVENTI
+    { name: "Mostra Parma Città dei Profumi", category: "CULTURE_TOURISM", relevance: 1, sub: "Percorso Espositivo Olfattivo", details: "Iniziativa culturale coordinata tra musei, orto botanico e aziende per raccontare la secolare storia della profumeria parmense.", connections: ["Parma - Capitale della Cosmetica", "Museo Glauco Lombardi", "Orto Botanico di Parma", "CNA Cosmetica Parma"] },
+    { name: "Museo Glauco Lombardi", category: "CULTURE_TOURISM", relevance: 2, sub: "Memorabilia di Maria Luigia", details: "Custodisce i cimeli della Duchessa, inclusi i flaconi originali, le ricette d'epoca e i ritratti legati alla Violetta.", connections: ["Duchessa Maria Luigia d'Austria", "Mostra Parma Città dei Profumi"] },
+    { name: "Orto Botanico di Parma", category: "CULTURE_TOURISM", relevance: 2, sub: "Giardino Universitario del 1770", details: "Spazio verde scientifico gestito dall'Università, che conserva specie storiche di Viola odorata e piante officinali per l'estrazione.", connections: ["Violetta di Parma", "Università degli Studi di Parma", "Davines Village"] },
+
+    // POLO & RELAZIONI NAZIONALI
+    { name: "Cosmetica Italia", category: "TERRITORY_HUB", relevance: 1, sub: "Associazione Nazionale Imprese Cosmetiche", details: "Associazione di categoria che rappresenta la filiera cosmetica italiana, fortemente integrata con il distretto parmense.", connections: ["Parma - Capitale della Cosmetica", "Cosmoprof Worldwide Bologna", "CNA Cosmetica Parma"] },
+    { name: "Cosmoprof Worldwide Bologna", category: "TERRITORY_HUB", relevance: 1, sub: "Fiera Globale della Beauty Industry", details: "La più importante fiera mondiale della cosmetica, snodo commerciale primario per le industrie essenziere e vetrarie di Parma.", connections: ["Cosmetica Italia", "Bormioli Luigi (Vetro Cosmestico)", "Davines Group"] },
+    { name: "Polo della Cosmesi (Lombardia-Emilia)", category: "TERRITORY_HUB", relevance: 1, sub: "Asse Industriale Cremona-Bergamo-Parma", details: "Quadrilatero produttivo che concentra oltre il 60% della produzione cosmetica e di make-up d'Europa.", connections: ["Parma - Capitale della Cosmetica", "Cosmetica Italia"] },
+    { name: "CNA Cosmetica Parma", category: "TERRITORY_HUB", relevance: 2, sub: "Rete Artigiani & PMI del Profumo", details: "Coordinamento locale che unisce i piccoli laboratori essenzieri, i creatori di nicchia e le botteghe storiche di Parma.", connections: ["Parma - Capitale della Cosmetica", "Mostra Parma Città dei Profumi"] },
+
+    // CHIMICA VERDE & BIO
+    { name: "Agroecologia Cosmetica", category: "INGREDIENTS_SUSTAINABILITY", relevance: 1, sub: "Agricoltura Organica Rigenerativa", details: "Sviluppo di ingredienti vegetali coltivati senza pesticidi in Emilia per estrarre principi attivi cosmetici ad alto rendimento.", connections: ["Davines Village", "Bio-Ingredienti Emiliani"] },
+    { name: "Ione / Alpha-Ionone", category: "INGREDIENTS_SUSTAINABILITY", relevance: 2, sub: "Molecola Aromatizzante della Viola", details: "Molecola organica isolata alla fine del '1800 che ha permesso di riprodurre sinteticamente l'inafferrabile profumo della violetta.", connections: ["Violetta di Parma", "Monastero della SS. Annunziata"] },
+    { name: "Bio-Ingredienti Emiliani", category: "INGREDIENTS_SUSTAINABILITY", relevance: 2, sub: "Estratti da Filiera Agroalimentare", details: "Progetti di economia circolare che trasformano i sottoprodotti agroalimentari della Food Valley di Parma in attivi cosmetici.", connections: ["Agroecologia Cosmetica", "Parma Food & Beauty Valley"] },
+    { name: "Parma Food & Beauty Valley", category: "TERRITORY_HUB", relevance: 2, sub: "Sinergia Cibo & Cosmesi", details: "Unione strategica tra le due più grandi eccellenze produttive del territorio emiliano: enogastronomia e cosmesi di alta gamma.", connections: ["Parma - Capitale della Cosmetica", "Bio-Ingredienti Emiliani"] }
+];
+
+// GENERAZIONE DATASET ESPANSO (200 NODI COMPLETI ED EQUILIBRATI)
+function generateCosmeticsDataset() {
+    const nodes = [];
+    const nodeMap = new Map();
+
+    // Inserisci i nodi Seed
+    SEED_NODES.forEach((d, idx) => {
+        const node = {
+            id: idx + 1,
+            name: d.name,
+            category: d.category,
+            relevance: d.relevance,
+            sub: d.sub,
+            details: d.details,
+            radius: Math.max(17 - d.relevance * 2.8, 7),
+            x: (Math.random() - 0.5) * 1000,
+            y: (Math.random() - 0.5) * 700,
+            targetX: 0, targetY: 0,
+            vx: 0, vy: 0,
+            connections: []
+        };
+        nodes.push(node);
+        nodeMap.set(d.name, node);
+    });
+
+    const categoryKeys = Object.keys(CATEGORIES);
+    const parmaLocations = ["Salsomaggiore Terme", "Tabiano Terme", "Noceto", "Collecchio", "Fidenza", "Langhirano", "Soragna", "Colorno", "Felino", "Torrile"];
+    const techWords = ["Formulazione", "Standardizzazione", "Sostenibilità", "Microbioma", "Nanoemulsione", "Biotecnologia", "Liofilizzazione", "Spettrometria"];
+
+    // Genera nodi procedurali coerenti fino a 200
+    for (let i = nodes.length; i < 200; i++) {
+        const id = i + 1;
+        const category = categoryKeys[i % categoryKeys.length];
+        const location = parmaLocations[i % parmaLocations.length];
+        const tech = techWords[i % techWords.length];
+
+        let name = "";
+        let sub = "";
+        let details = "";
+
+        if (category === "HISTORY_HERITAGE") {
+            name = `Archivio Essenziero Ducale #${id}`;
+            sub = `Documento & Formulario Storico`;
+            details = `Ricetta d'epoca conservata negli archivi storici parmensi per la preparazione di acque distillati ed pomate profumate.`;
+        } else if (category === "INDUSTRIES_BRANDS") {
+            name = `Laboratorio Cosmetico ${location} #${id}`;
+            sub = `Azienda Specializzata & Brand Local`;
+            details = `Impresa del distretto parmense focalizzata sullo sviluppo di linee cosmetiche di nicchia e trattamenti rigeneranti.`;
+        } else if (category === "SUPPLY_CHAIN") {
+            name = `Componente Packaging #${id} [Lusso]`;
+            sub = `Filiera del Vetro & Soluzioni di Chiusura`;
+            details = `Soluzione ingegnerizzata per la tenuta ermetica, pompe erogatrici o decorazioni serigrafiche su cristallo.`;
+        } else if (category === "RESEARCH_ACADEMIA") {
+            name = `Progetto R&D ${tech} UNIPR`;
+            sub = `Ricerca Universitaria Applicata`;
+            details = `Studio condotto nei laboratori di Parma per la validazione di nuovi vettori dermici e test di tollerabilità cutanea.`;
+        } else if (category === "CULTURE_TOURISM") {
+            name = `Percorso Olfattivo #${id} (${location})`;
+            sub = `Turismo Esperienziale & Profumi`;
+            details = `Itinerario culturale dedicato alla scoperta delle storiche limonaie, orti dei semplici e collezioni essenziere.`;
+        } else if (category === "TERRITORY_HUB") {
+            name = `Nodo Relazionale Export #${id}`;
+            sub = `Network Internazionale di Parma`;
+            details = `Canale distributivo e commerciale che esporta l'eccellenza cosmetica parmense verso i mercati di Europa, USA ed Asia.`;
+        } else {
+            name = `Principio Attivo Bio #${id} (${tech})`;
+            sub = `Chimica Verde & Fitoestratto`;
+            details = `Ingrediente naturale ad alta concentrazione di polifenoli ricavato mediante processi di estrazione eco-compatibile.`;
+        }
+
+        const node = {
+            id: id,
+            name: name,
+            category: category,
+            relevance: 3,
+            sub: sub,
+            details: details,
+            radius: Math.max(7 - (id * 0.015), 4),
+            x: (Math.random() - 0.5) * 1600,
+            y: (Math.random() - 0.5) * 1100,
+            targetX: 0, targetY: 0,
+            vx: 0, vy: 0,
+            connections: []
+        };
+        nodes.push(node);
+        nodeMap.set(name, node);
+    }
+
+    // GENERAZIONE ARCHI E CONNESSI
+    const edges = [];
+    const edgeSet = new Set();
+
+    function addEdge(source, target, weight = 1) {
+        if (!source || !target || source.id === target.id) return;
+        const key = source.id < target.id ? `${source.id}-${target.id}` : `${target.id}-${source.id}`;
+        if (!edgeSet.has(key)) {
+            edgeSet.add(key);
+            const edge = { source, target, weight };
+            edges.push(edge);
+            source.connections.push(target);
+            target.connections.push(source);
+        }
+    }
+
+    // Connetti archi definiti nei seed
+    SEED_NODES.forEach(d => {
+        const src = nodeMap.get(d.name);
+        if (d.connections) {
+            d.connections.forEach(targetName => {
+                const tgt = nodeMap.get(targetName);
+                if (tgt) addEdge(src, tgt, 2.2);
+            });
+        }
+    });
+
+    // Connessioni dinamiche per il grafo generale
+    const parmaCenter = nodes[0]; // Parma - Capitale della Cosmetica
+    const violettaNode = nodeMap.get("Violetta di Parma");
+    const davinesNode = nodeMap.get("Davines Group");
+    const bormioliNode = nodeMap.get("Bormioli Luigi (Vetro Cosmestico)");
+    const uniprNode = nodeMap.get("Università degli Studi di Parma");
+
+    for (let i = 1; i < nodes.length; i++) {
+        const nodeA = nodes[i];
+        
+        // Link all'hub centrale Parma
+        if (Math.random() < 0.45) {
+            addEdge(nodeA, parmaCenter, 1.5);
+        }
+
+        // Link ai sotto-hub di categoria
+        if (nodeA.category === "HISTORY_HERITAGE" && violettaNode && Math.random() < 0.5) {
+            addEdge(nodeA, violettaNode, 1.3);
+        }
+        if (nodeA.category === "INDUSTRIES_BRANDS" && davinesNode && Math.random() < 0.5) {
+            addEdge(nodeA, davinesNode, 1.3);
+        }
+        if (nodeA.category === "SUPPLY_CHAIN" && bormioliNode && Math.random() < 0.5) {
+            addEdge(nodeA, bormioliNode, 1.3);
+        }
+        if (nodeA.category === "RESEARCH_ACADEMIA" && uniprNode && Math.random() < 0.5) {
+            addEdge(nodeA, uniprNode, 1.3);
+        }
+
+        // Connetti nodi della stessa categoria
+        const extraConnections = Math.floor(Math.random() * 2) + 1;
+        for (let k = 0; k < extraConnections; k++) {
+            const targetIdx = Math.floor(Math.random() * nodes.length);
+            const nodeB = nodes[targetIdx];
+            if (nodeA.category === nodeB.category && nodeA.id !== nodeB.id) {
+                addEdge(nodeA, nodeB, 0.75);
+            }
+        }
+    }
+
+    return { nodes, edges };
+}
+
+// --- ENGINE CANVAS & FISICA DINAMICA ---
+const canvas = document.getElementById('networkCanvas');
+const ctx = canvas.getContext('2d');
+
+let width, height;
+let graphData = generateCosmeticsDataset();
+let nodes = graphData.nodes;
+let edges = graphData.edges;
+
+let transform = { x: 0, y: 0, scale: 1 };
+let isDragging = false;
+let dragStart = { x: 0, y: 0 };
+let hoveredNode = null;
+let selectedNode = null;
+let draggedNode = null;
+
+let searchQuery = "";
+let selectedCategory = "ALL";
+let currentLayout = "radial";
+
+// CONTROLLO SIMULAZIONE E FISICA
+let isSimulating = true;
+let simFrames = 0;
+const MAX_SIM_FRAMES = 360;
+let totalKineticEnergy = 100;
+
+let repulsionStrength = 260;
+const damping = 0.85;
+const springLength = 85;
+const springStiffness = 0.035;
+
+document.getElementById('stat-nodes').innerText = nodes.length;
+document.getElementById('stat-edges').innerText = edges.length;
+
+function resizeCanvas() {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+    if (transform.x === 0 && transform.y === 0) {
+        transform.x = width / 2;
+        transform.y = height / 2;
+    }
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// --- LAYOUTS ALTERNATIVI ---
+function computeLayoutTargets(layout) {
+    if (layout === 'radial') {
+        nodes.forEach(n => {
+            if (n.id === 1) { // Parma Hub al centro
+                n.targetX = 0;
+                n.targetY = 0;
+            } else {
+                const ring = n.relevance;
+                const angle = (n.id % 32) * (Math.PI * 2 / 32) + (n.relevance * 0.2);
+                const radius = 120 + ring * 130 + ((n.id % 8) * 18);
+                n.targetX = Math.cos(angle) * radius;
+                n.targetY = Math.sin(angle) * radius;
+            }
+        });
+    } else if (layout === 'cluster') {
+        const catKeys = Object.keys(CATEGORIES);
+        const cols = 3;
+        const spacingX = 490;
+        const spacingY = 390;
+
+        catKeys.forEach((cat, idx) => {
+            const cx = ((idx % cols) - 1) * spacingX;
+            const cy = (Math.floor(idx / cols) - 0.5) * spacingY;
+            const catNodes = nodes.filter(n => n.category === cat);
+
+            catNodes.forEach((n, i) => {
+                const angle = i * 0.45;
+                const r = 25 + Math.sqrt(i) * 22;
+                n.targetX = cx + Math.cos(angle) * r;
+                n.targetY = cy + Math.sin(angle) * r;
+            });
+        });
+    } else if (layout === 'circular') {
+        const total = nodes.length;
+        const radius = 640;
+        const sorted = nodes.slice().sort((a, b) => a.category.localeCompare(b.category));
+        
+        sorted.forEach((n, i) => {
+            const angle = (i / total) * Math.PI * 2;
+            n.targetX = Math.cos(angle) * radius;
+            n.targetY = Math.sin(angle) * radius;
+        });
+    }
+}
+
+// Inizializza il layout radiale di default
+computeLayoutTargets('radial');
+
+function changeLayout(newLayout) {
+    currentLayout = newLayout;
+    computeLayoutTargets(newLayout);
+    document.getElementById('repulsionControl').style.display = newLayout === 'force' ? 'block' : 'none';
+    wakeSimulation();
+}
+
+// --- FISICA ---
+function wakeSimulation() {
+    isSimulating = true;
+    simFrames = 0;
+    updateSimUI(true);
+}
+
+function toggleSimulation() {
+    isSimulating = !isSimulating;
+    if (isSimulating) simFrames = 0;
+    updateSimUI(isSimulating);
+}
+
+function updateSimUI(active) {
+    const dot = document.getElementById('status-dot');
+    const text = document.getElementById('status-text');
+    const btn = document.getElementById('toggleSimBtn');
+
+    if (active) {
+        dot.classList.remove('paused');
+        text.innerText = "Simulazione Attiva";
+        btn.innerText = "Pausa";
+    } else {
+        dot.classList.add('paused');
+        text.innerText = "Rete Stabilizzata";
+        btn.innerText = "Riprendi";
+    }
+}
+
+function updatePhysics() {
+    if (!isSimulating) return;
+
+    if (currentLayout === 'force') {
+        totalKineticEnergy = 0;
+
+        for (let i = 0; i < nodes.length; i++) {
+            const n1 = nodes[i];
+            for (let j = i + 1; j < nodes.length; j++) {
+                const n2 = nodes[j];
+                let dx = n2.x - n1.x;
+                let dy = n2.y - n1.y;
+                let distSq = dx * dx + dy * dy + 0.1;
+                let dist = Math.sqrt(distSq);
+
+                if (dist < 420) {
+                    let force = (repulsionStrength * 10) / distSq;
+                    let fx = (dx / dist) * force;
+                    let fy = (dy / dist) * force;
+
+                    n1.vx -= fx;
+                    n1.vy -= fy;
+                    n2.vx += fx;
+                    n2.vy += fy;
+                }
+            }
+        }
+
+        for (let i = 0; i < edges.length; i++) {
+            const edge = edges[i];
+            let dx = edge.target.x - edge.source.x;
+            let dy = edge.target.y - edge.source.y;
+            let dist = Math.sqrt(dx * dx + dy * dy) + 0.1;
+            let force = (dist - springLength) * springStiffness * edge.weight;
+
+            let fx = (dx / dist) * force;
+            let fy = (dy / dist) * force;
+
+            edge.source.vx += fx;
+            edge.source.vy += fy;
+            edge.target.vx -= fx;
+            edge.target.vy -= fy;
+        }
+
+        for (let i = 0; i < nodes.length; i++) {
+            const n = nodes[i];
+            if (n === draggedNode) continue;
+
+            n.vx -= n.x * 0.0004;
+            n.vy -= n.y * 0.0004;
+
+            n.vx *= damping;
+            n.vy *= damping;
+
+            n.x += n.vx;
+            n.y += n.vy;
+
+            totalKineticEnergy += Math.abs(n.vx) + Math.abs(n.vy);
+        }
+
+        simFrames++;
+        if (totalKineticEnergy < 0.8 || simFrames > MAX_SIM_FRAMES) {
+            isSimulating = false;
+            updateSimUI(false);
+        }
+    } else {
+        let maxMovement = 0;
+        nodes.forEach(n => {
+            if (n === draggedNode) return;
+            let dx = n.targetX - n.x;
+            let dy = n.targetY - n.y;
+            n.x += dx * 0.08;
+            n.y += dy * 0.08;
+
+            maxMovement += Math.abs(dx) + Math.abs(dy);
+        });
+
+        simFrames++;
+        if (maxMovement < 0.5 || simFrames > 180) {
+            isSimulating = false;
+            updateSimUI(false);
+        }
+    }
+}
+
+let lastTime = performance.now();
+let frameCount = 0;
+
+function render() {
+    const now = performance.now();
+    frameCount++;
+    if (now - lastTime >= 1000) {
+        document.getElementById('stat-fps').innerText = frameCount;
+        frameCount = 0;
+        lastTime = now;
+    }
+
+    updatePhysics();
+
+    ctx.save();
+    ctx.fillStyle = '#06080d';
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.translate(transform.x, transform.y);
+    ctx.scale(transform.scale, transform.scale);
+
+    const isFilterActive = selectedCategory !== "ALL" || searchQuery !== "";
+
+    // Archi
+    for (let i = 0; i < edges.length; i++) {
+        const edge = edges[i];
+        const isHighlight = (hoveredNode || selectedNode) && 
+            (edge.source === hoveredNode || edge.target === hoveredNode || edge.source === selectedNode || edge.target === selectedNode);
+        
+        ctx.beginPath();
+        ctx.moveTo(edge.source.x, edge.source.y);
+        ctx.lineTo(edge.target.x, edge.target.y);
+
+        if (isHighlight) {
+            ctx.strokeStyle = '#c084fc';
+            ctx.lineWidth = 2.4;
+        } else {
+            ctx.strokeStyle = isFilterActive ? 'rgba(30, 41, 59, 0.15)' : 'rgba(51, 65, 85, 0.28)';
+            ctx.lineWidth = 0.6;
+        }
+        ctx.stroke();
+    }
+
+    // Nodi
+    for (let i = 0; i < nodes.length; i++) {
+        const n = nodes[i];
+        const catColor = CATEGORIES[n.category]?.color || '#94a3b8';
+        
+        const matchesCategory = (selectedCategory === "ALL" || n.category === selectedCategory);
+        const matchesSearch = searchQuery === "" || 
+            n.name.toLowerCase().includes(searchQuery) || 
+            n.sub.toLowerCase().includes(searchQuery) || 
+            n.details.toLowerCase().includes(searchQuery);
+
+        const isMatch = matchesCategory && matchesSearch;
+        const isSelected = n === selectedNode;
+        const isHovered = n === hoveredNode;
+
+        ctx.save();
+        
+        if (isFilterActive && !isMatch && !isSelected && !isHovered) {
+            ctx.globalAlpha = 0.12;
+        }
+
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, isSelected || isHovered ? n.radius + 4 : n.radius, 0, Math.PI * 2);
+
+        ctx.fillStyle = isFilterActive && isMatch ? '#ffffff' : catColor;
+        ctx.fill();
+
+        if (isSelected || isHovered || (isFilterActive && isMatch)) {
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+        }
+
+        if (transform.scale > 0.75 || n.relevance <= 2 || isHovered || isSelected || (isFilterActive && isMatch)) {
+            ctx.fillStyle = isSelected || isHovered ? '#ffffff' : '#e2e8f0';
+            ctx.font = `${Math.max(10 / transform.scale, 8)}px -apple-system, sans-serif`;
+            ctx.fillText(`${n.name}`, n.x + n.radius + 5, n.y + 3);
+        }
+
+        ctx.restore();
+    }
+
+    ctx.restore();
+    requestAnimationFrame(render);
+}
+
+function getCanvasCoords(e) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+        x: (e.clientX - rect.left - transform.x) / transform.scale,
+        y: (e.clientY - rect.top - transform.y) / transform.scale
+    };
+}
+
+function findNodeAt(coords) {
+    for (let i = nodes.length - 1; i >= 0; i--) {
+        const n = nodes[i];
+        const dx = n.x - coords.x;
+        const dy = n.y - coords.y;
+        if (dx * dx + dy * dy <= (n.radius + 6) * (n.radius + 6)) {
+            return n;
+        }
+    }
+    return null;
+}
+
+// EVENTI MOUSE
+canvas.addEventListener('mousedown', (e) => {
+    if (e.button === 2) return;
+    closeWorkModal();
+
+    const coords = getCanvasCoords(e);
+    const node = findNodeAt(coords);
+
+    if (node) {
+        draggedNode = node;
+        selectedNode = node;
+        updateInfoCard(node);
+        wakeSimulation();
+    } else {
+        isDragging = true;
+        dragStart = { x: e.clientX - transform.x, y: e.clientY - transform.y };
+    }
+});
+
+canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    const coords = getCanvasCoords(e);
+    const node = findNodeAt(coords);
+
+    if (node) {
+        selectedNode = node;
+        openWorkModal(node, e.clientX, e.clientY);
+    } else {
+        closeWorkModal();
+    }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+    const coords = getCanvasCoords(e);
+
+    if (draggedNode) {
+        draggedNode.x = coords.x;
+        draggedNode.y = coords.y;
+        draggedNode.vx = 0;
+        draggedNode.vy = 0;
+        wakeSimulation();
+    } else if (isDragging) {
+        transform.x = e.clientX - dragStart.x;
+        transform.y = e.clientY - dragStart.y;
+    } else {
+        hoveredNode = findNodeAt(coords);
+    }
+});
+
+window.addEventListener('mouseup', () => {
+    isDragging = false;
+    draggedNode = null;
+});
+
+canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const zoomFactor = 1.1;
+    const mouseX = e.clientX;
+    const mouseY = e.clientY;
+
+    let newScale = e.deltaY < 0 ? transform.scale * zoomFactor : transform.scale / zoomFactor;
+    newScale = Math.max(0.18, Math.min(newScale, 4.5));
+
+    transform.x = mouseX - (mouseX - transform.x) * (newScale / transform.scale);
+    transform.y = mouseY - (mouseY - transform.y) * (newScale / transform.scale);
+    transform.scale = newScale;
+}, { passive: false });
+
+// CONTROLLI
+document.getElementById('categorySelect').addEventListener('change', (e) => { selectedCategory = e.target.value; wakeSimulation(); });
+document.getElementById('searchInput').addEventListener('input', (e) => { searchQuery = e.target.value.toLowerCase().trim(); wakeSimulation(); });
+document.getElementById('repulsionSlider').addEventListener('input', (e) => { repulsionStrength = parseFloat(e.target.value); wakeSimulation(); });
+
+function updateInfoCard(node) {
+    const card = document.getElementById('info-card');
+    if (!node) {
+        card.style.display = 'none';
+        return;
+    }
+    
+    const catObj = CATEGORIES[node.category] || { name: 'Nodo', color: '#c084fc' };
+    
+    document.getElementById('card-title').innerText = node.name;
+    const badge = document.getElementById('card-badge');
+    badge.innerText = catObj.name;
+    badge.style.backgroundColor = catObj.color;
+    badge.style.color = '#020617';
+
+    document.getElementById('card-meta').innerText = `🌸 ${node.sub}`;
+    
+    const partnersList = node.connections.map(c => `• ${c.name}`).slice(0, 6).join('<br>');
+    
+    document.getElementById('card-details').innerHTML = `
+        <strong>Ruolo nell'Ecosistema Parmense:</strong><br>${node.details}
+    `;
+    
+    document.getElementById('card-partners').innerHTML = `
+        <strong>Connessioni di Filiera & Territorio:</strong><br>${partnersList || 'Nessun collegamento diretto'}
+    `;
+    
+    card.style.display = 'block';
+}
+
+function openWorkModal(node, mouseX, mouseY) {
+    const modal = document.getElementById('work-modal');
+    
+    document.getElementById('modal-node-name').innerText = node.name;
+    document.getElementById('modal-node-meta').innerText = `${CATEGORIES[node.category]?.name} • ${node.sub}`;
+    document.getElementById('modal-node-title').innerText = node.details;
+    
+    const searchQuery = encodeURIComponent(`Parma cosmetica profumi ${node.name} ${node.sub}`);
+    const searchUrl = `https://www.google.com/search?q=${searchQuery}`;
+    
+    const linkBtn = document.getElementById('modal-web-link');
+    linkBtn.href = searchUrl;
+
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    
+    let posX = mouseX + 10;
+    let posY = mouseY + 10;
+
+    if (posX + 340 > windowWidth) posX = mouseX - 340;
+    if (posY + 240 > windowHeight) posY = mouseY - 240;
+
+    modal.style.left = `${Math.max(10, posX)}px`;
+    modal.style.top = `${Math.max(10, posY)}px`;
+    modal.style.display = 'block';
+}
+
+function closeWorkModal() {
+    document.getElementById('work-modal').style.display = 'none';
+}
+
+// Start
+requestAnimationFrame(render);
+</script>
+</body>
+</html>
