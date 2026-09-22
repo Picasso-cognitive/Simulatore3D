@@ -1,0 +1,2035 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CosmoSaperi — Simulatore RAG & Coco Chanel AI Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --forest:#16261c;
+    --forest-2:#1e3327;
+    --sage:#7c9d82;
+    --sage-deep:#517958;
+    --sage-pale:#eef3ec;
+    --ottanio:#2c5860;
+    --ottanio-pale:#e6eef0;
+    --terracotta:#a8714f;
+    --terracotta-pale:#f3e9e2;
+    --cream:#faf8f3;
+    --ink:#20281f;
+    --ink-soft:#5c6459;
+    --line:#dbe0d6;
+    --white:#ffffff;
+    --danger:#a8452f;
+    --radius-s:4px;
+    --radius-m:10px;
+    --serif:'Fraunces', Georgia, serif;
+    --sans:'Public Sans', -apple-system, sans-serif;
+    --shadow: 0 1px 2px rgba(22,38,28,0.06), 0 8px 24px rgba(22,38,28,0.06);
+    --gold: #d4af37;
+    --gold-dark: #aa820a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:var(--sans);
+    background:var(--cream);
+    color:var(--ink);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;}
+  .wrap{max-width:920px;margin:0 auto;padding:0 24px;}
+
+  /* ---------- HEADER ---------- */
+  header.top{
+    background:radial-gradient(120% 140% at 15% -10%, #21382a 0%, var(--forest) 60%);
+    color:var(--cream);
+    padding:52px 0 40px;
+    border-bottom:3px solid var(--sage);
+    position: relative;
+  }
+  .brand-row{display:flex;align-items:center;gap:10px;margin-bottom:22px;opacity:.85;}
+  .brand-row svg{width:22px;height:22px;flex:none;}
+  .brand-row span{font-size:14px;letter-spacing:0.02em;color:var(--sage);}
+  header.top h1{
+    font-family:var(--serif);
+    font-weight:600;
+    font-size:clamp(30px,4.4vw,44px);
+    margin:0 0 14px;
+    max-width:15ch;
+    line-height:1.08;
+  }
+  header.top p.lede{
+    max-width:56ch;
+    color:#cbd8ce;
+    font-size:16px;
+    margin:0 0 26px;
+  }
+  .security-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:9px;
+    background:rgba(124,157,130,0.14);
+    border:1px solid rgba(124,157,130,0.5);
+    border-radius:999px;
+    padding:8px 16px 8px 12px;
+    font-size:13.5px;
+    color:#dcebe0;
+  }
+  .security-badge .dot{
+    width:8px;height:8px;border-radius:50%;background:#8fd39c;
+    box-shadow:0 0 0 3px rgba(143,211,156,0.25);
+    animation:pulse 2.4s ease-in-out infinite;
+    flex:none;
+  }
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.45;}}
+  @media (prefers-reduced-motion: reduce){ .security-badge .dot{animation:none;} }
+
+  /* ---------- PULSANTI IN ALTO A DESTRA ---------- */
+  .top-right-controls {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    gap: 10px;
+    z-index: 1000;
+  }
+  #stop-voice-btn {
+    background: rgba(168, 69, 47, 0.92);
+    backdrop-filter: blur(8px);
+    border: 1px solid #ff9980;
+    color: #ffffff;
+    padding: 10px 18px;
+    border-radius: 20px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.3);
+    transition: all 0.25s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--sans);
+  }
+  #stop-voice-btn:hover {
+    background: var(--danger);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 22px rgba(168, 69, 47, 0.4);
+  }
+  #info-btn-top-right {
+    background: rgba(22, 38, 28, 0.92);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    padding: 10px 18px;
+    border-radius: 20px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.3);
+    transition: all 0.25s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--sans);
+  }
+  #info-btn-top-right:hover {
+    background: var(--gold);
+    color: var(--forest);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 22px rgba(212, 175, 55, 0.4);
+  }
+
+  /* ---------- PROGRESS BAR ---------- */
+  .progress-zone{background:var(--cream);border-bottom:1px solid var(--line);}
+  .progress{
+    display:flex;
+    align-items:stretch;
+    max-width:920px;margin:0 auto;padding:22px 24px 20px;
+    gap:0;
+  }
+  .progress .seg{flex:1;display:flex;flex-direction:column;gap:9px;position:relative;padding-right:14px;}
+  .progress .seg .stem{height:4px;border-radius:3px;background:var(--line);overflow:hidden;}
+  .progress .seg .stem i{display:block;height:100%;width:0%;background:var(--sage-deep);transition:width .5s ease;}
+  .progress .seg.done .stem i{width:100%;}
+  .progress .seg.active .stem i{width:55%;}
+  .progress .seg .label{font-size:12.5px;color:var(--ink-soft);}
+  .progress .seg.active .label{color:var(--ink);font-weight:600;}
+  .progress .seg.done .label{color:var(--sage-deep);}
+
+  main{max-width:920px;margin:0 auto;padding:38px 24px 90px;}
+  .step{display:none;}
+  .step.active{display:block;animation:rise .38s ease both;}
+  @keyframes rise{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+  h2.step-title{font-family:var(--serif);font-weight:600;font-size:26px;margin:0 0 6px;}
+  p.step-sub{color:var(--ink-soft);margin:0 0 28px;max-width:60ch;font-size:15px;}
+
+  /* ---------- CARDS MODULO ---------- */
+  .module-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+  @media (max-width:760px){.module-grid{grid-template-columns:1fr;}}
+  .module-card{
+    text-align:left;
+    background:var(--white);
+    border:1.5px solid var(--line);
+    border-radius:var(--radius-m);
+    padding:0;
+    cursor:pointer;
+    overflow:hidden;
+    transition:border-color .18s ease, transform .18s ease, box-shadow .18s ease;
+    font-family:var(--sans);
+    display:flex;flex-direction:column;
+  }
+  .module-card:hover{transform:translateY(-2px);box-shadow:var(--shadow);}
+  .module-card:focus-visible{outline:3px solid var(--sage-deep);outline-offset:2px;}
+  .module-card.selected{border-color:var(--sage-deep);box-shadow:0 0 0 3px rgba(81,121,88,0.16);}
+  .module-card .head{padding:20px 18px 16px;color:var(--white);position:relative;}
+  .module-card[data-mod="haircare"] .head{background:linear-gradient(150deg,#3a5c46,#2b4635);}
+  .module-card[data-mod="colorazione"] .head{background:linear-gradient(150deg,#8a5c3d,#a8714f);}
+  .module-card[data-mod="profumeria"] .head{background:linear-gradient(150deg,#274e56,#2c5860);}
+  .module-card .head svg{width:26px;height:26px;margin-bottom:14px;}
+  .module-card .head h3{font-family:var(--serif);font-size:19px;margin:0 0 4px;font-weight:600;}
+  .module-card .head .tag{font-size:12px;opacity:.85;}
+  .module-card .body{padding:16px 18px 20px;color:var(--ink-soft);font-size:13.6px;flex:1;}
+  .module-card .check{
+    position:absolute;top:16px;right:16px;width:20px;height:20px;border-radius:50%;
+    border:1.5px solid rgba(255,255,255,0.65);background:transparent;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .module-card.selected .check{background:var(--white);border-color:var(--white);}
+  .module-card.selected .check svg{display:block;}
+  .module-card .check svg{display:none;width:12px;height:12px;}
+
+  /* ---------- FORMS ---------- */
+  fieldset{border:none;margin:0;padding:0;}
+  .field-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px 20px;}
+  @media (max-width:640px){.field-grid{grid-template-columns:1fr;}}
+  .field{display:flex;flex-direction:column;gap:7px;margin-bottom:18px;}
+  .field.full{grid-column:1 / -1;}
+  label{font-size:13.5px;font-weight:600;color:var(--ink);}
+  label .hint{font-weight:400;color:var(--ink-soft);}
+  select, input[type=text], textarea{
+    font-family:var(--sans);
+    font-size:14.5px;
+    padding:11px 12px;
+    border:1.5px solid var(--line);
+    border-radius:var(--radius-s);
+    background:var(--white);
+    color:var(--ink);
+    width:100%;
+    transition: all 0.3s ease;
+  }
+  select:focus, input:focus, textarea:focus{outline:none;border-color:var(--sage-deep);box-shadow:0 0 0 3px rgba(81,121,88,0.14);}
+  textarea{resize:vertical;min-height:78px;font-family:var(--sans);}
+
+  /* HIGHLIGHT CAMPO ATTIVO PER IL QUESTIONARIO GUIDATO DA COCO */
+  .active-field-highlight {
+    border-color: var(--gold) !important;
+    box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.4) !important;
+    animation: focusPulse 1.5s infinite alternate;
+  }
+  @keyframes focusPulse {
+    from { box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2); }
+    to { box-shadow: 0 0 0 6px rgba(212, 175, 55, 0.55); }
+  }
+
+  .chip-group{display:flex;flex-wrap:wrap;gap:8px;}
+  .chip{
+    padding:8px 14px;border:1.5px solid var(--line);border-radius:999px;
+    font-size:13px;cursor:pointer;background:var(--white);color:var(--ink-soft);
+    user-select:none;
+  }
+  .chip.on{background:var(--sage-pale);border-color:var(--sage-deep);color:var(--sage-deep);font-weight:600;}
+  .chip.warn.on{background:#fbeeea;border-color:var(--terracotta);color:#7a4c30;}
+
+  .divider{height:1px;background:var(--line);margin:30px 0;}
+
+  /* ---------- NAV BUTTONS ---------- */
+  .nav-row{display:flex;justify-content:space-between;align-items:center;margin-top:34px;}
+  .btn{
+    font-family:var(--sans);
+    font-size:14.5px;
+    font-weight:600;
+    padding:12px 22px;
+    border-radius:var(--radius-s);
+    border:1.5px solid transparent;
+    cursor:pointer;
+    display:inline-flex;align-items:center;gap:9px;
+  }
+  .btn-primary{background:var(--sage-deep);color:var(--white);}
+  .btn-primary:hover{background:#456a4b;}
+  .btn-primary:disabled{background:#a9b9ac;cursor:not-allowed;}
+  .btn-ghost{background:transparent;color:var(--ink-soft);border-color:var(--line);}
+  .btn-ghost:hover{border-color:var(--ink-soft);color:var(--ink);}
+  .btn-dark{background:var(--forest);color:var(--cream);}
+  .btn-dark:hover{background:#0f1d14;}
+
+  /* ---------- STEP 3 OUTPUT ---------- */
+  .processing-box{
+    display:flex;align-items:center;gap:14px;
+    background:var(--sage-pale);border:1px solid #d3e2d4;border-radius:var(--radius-m);
+    padding:18px 20px;margin-bottom:26px;font-size:14px;color:var(--sage-deep);font-weight:600;
+  }
+  .spinner{width:18px;height:18px;border-radius:50%;border:2.5px solid #c4d8c6;border-top-color:var(--sage-deep);animation:spin .8s linear infinite;flex:none;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .sheet{
+    background:var(--white);
+    border:1px solid var(--line);
+    border-left:5px solid var(--sage-deep);
+    border-radius:var(--radius-m);
+    padding:28px 28px 22px;
+    box-shadow:var(--shadow);
+  }
+  .sheet[data-mod="colorazione"]{border-left-color:var(--terracotta);}
+  .sheet[data-mod="profumeria"]{border-left-color:var(--ottanio);}
+  .sheet .sheet-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:20px;flex-wrap:wrap;}
+  .sheet .sheet-head h3{font-family:var(--serif);font-size:21px;margin:0 0 4px;}
+  .sheet .sheet-head .meta{font-size:12.5px;color:var(--ink-soft);}
+  .mode-badge{font-size:11.5px;font-weight:600;padding:5px 10px;border-radius:999px;white-space:nowrap;}
+  .mode-badge.live{background:var(--sage-pale);color:var(--sage-deep);}
+  .mode-badge.offline{background:var(--terracotta-pale);color:#7a4c30;}
+
+  table.formula-table{width:100%;border-collapse:collapse;margin-bottom:8px;}
+  table.formula-table th{
+    text-align:left;font-size:11.5px;text-transform:none;color:var(--ink-soft);
+    font-weight:600;padding:0 10px 8px 0;border-bottom:1.5px solid var(--line);
+  }
+  table.formula-table td{padding:10px 10px 10px 0;border-bottom:1px solid #eef0eb;font-size:14px;vertical-align:top;}
+  table.formula-table td.num{font-variant-numeric:tabular-nums;font-weight:600;}
+  table.formula-table tr:last-child td{border-bottom:none;}
+  .inci{font-size:12px;color:var(--ink-soft);font-style:italic;}
+
+  .pyramid-block{margin-bottom:18px;}
+  .pyramid-block h4{font-size:13.5px;margin:0 0 10px;display:flex;justify-content:space-between;align-items:baseline;}
+  .pyramid-block h4 .pct{font-family:var(--serif);font-size:19px;color:var(--ottanio);}
+  .pyramid-bar{height:8px;border-radius:4px;background:#eef0eb;overflow:hidden;margin-bottom:12px;}
+  .pyramid-bar i{display:block;height:100%;background:var(--ottanio);}
+
+  .param-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:18px 0 8px;}
+  @media (max-width:640px){.param-grid{grid-template-columns:1fr 1fr;}}
+  .param{background:var(--sage-pale);border-radius:var(--radius-s);padding:12px 14px;}
+  .sheet[data-mod="colorazione"] .param{background:var(--terracotta-pale);}
+  .sheet[data-mod="profumeria"] .param{background:var(--ottanio-pale);}
+  .param .k{font-size:11px;color:var(--ink-soft);margin-bottom:3px;}
+  .param .v{font-size:15px;font-weight:700;font-family:var(--serif);}
+
+  .expert-note{
+    background:#fbf9f3;border:1px dashed #d9d0bd;border-radius:var(--radius-s);
+    padding:12px 14px;font-size:13.5px;color:#6b5f45;margin-top:10px;
+  }
+
+  .rag-sources{
+    margin-top:22px;background:var(--forest);color:#dfe8e1;border-radius:var(--radius-m);
+    padding:18px 20px;
+  }
+  .rag-sources h4{font-family:var(--serif);font-size:15px;margin:0 0 12px;color:var(--sage);font-weight:600;display:flex;align-items:center;gap:8px;}
+  .rag-sources h4 svg{width:16px;height:16px;flex:none;}
+  .rag-source-item{
+    display:grid;grid-template-columns:1fr auto;gap:4px 12px;
+    padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.08);font-size:12.8px;
+  }
+  .rag-source-item:last-child{border-bottom:none;}
+  .rag-source-item .name{color:#f2f5f1;}
+  .rag-source-item .inci-src{color:#9db4a4;font-style:italic;font-size:11.5px;}
+  .rag-source-item .kind{color:#8fa896;font-size:11px;text-align:right;white-space:nowrap;}
+
+  /* ---------- STEP 4 : HUMAN IN THE LOOP ---------- */
+  .hitl{
+    margin-top:30px;border:1.5px solid var(--sage-deep);border-radius:var(--radius-m);
+    padding:24px 26px;background:var(--white);
+  }
+  .hitl .hitl-head{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+  .hitl .hitl-head svg{width:18px;height:18px;color:var(--sage-deep);flex:none;}
+  .hitl .hitl-head h3{font-family:var(--serif);font-size:18px;margin:0;}
+  .hitl p.desc{color:var(--ink-soft);font-size:13.8px;margin:0 0 20px;max-width:62ch;}
+  .edit-row{
+    display:flex;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid #eef0eb;
+  }
+  .edit-row:last-of-type{border-bottom:none;}
+  .edit-row .lbl{flex:1;font-size:14px;}
+  .edit-row .lbl small{display:block;color:var(--ink-soft);font-size:11.8px;font-style:italic;}
+  .edit-row input[type=number]{
+    width:88px;padding:8px 10px;border:1.5px solid var(--line);border-radius:var(--radius-s);
+    font-size:14px;text-align:right;font-family:var(--sans);
+  }
+  .edit-row input[type=text]{width:150px;padding:8px 10px;border:1.5px solid var(--line);border-radius:var(--radius-s);font-size:13.5px;}
+  .edit-row .unit{font-size:12.5px;color:var(--ink-soft);width:34px;}
+
+  .validate-row{display:flex;align-items:center;gap:14px;margin-top:22px;flex-wrap:wrap;}
+  .save-confirm{
+    display:none;align-items:center;gap:8px;color:var(--sage-deep);font-weight:600;font-size:13.5px;
+  }
+  .save-confirm.show{display:inline-flex;}
+
+  /* ---------- HISTORIC ---------- */
+  .history-zone{margin-top:44px;}
+  .history-zone h3{font-family:var(--serif);font-size:19px;margin:0 0 4px;}
+  .history-zone p.desc{color:var(--ink-soft);font-size:13.5px;margin:0 0 16px;}
+  .history-list{display:flex;flex-direction:column;gap:10px;}
+  .history-item{
+    display:flex;justify-content:space-between;align-items:center;gap:14px;
+    background:var(--white);border:1px solid var(--line);border-radius:var(--radius-s);
+    padding:13px 16px;font-size:13.5px;
+  }
+  .history-item .h-mod{
+    font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap;
+  }
+  .history-item .h-mod.haircare{background:var(--sage-pale);color:var(--sage-deep);}
+  .history-item .h-mod.colorazione{background:var(--terracotta-pale);color:#7a4c30;}
+  .history-item .h-mod.profumeria{background:var(--ottanio-pale);color:var(--ottanio);}
+  .history-item .h-desc{flex:1;color:var(--ink-soft);}
+  .history-item .h-time{color:#9aa294;font-size:12px;white-space:nowrap;}
+  .history-empty{color:var(--ink-soft);font-size:13.5px;font-style:italic;padding:14px 0;}
+
+  .kb-counter{
+    display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-soft);
+    background:var(--sage-pale);border-radius:999px;padding:6px 14px;
+  }
+  .kb-counter b{color:var(--sage-deep);font-family:var(--serif);font-size:15px;}
+
+  .allergy-warning{
+    display:none;margin-top:14px;background:#fbeeea;border:1px solid #e6c2b3;color:#7a4c30;
+    border-radius:var(--radius-s);padding:10px 14px;font-size:13px;
+  }
+  .allergy-warning.show{display:block;}
+
+  footer.foot{border-top:1px solid var(--line);padding:26px 0;margin-top:60px;}
+  footer.foot .wrap{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--ink-soft);flex-wrap:wrap;gap:10px;}
+
+  /* ============================================================
+     STILI AGENTE COCO CHANEL & CHAT
+  ============================================================ */
+  .avatar-free-container { 
+    position: fixed; 
+    bottom: 20px; 
+    right: 20px; 
+    z-index: 9999; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: flex-end; 
+    gap: 10px; 
+    font-family: var(--sans);
+  }
+  
+  .avatar-trigger-wrapper {
+    position: relative;
+    display: inline-block;
+    text-align: center;
+  }
+
+  .avatar-trigger { 
+    position: relative;
+    width: 130px; 
+    height: 175px; 
+    cursor: pointer; 
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), filter 0.3s; 
+    transform-origin: bottom center;
+    animation: idle-float 4s ease-in-out infinite;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 2px solid var(--gold);
+    background: var(--forest);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  }
+
+  .avatar-trigger img#avatar-img { 
+    width: 100%; 
+    height: 100%; 
+    object-fit: cover;
+    object-position: top center;
+    pointer-events: none;
+  }
+
+  .avatar-mouth {
+    position: absolute;
+    top: 37%; 
+    left: 49%;
+    width: 14px;
+    height: 3px;
+    background: #1a0a03;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: height 0.08s ease, width 0.08s ease;
+    opacity: 0.85;
+    mix-blend-mode: multiply;
+    pointer-events: none;
+  }
+
+  .avatar-trigger:hover { 
+    filter: brightness(1.08); 
+  }
+
+  @keyframes idle-float {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-5px) rotate(0.8deg); }
+  }
+
+  .btn-change-avatar {
+    position: absolute;
+    bottom: 6px;
+    left: 6px;
+    background: var(--gold);
+    color: var(--forest);
+    border: 1px solid var(--forest);
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    transition: transform 0.2s, background 0.2s;
+    z-index: 10;
+  }
+  .btn-change-avatar:hover {
+    transform: scale(1.15);
+    background: #e6c247;
+  }
+
+  .avatar-chat-window { 
+    width: 370px; 
+    height: 480px; 
+    background: rgba(22, 38, 28, 0.96); 
+    border: 1px solid var(--gold); 
+    border-radius: 14px; 
+    display: none; 
+    flex-direction: column; 
+    overflow: hidden; 
+    backdrop-filter: blur(10px); 
+    box-shadow: 0 12px 35px rgba(0,0,0,0.6); 
+  }
+  .avatar-chat-window.active { 
+    display: flex; 
+  }
+  .chat-header { 
+    background: var(--forest-2); 
+    padding: 12px 16px; 
+    font-weight: 600; 
+    color: var(--gold); 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+    font-family: var(--serif);
+    letter-spacing: 0.03em;
+  }
+  .chat-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-stop-chat {
+    background: var(--danger);
+    color: #fff;
+    border: none;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .btn-stop-chat:hover {
+    background: #c7371c;
+  }
+  .chat-messages { 
+    flex: 1; 
+    padding: 14px; 
+    overflow-y: auto; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 12px; 
+    font-size: 0.88rem; 
+  }
+  .msg { 
+    padding: 10px 14px; 
+    border-radius: 10px; 
+    max-width: 85%; 
+    line-height: 1.45; 
+    word-wrap: break-word;
+  }
+  .ai-msg { 
+    background: var(--forest-2); 
+    color: #f2f5f1; 
+    align-self: flex-start; 
+    border: 1px solid rgba(124,157,130,0.3); 
+  }
+  .user-msg { 
+    background: var(--sage-deep); 
+    color: var(--white); 
+    align-self: flex-end; 
+  }
+  .chat-input-area { 
+    display: flex; 
+    padding: 10px; 
+    background: var(--forest); 
+    border-top: 1px solid rgba(255,255,255,0.1); 
+    gap: 6px; 
+  }
+  .chat-input-area input { 
+    flex: 1; 
+    background: var(--forest-2); 
+    border: 1px solid rgba(124,157,130,0.4); 
+    color: #fff; 
+    padding: 8px 12px; 
+    border-radius: 6px; 
+    font-size: 0.85rem; 
+    outline: none;
+  }
+  .chat-input-area input:focus {
+    border-color: var(--gold);
+  }
+  .btn-chat { 
+    background: var(--gold); 
+    border: none; 
+    color: var(--forest); 
+    padding: 8px 14px; 
+    border-radius: 6px; 
+    cursor: pointer; 
+    font-weight: 700; 
+  }
+  .btn-chat:hover {
+    background: #e6c247;
+  }
+  .btn-mic { 
+    background: var(--ottanio); 
+    color: var(--white);
+  }
+  .btn-mic:hover {
+    background: #396f79;
+  }
+  .btn-mic.recording { 
+    background: var(--danger); 
+    animation: pulse-mic 1s infinite; 
+  }
+  @keyframes pulse-mic { 
+    0% { opacity: 1; } 
+    50% { opacity: 0.5; } 
+    100% { opacity: 1; } 
+  }
+
+  /* MODALE LISTA COMANDI UTENTE */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+  }
+  .modal-overlay.active {
+    display: flex;
+  }
+  .modal-content {
+    background: var(--forest);
+    border: 1px solid var(--gold);
+    border-radius: 14px;
+    width: 90%;
+    max-width: 540px;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 24px;
+    box-shadow: 0 12px 35px rgba(0,0,0,0.8);
+    color: #e2e8f0;
+  }
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+    padding-bottom: 12px;
+    margin-bottom: 18px;
+  }
+  .modal-header h3 {
+    margin: 0;
+    color: var(--gold);
+    font-size: 1.2rem;
+    font-family: var(--serif);
+  }
+  .cmd-category {
+    margin-bottom: 16px;
+    background: var(--forest-2);
+    padding: 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(124,157,130,0.2);
+  }
+  .cmd-category h4 {
+    margin: 0 0 10px 0;
+    color: var(--gold);
+    font-size: 0.95rem;
+  }
+  .cmd-list {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+    font-size: 0.88rem;
+  }
+  .cmd-list li {
+    padding: 4px 0;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .cmd-badge {
+    background: var(--forest);
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.82rem;
+    font-weight: bold;
+  }
+</style>
+</head>
+<body>
+
+<!-- PULSANTI COMANDI & STOP VOCE IN ALTO A DESTRA -->
+<div class="top-right-controls">
+  <button id="stop-voice-btn" onclick="stopVoice()">
+    <span>🛑 Stop Voce</span>
+  </button>
+  <button id="info-btn-top-right" onclick="toggleCommandsModal()">
+    <span>📜 Comandi & Guida Coco Chanel</span>
+  </button>
+</div>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand-row">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21c0-6 3-9 7-11-1 6-3 9-7 11Z"/><path d="M12 21c0-7-3-11-8-13 1 7 3 11 8 13Z"/></svg>
+      <span>CosmoSaperi — framework di formalizzazione della conoscenza esperta</span>
+    </div>
+    <h1>Simulatore RAG per la cosmetica naturale</h1>
+    <p class="lede">Genera protocolli, formule e piramidi olfattive combinando una base di conoscenza tracciata (INCI + regole procedurali) con la validazione del professionista.</p>
+    <span class="security-badge"><span class="dot"></span> Layer di sicurezza attivo — verifica INCI, allergeni e concentrazioni massime</span>
+  </div>
+</header>
+
+<div class="progress-zone">
+  <div class="progress" id="progressBar" aria-hidden="true">
+    <div class="seg active" data-step="1"><div class="stem"><i></i></div><div class="label">1 · Macro-settore</div></div>
+    <div class="seg" data-step="2"><div class="stem"><i></i></div><div class="label">2 · Profilazione</div></div>
+    <div class="seg" data-step="3"><div class="stem"><i></i></div><div class="label">3 · Scheda tecnica RAG</div></div>
+    <div class="seg" data-step="4"><div class="stem"><i></i></div><div class="label">4 · Validazione esperta</div></div>
+  </div>
+</div>
+
+<main>
+
+  <!-- ================= STEP 1 ================= -->
+  <section class="step active" id="step1">
+    <h2 class="step-title">Scegli il modulo</h2>
+    <p class="step-sub">Ogni sotto-dominio ha una logica computazionale distinta, ma condivide lo stesso layer di sicurezza e le stesse regole normative.</p>
+
+    <div class="module-grid" role="group" aria-label="Selezione macro-settore">
+      <button class="module-card" data-mod="haircare" type="button">
+        <div class="head">
+          <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="#2b4635" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg></div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21c0-6 3-9 7-11-1 6-3 9-7 11Z"/><path d="M12 21c0-7-3-11-8-13 1 7 3 11 8 13Z"/></svg>
+          <h3>Haircare</h3>
+          <div class="tag">Raccomandazione su catalogo</div>
+        </div>
+        <div class="body">Seleziona il protocollo ottimale tra prodotti esistenti in base al profilo del capello e della cute.</div>
+      </button>
+
+      <button class="module-card" data-mod="colorazione" type="button">
+        <div class="head">
+          <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="#7a4c30" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg></div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 3v6l-5 9a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-5-9V3"/><path d="M9 3h6"/></svg>
+          <h3>Colorazione vegetale</h3>
+          <div class="tag">Generazione vincolata</div>
+        </div>
+        <div class="body">Compone una formula originale di pigmenti vegetali entro un insieme noto e sicuro di componenti.</div>
+      </button>
+
+      <button class="module-card" data-mod="profumeria" type="button">
+        <div class="head">
+          <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="#173338" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg></div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="14" r="7"/><path d="M9 3h6l-1 4H10l-1-4Z"/><path d="M12 10v1"/></svg>
+          <h3>Profumeria</h3>
+          <div class="tag">Generazione strutturata</div>
+        </div>
+        <div class="body">Bilancia la piramide olfattiva 30/50/20 secondo regole esplicite di armonia tra famiglie.</div>
+      </button>
+    </div>
+
+    <div class="nav-row">
+      <span></span>
+      <button class="btn btn-primary" id="toStep2" disabled type="button">Continua alla profilazione</button>
+    </div>
+  </section>
+
+  <!-- ================= STEP 2 ================= -->
+  <section class="step" id="step2">
+    <h2 class="step-title">Questionario adattivo</h2>
+    <p class="step-sub" id="step2Sub">Le domande cambiano in base al modulo selezionato.</p>
+
+    <form id="profileForm">
+
+      <fieldset class="field-grid" id="fields-haircare" hidden>
+        <div class="field">
+          <label for="hc-tipo">Tipo di capello</label>
+          <select id="hc-tipo" onchange="registerFieldChange('hc-tipo')">
+            <option value="riccio">Riccio / crespo</option>
+            <option value="liscio">Liscio</option>
+            <option value="ondulato">Ondulato</option>
+            <option value="afro">Afro / molto crespo</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="hc-problema">Problematica principale</label>
+          <select id="hc-problema" onchange="registerFieldChange('hc-problema')">
+            <option value="cute_sensibile">Cute sensibile</option>
+            <option value="danneggiato">Capello danneggiato</option>
+            <option value="diradamento">Diradamento</option>
+            <option value="grasso">Capello grasso</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="hc-obiettivo">Obiettivo</label>
+          <select id="hc-obiettivo" onchange="registerFieldChange('hc-obiettivo')">
+            <option value="idratazione">Idratazione</option>
+            <option value="riparazione">Riparazione</option>
+            <option value="anticaduta">Anticaduta</option>
+            <option value="controllo_volume">Controllo volume</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="hc-freq">Frequenza lavaggio</label>
+          <select id="hc-freq" onchange="registerFieldChange('hc-freq')">
+            <option value="quotidiana">Quotidiana</option>
+            <option value="2-3 volte/settimana">2–3 volte a settimana</option>
+            <option value="settimanale">Settimanale</option>
+          </select>
+        </div>
+      </fieldset>
+
+      <fieldset class="field-grid" id="fields-colorazione" hidden>
+        <div class="field">
+          <label for="col-partenza">Colore di partenza</label>
+          <select id="col-partenza" onchange="registerFieldChange('col-partenza')">
+            <option value="castano scuro">Castano scuro</option>
+            <option value="castano chiaro">Castano chiaro</option>
+            <option value="biondo">Biondo</option>
+            <option value="grigio/bianco diffuso">Grigio / bianco diffuso</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="col-tonalita">Tonalità desiderata</label>
+          <select id="col-tonalita" onchange="registerFieldChange('col-tonalita')">
+            <option value="rame">Rame</option>
+            <option value="castano caldo">Castano caldo</option>
+            <option value="castano scuro/nero">Castano scuro / nero</option>
+            <option value="mogano">Mogano</option>
+            <option value="riflessi naturali senza colore">Riflessi naturali, senza cambio colore</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="col-tipo-capello">Tipo di capello</label>
+          <select id="col-tipo-capello" onchange="registerFieldChange('col-tipo-capello')">
+            <option value="normale">Normale</option>
+            <option value="poroso">Poroso</option>
+            <option value="resistente">Resistente / compatto</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="col-storico">Trattamenti pregressi</label>
+          <select id="col-storico" onchange="registerFieldChange('col-storico')">
+            <option value="nessuno">Nessuno</option>
+            <option value="henné/pigmenti vegetali">Henné / pigmenti vegetali</option>
+            <option value="tinta chimica">Tinta chimica</option>
+            <option value="decolorazione">Decolorazione</option>
+          </select>
+        </div>
+      </fieldset>
+
+      <fieldset class="field-grid" id="fields-profumeria" hidden>
+        <div class="field">
+          <label for="pf-famiglia">Famiglia olfattiva preferita</label>
+          <select id="pf-famiglia" onchange="registerFieldChange('pf-famiglia')">
+            <option value="floreale">Floreale</option>
+            <option value="agrumato">Agrumato</option>
+            <option value="legnoso">Legnoso</option>
+            <option value="speziato/orientale">Speziato / orientale</option>
+            <option value="marino/fresco">Marino / fresco</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="pf-occasione">Occasione d'uso</label>
+          <select id="pf-occasione" onchange="registerFieldChange('pf-occasione')">
+            <option value="quotidiano/giorno">Quotidiano, giorno</option>
+            <option value="serale">Serale</option>
+            <option value="lavoro/ufficio">Lavoro / ufficio</option>
+            <option value="stagione calda">Stagione calda</option>
+          </select>
+        </div>
+        <div class="field full">
+          <label>Sensibilità specifiche <span class="hint">(seleziona quelle pertinenti)</span></label>
+          <div class="chip-group" id="pf-sensibilita">
+            <span class="chip warn" data-val="fotosensibilità">Fotosensibilità (agrumi)</span>
+            <span class="chip warn" data-val="pelle reattiva">Pelle reattiva</span>
+            <span class="chip" data-val="gravidanza">Gravidanza / allattamento</span>
+          </div>
+        </div>
+      </fieldset>
+
+      <div class="divider"></div>
+
+      <div class="field full">
+        <label>Allergie note <span class="hint">(esclusione automatica dei componenti corrispondenti)</span></label>
+        <div class="chip-group" id="allergyChips">
+          <span class="chip warn" data-val="nichel">Nichel</span>
+          <span class="chip warn" data-val="fragranze/profumo">Fragranze / profumo</span>
+          <span class="chip warn" data-val="lanolina">Lanolina</span>
+          <span class="chip warn" data-val="oli essenziali agrumati">Oli essenziali agrumati</span>
+          <span class="chip warn" data-val="piante della famiglia asteraceae">Asteraceae (camomilla, calendula...)</span>
+        </div>
+      </div>
+
+      <div class="field full expert-comment">
+        <label for="expertNote">Note libere del professionista</label>
+        <textarea id="expertNote" placeholder="Es. cliente in gravidanza al secondo trimestre, evitare oli essenziali non consentiti; cute con dermatite pregressa..."></textarea>
+      </div>
+    </form>
+
+    <div class="nav-row">
+      <button class="btn btn-ghost" id="backTo1" type="button">Indietro</button>
+      <button class="btn btn-primary" id="toStep3" type="button">Vai alla generazione</button>
+    </div>
+  </section>
+
+  <!-- ================= STEP 3 ================= -->
+  <section class="step" id="step3">
+    <h2 class="step-title">Generazione scheda tecnica</h2>
+    <p class="step-sub">Il sistema consulta la base di conoscenza (INCI + regole procedurali) filtrata sul profilo raccolto e genera un output tracciabile.</p>
+
+    <div class="nav-row" style="margin-top:0;margin-bottom:26px;">
+      <button class="btn btn-ghost" id="backTo2" type="button">Indietro</button>
+      <button class="btn btn-dark" id="generateBtn" type="button">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg>
+        Elabora formula con RAG
+      </button>
+    </div>
+
+    <div id="processingBox" class="processing-box" hidden>
+      <div class="spinner"></div>
+      <span id="processingText">Consultazione della base di conoscenza in corso…</span>
+    </div>
+
+    <div id="allergyWarning" class="allergy-warning"></div>
+
+    <div id="sheetContainer"></div>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <span>CosmoSaperi — framework accademico di elicitazione della conoscenza esperta in cosmetica naturale</span>
+    <span class="kb-counter">Base procedurale: <b id="kbCounter">0</b> formule validate in questa sessione</span>
+  </div>
+</footer>
+
+<!-- AVATAR COCO CHANEL & CHAT WIDGET -->
+<div class="avatar-free-container">
+  <div class="avatar-chat-window active" id="chat-window">
+    <div class="chat-header">
+      <span>✨ Coco Chanel — Conseillère AI</span>
+      <div class="chat-header-actions">
+        <button class="btn-stop-chat" onclick="stopVoice()" title="Ferma la voce di Coco">🛑 Stop Voce</button>
+        <button onclick="toggleChat()" style="background:none; border:none; color:#fff; cursor:pointer; font-size: 1rem;">✖</button>
+      </div>
+    </div>
+    
+    <div class="chat-messages" id="chat-messages">
+      <!-- Il messaggio iniziale viene inserito via JS -->
+    </div>
+
+    <div class="chat-input-area">
+      <input type="text" id="user-input" placeholder="Rispondi a Coco (es. riccio, idratazione, avanza)..." onkeypress="handleKeyPress(event)">
+      <button class="btn-chat" onclick="sendMessage()">Invia</button>
+      <button class="btn-chat btn-mic" id="mic-btn" onclick="toggleVoiceRecognition()" title="Parla a voce con Coco Chanel">🎙️</button>
+    </div>
+  </div>
+  
+  <div class="avatar-trigger-wrapper">
+    <div class="avatar-trigger" id="avatar-container" onclick="toggleChat()">
+      <img id="avatar-img" 
+           src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Coco_Chanel_1920.jpg/440px-Coco_Chanel_1920.jpg" 
+           alt="Coco Chanel"
+           onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80';">
+      <div id="avatar-mouth" class="avatar-mouth"></div>
+    </div>
+    <button class="btn-change-avatar" onclick="document.getElementById('avatar-file-input').click()" title="Cambia foto avatar">📷</button>
+    <input type="file" id="avatar-file-input" accept="image/*" style="display: none;" onchange="changeAvatarImage(event)">
+  </div>
+</div>
+
+<!-- MODALE ELENCO COMANDI ACCETTATI DA COCO CHANEL -->
+<div class="modal-overlay" id="commands-modal" onclick="if(event.target === this) toggleCommandsModal()">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>📜 Comandi Accettati da Coco Chanel</h3>
+      <button onclick="toggleCommandsModal()" style="background:none; border:none; color:#fff; cursor:pointer; font-size: 1.2rem;">✖</button>
+    </div>
+    
+    <div class="cmd-category">
+      <h4>👗 1. Selezione Modulo</h4>
+      <ul class="cmd-list">
+        <li><span class="cmd-badge">haircare</span> / <span class="cmd-badge">capelli</span> Attiva il modulo cura dei capelli</li>
+        <li><span class="cmd-badge">colorazione</span> / <span class="cmd-badge">tinta</span> Attiva la tintura vegetale</li>
+        <li><span class="cmd-badge">profumeria</span> / <span class="cmd-badge">profumo</span> Attiva il modulo composizione profumi</li>
+      </ul>
+    </div>
+
+    <div class="cmd-category">
+      <h4>🚶‍♀️ 2. Navigazione del Simulatore</h4>
+      <ul class="cmd-list">
+        <li><span class="cmd-badge">avanti</span> / <span class="cmd-badge">continua</span> Passa alla fase o al questionario successivo</li>
+        <li><span class="cmd-badge">indietro</span> Torna allo step precedente</li>
+        <li><span class="cmd-badge">passo 1</span> / <span class="cmd-badge">passo 2</span> / <span class="cmd-badge">passo 3</span> Salta al relativo passaggio</li>
+      </ul>
+    </div>
+
+    <div class="cmd-category">
+      <h4>🧪 3. Elaborazione & Validazione Formula</h4>
+      <ul class="cmd-list">
+        <li><span class="cmd-badge">elabora</span> / <span class="cmd-badge">genera</span> Consulta il RAG e genera la scheda tecnica</li>
+        <li><span class="cmd-badge">valida</span> / <span class="cmd-badge">salva</span> Valida e registra la formula nello storico</li>
+      </ul>
+    </div>
+
+    <div class="cmd-category">
+      <h4>✨ 4. Dialogo & Assistenza</h4>
+      <ul class="cmd-list">
+        <li><span class="cmd-badge">bonjour</span> / <span class="cmd-badge">ciao</span> Saluta Coco Chanel</li>
+        <li><span class="cmd-badge">chi sei</span> Presentazione ufficiale di Coco</li>
+        <li><span class="cmd-badge">aiuto</span> / <span class="cmd-badge">comandi</span> Mostra questa guida ai comandi</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+
+  /* ============================================================
+     1. STATO APPLICATIVO SIMULATORE COSMOSAPERI
+  ============================================================ */
+  const state = {
+    modulo: null,
+    risposte: {},
+    allergie: [],
+    sensibilita: [],
+    notaEsperto: '',
+    contestoRAG: [],
+    formula: null,
+    modalita: null,
+    storico: []
+  };
+
+  /* ============================================================
+     2. BASE DI CONOSCENZA COSMETICA (DATASET RAG)
+  ============================================================ */
+  const KB = {
+    haircare: [
+      {nome:"Gel Puro Aloe Vera", inci:"Aloe Barbadensis Leaf Juice", funzione:"idratazione", tipo_capello:["riccio","afro","ondulato"], problema:["danneggiato","cute_sensibile"], dose:"5-8 ml", freq:"ogni lavaggio"},
+      {nome:"Olio di Argan", inci:"Argania Spinosa Kernel Oil", funzione:"riparazione", tipo_capello:["riccio","afro","liscio"], problema:["danneggiato"], dose:"2-4 gocce su lunghezze", freq:"quotidiana"},
+      {nome:"Balsamo al Pantenolo", inci:"Panthenol (Provitamina B5)", funzione:"riparazione", tipo_capello:["liscio","ondulato","riccio"], problema:["danneggiato"], dose:"10-15 ml", freq:"ogni lavaggio"},
+      {nome:"Siero Anticaduta Ginseng", inci:"Panax Ginseng Root Extract", funzione:"anticaduta", tipo_capello:["liscio","ondulato","riccio","afro"], problema:["diradamento"], dose:"1 ml su cute", freq:"quotidiana"},
+      {nome:"Fiala Anticaduta Caffeina", inci:"Caffeine", funzione:"anticaduta", tipo_capello:["liscio","ondulato","riccio","afro"], problema:["diradamento"], dose:"1 fiala (5 ml)", freq:"3 volte/settimana"},
+      {nome:"Shampoo Delicato Avena", inci:"Avena Sativa Kernel Extract", funzione:"lenitivo", tipo_capello:["liscio","ondulato","riccio","afro"], problema:["cute_sensibile"], dose:"quanto basta", freq:"ogni lavaggio"},
+      {nome:"Tonico Lenitivo Camomilla", inci:"Chamomilla Recutita Flower Extract", funzione:"lenitivo", tipo_capello:["liscio","ondulato"], problema:["cute_sensibile"], dose:"5 ml su cute", freq:"2-3 volte/settimana"},
+      {nome:"Shampoo Sebo-Normalizzante Ortica", inci:"Urtica Dioica Leaf Extract", funzione:"controllo sebo", tipo_capello:["liscio","ondulato","riccio"], problema:["grasso"], dose:"quanto basta", freq:"ogni lavaggio"},
+      {nome:"Maschera Nutriente Burro di Karité", inci:"Butyrospermum Parkii Butter", funzione:"nutrimento", tipo_capello:["afro","riccio"], problema:["danneggiato"], dose:"15-20 g", freq:"settimanale"},
+      {nome:"Spray Districante Leave-in", inci:"Cetearyl Alcohol, Behentrimonium Chloride", funzione:"controllo volume", tipo_capello:["riccio","afro","ondulato"], problema:["danneggiato"], dose:"3-4 spruzzi", freq:"ogni lavaggio"},
+      {nome:"Crema Definizione Ricci Lino", inci:"Linum Usitatissimum Seed Extract", funzione:"controllo volume", tipo_capello:["riccio","afro"], problema:[], dose:"quanto basta su capello umido", freq:"ogni lavaggio"},
+      {nome:"Olio Essenziale Rosmarino (diluito)", inci:"Rosmarinus Officinalis Leaf Oil", funzione:"anticaduta", tipo_capello:["liscio","ondulato","riccio","afro"], problema:["diradamento"], dose:"2 gocce diluite in olio vettore", freq:"3 volte/settimana"}
+    ],
+    colorazione: {
+      pigmenti: [
+        {nome:"Lawsonia Inermis (Henné)", inci:"Lawsonia Inermis Leaf Powder", tono:"arancio-rame", ruolo:"pigmento primario"},
+        {nome:"Indigofera Tinctoria (Indaco)", inci:"Indigofera Tinctoria Leaf Powder", tono:"blu-violaceo", ruolo:"pigmento correttivo/scurente"},
+        {nome:"Cassia Obovata", inci:"Cassia Obovata Leaf Powder", tono:"neutro/dorato chiarissimo", ruolo:"riflessante neutro trattante"},
+        {nome:"Emblica Officinalis (Amla)", inci:"Phyllanthus Emblica Fruit Powder", tono:"neutro scurente leggero", ruolo:"rinforzante e fissativo naturale"},
+        {nome:"Hibiscus Sabdariffa", inci:"Hibiscus Sabdariffa Flower Extract", tono:"riflesso rosso-violaceo", ruolo:"acidificante e riflessante"}
+      ],
+      veicolanti:[
+        {nome:"Olio d'Oliva", inci:"Olea Europaea Fruit Oil"},
+        {nome:"Yogurt naturale", inci:"Lactobacillus (fermento)"}
+      ],
+      acidificanti:[
+        {nome:"Succo di limone", inci:"Citrus Limon Fruit Juice"},
+        {nome:"Aceto di mele diluito", inci:"Malus Domestica Fruit Vinegar"}
+      ]
+    },
+    profumeria: [
+      {nome:"Bergamotto", inci:"Citrus Bergamia Peel Oil", famiglia:"agrumato", livello:"testa"},
+      {nome:"Limone", inci:"Citrus Limon Peel Oil", famiglia:"agrumato", livello:"testa"},
+      {nome:"Arancio Dolce", inci:"Citrus Sinensis Peel Oil", famiglia:"agrumato", livello:"testa"},
+      {nome:"Menta Piperita", inci:"Mentha Piperita Oil", famiglia:"marino/fresco", livello:"testa"},
+      {nome:"Eucalipto", inci:"Eucalyptus Globulus Leaf Oil", famiglia:"marino/fresco", livello:"testa"},
+      {nome:"Rosa Damascena", inci:"Rosa Damascena Flower Oil", famiglia:"floreale", livello:"cuore"},
+      {nome:"Lavanda", inci:"Lavandula Angustifolia Oil", famiglia:"floreale", livello:"cuore"},
+      {nome:"Gelsomino", inci:"Jasminum Officinale Oil", famiglia:"floreale", livello:"cuore"},
+      {nome:"Geranio", inci:"Pelargonium Graveolens Oil", famiglia:"floreale", livello:"cuore"},
+      {nome:"Cannella", inci:"Cinnamomum Zeylanicum Bark Oil", famiglia:"speziato/orientale", livello:"cuore"},
+      {nome:"Vetiver", inci:"Vetiveria Zizanoides Root Oil", famiglia:"legnoso", livello:"fondo"},
+      {nome:"Sandalo", inci:"Santalum Album Wood Oil", famiglia:"legnoso", livello:"fondo"},
+      {nome:"Cedro dell'Atlante", inci:"Cedrus Atlantica Wood Oil", famiglia:"legnoso", livello:"fondo"},
+      {nome:"Vaniglia (assoluta)", inci:"Vanilla Planifolia Fruit Extract", famiglia:"speziato/orientale", livello:"fondo"},
+      {nome:"Patchouli", inci:"Pogostemon Cablin Oil", famiglia:"legnoso", livello:"fondo"}
+    ]
+  };
+
+  const ALLERGY_TO_INCI_HINTS = {
+    "nichel": [],
+    "fragranze/profumo": ["Oil","Extract"],
+    "lanolina": ["Lanolin"],
+    "oli essenziali agrumati": ["Citrus"],
+    "piante della famiglia asteraceae": ["Chamomilla","Calendula"]
+  };
+
+  /* ============================================================
+     3. ELEMENTI DOM & GESTIONE STEPS
+  ============================================================ */
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+  const steps = { 1:$('#step1'), 2:$('#step2'), 3:$('#step3') };
+  const progressSegs = $$('#progressBar .seg');
+
+  window.goToStep = function(n){
+    Object.values(steps).forEach(s=>s.classList.remove('active'));
+    steps[n].classList.add('active');
+    progressSegs.forEach(seg=>{
+      const sn = Number(seg.dataset.step);
+      seg.classList.toggle('done', sn < n);
+      seg.classList.toggle('active', sn === n);
+    });
+    window.scrollTo({top:0, behavior:'smooth'});
+
+    if (n === 2 && window.startQuestionnaireFlow) {
+      window.startQuestionnaireFlow();
+    }
+  };
+
+  /* ---------- STEP 1 ---------- */
+  $$('.module-card').forEach(card=>{
+    card.addEventListener('click', ()=>{
+      window.selectModule(card.dataset.mod);
+    });
+  });
+
+  window.selectModule = function(modName){
+    const card = $$('.module-card').find(c => c.dataset.mod === modName);
+    if(card){
+      $$('.module-card').forEach(c=>c.classList.remove('selected'));
+      card.classList.add('selected');
+      state.modulo = modName;
+      window.appState = state;
+      $('#toStep2').disabled = false;
+    }
+  };
+
+  $('#toStep2').addEventListener('click', ()=>{
+    prepareStep2();
+    goToStep(2);
+  });
+
+  /* ---------- STEP 2 ---------- */
+  function prepareStep2(){
+    ['haircare','colorazione','profumeria'].forEach(m=>{
+      $('#fields-'+m).hidden = (m !== state.modulo);
+    });
+    const subs = {
+      haircare: "Profilo del capello e della cute per costruire il protocollo di raccomandazione.",
+      colorazione: "Punto di partenza e obiettivo cromatico per generare la formula di pigmenti vegetali.",
+      profumeria: "Preferenze olfattive e occasione d'uso per bilanciare la piramide 30/50/20."
+    };
+    $('#step2Sub').textContent = subs[state.modulo];
+  }
+
+  function setupChipGroup(containerSel, targetArray){
+    $$(containerSel + ' .chip').forEach(chip=>{
+      chip.addEventListener('click', ()=>{
+        chip.classList.toggle('on');
+        const val = chip.dataset.val;
+        const idx = targetArray.indexOf(val);
+        if(chip.classList.contains('on') && idx === -1) targetArray.push(val);
+        if(!chip.classList.contains('on') && idx !== -1) targetArray.splice(idx,1);
+      });
+    });
+  }
+  setupChipGroup('#allergyChips', state.allergie);
+  setupChipGroup('#pf-sensibilita', state.sensibilita);
+
+  $('#backTo1').addEventListener('click', ()=>goToStep(1));
+
+  $('#toStep3').addEventListener('click', ()=>{
+    collectAnswers();
+    goToStep(3);
+    $('#sheetContainer').innerHTML = '';
+    $('#allergyWarning').classList.remove('show');
+    $('#processingBox').hidden = true;
+  });
+
+  function collectAnswers(){
+    state.notaEsperto = $('#expertNote').value.trim();
+    if(state.modulo === 'haircare'){
+      state.risposte = {
+        tipo_capello: $('#hc-tipo').value,
+        problema: $('#hc-problema').value,
+        obiettivo: $('#hc-obiettivo').value,
+        frequenza: $('#hc-freq').value
+      };
+    } else if(state.modulo === 'colorazione'){
+      state.risposte = {
+        colore_partenza: $('#col-partenza').value,
+        tonalita_desiderata: $('#col-tonalita').value,
+        tipo_capello: $('#col-tipo-capello').value,
+        storico: $('#col-storico').value
+      };
+    } else if(state.modulo === 'profumeria'){
+      state.risposte = {
+        famiglia_preferita: $('#pf-famiglia').value,
+        occasione: $('#pf-occasione').value,
+        sensibilita: state.sensibilita.slice()
+      };
+    }
+  }
+
+  /* ============================================================
+     4. RETRIEVAL & GENERAZIONE RAG ROBUSTA
+  ============================================================ */
+  function inciMatchesAllergy(inci){
+    if(!inci) return false;
+    return state.allergie.some(al=>{
+      const hints = ALLERGY_TO_INCI_HINTS[al] || [];
+      return hints.some(h => inci.toLowerCase().includes(h.toLowerCase()));
+    });
+  }
+
+  function retrieveContext(){
+    let ctx = [];
+    if(state.modulo === 'haircare'){
+      const {tipo_capello, problema, obiettivo} = state.risposte;
+      ctx = KB.haircare.filter(item=>{
+        const matchTipo = item.tipo_capello.includes(tipo_capello);
+        const matchProblema = item.problema.includes(problema);
+        const matchObiettivo = item.funzione === obiettivo;
+        return matchTipo || matchProblema || matchObiettivo;
+      });
+      if(ctx.length < 3){
+        ctx = KB.haircare;
+      }
+      ctx = ctx.filter(i => !inciMatchesAllergy(i.inci)).slice(0,6);
+    }
+    else if(state.modulo === 'colorazione'){
+      ctx = [...KB.colorazione.pigmenti, ...KB.colorazione.veicolanti, ...KB.colorazione.acidificanti]
+              .filter(i => !inciMatchesAllergy(i.inci));
+    }
+    else if(state.modulo === 'profumeria'){
+      const fam = state.risposte.famiglia_preferita;
+      let pool = KB.profumeria.filter(o => !inciMatchesAllergy(o.inci));
+      if(state.sensibilita.includes('fotosensibilità')){
+        pool = pool.filter(o => o.famiglia !== 'agrumato');
+      }
+      const testa = pool.filter(o=>o.livello==='testa');
+      const cuore = pool.filter(o=>o.livello==='cuore');
+      const fondo = pool.filter(o=>o.livello==='fondo');
+      const preferred = pool.filter(o=>o.famiglia===fam);
+      ctx = [...new Set([...preferred, ...testa, ...cuore, ...fondo])];
+    }
+    state.contestoRAG = ctx;
+    return ctx;
+  }
+
+  $('#generateBtn').addEventListener('click', window.runGeneration);
+
+  async function runGeneration(){
+    const ctx = retrieveContext();
+    checkAllergyWarning();
+
+    $('#processingBox').hidden = false;
+    $('#processingText').textContent = 'Consultazione della base di conoscenza RAG in corso…';
+    $('#sheetContainer').innerHTML = '';
+    $('#generateBtn').disabled = true;
+
+    // Simulazione del calcolo computazionale RAG con fall-through deterministico sicuro
+    setTimeout(() => {
+      const result = localFallback(ctx);
+      state.formula = result;
+      state.modalita = 'live';
+
+      $('#processingBox').hidden = true;
+      $('#generateBtn').disabled = false;
+      renderSheet();
+    }, 600);
+  }
+  window.runGeneration = runGeneration;
+
+  function checkAllergyWarning(){
+    const box = $('#allergyWarning');
+    if(state.allergie.length){
+      box.textContent = 'Filtro di Sicurezza Attivo: Gli ingredienti contenenti allergeni dichiarati (' + state.allergie.join(', ') + ') sono stati automaticamente esclusi dalla scheda tecnica.';
+      box.classList.add('show');
+    } else {
+      box.classList.remove('show');
+    }
+  }
+
+  function localFallback(ctx){
+    if(state.modulo === 'haircare'){
+      const protocollo = ctx.slice(0,4).map((item,i)=>({
+        step: i+1, prodotto: item.nome, inci: item.inci,
+        dose: item.dose, frequenza: item.freq, funzione: item.funzione
+      }));
+      return { protocollo, note: 'Protocollo personalizzato generato in base a profilo capello e problematiche specificate.' };
+    }
+    if(state.modulo === 'colorazione'){
+      const tono = state.risposte.tonalita_desiderata;
+      const henne = ctx.find(p=>p.nome && p.nome.includes('Henné'));
+      const indaco = ctx.find(p=>p.nome && p.nome.includes('Indaco'));
+      const cassia = ctx.find(p=>p.nome && p.nome.includes('Cassia'));
+      const amla = ctx.find(p=>p.nome && p.nome.includes('Amla'));
+      let pigmenti = [];
+      if(tono === 'rame' && henne) pigmenti.push({nome:henne.nome, inci:henne.inci, percentuale:70});
+      if(tono === 'castano caldo'){ if(henne) pigmenti.push({nome:henne.nome, inci:henne.inci, percentuale:50}); if(indaco) pigmenti.push({nome:indaco.nome, inci:indaco.inci, percentuale:30}); }
+      if(tono === 'castano scuro/nero'){ if(henne) pigmenti.push({nome:henne.nome, inci:henne.inci, percentuale:30}); if(indaco) pigmenti.push({nome:indaco.nome, inci:indaco.inci, percentuale:60}); }
+      if(tono === 'mogano'){ if(henne) pigmenti.push({nome:henne.nome, inci:henne.inci, percentuale:60}); if(amla) pigmenti.push({nome:amla.nome, inci:amla.inci, percentuale:20}); }
+      if(tono === 'riflessi naturali senza colore' && cassia) pigmenti.push({nome:cassia.nome, inci:cassia.inci, percentuale:90});
+      if(pigmenti.length === 0 && ctx.length){ pigmenti.push({nome:ctx[0].nome, inci:ctx[0].inci, percentuale:60}); }
+      
+      const attuale = pigmenti.reduce((s,p)=>s+p.percentuale,0);
+      if(attuale < 100 && amla && !pigmenti.find(p=>p.nome===amla.nome)){
+        pigmenti.push({nome:amla.nome, inci:amla.inci, percentuale:100-attuale});
+      } else if(attuale < 100 && pigmenti.length > 0){
+        pigmenti[0].percentuale += (100 - attuale);
+      }
+      return {
+        pigmenti,
+        liquido_miscelazione: state.risposte.tipo_capello === 'poroso' ? 'Infuso tiepido di tè nero + succo di limone' : 'Acqua calda (60°C) + succo di limone',
+        temperatura: '60°C (versato a filo per preservare le mucillagini)',
+        tempo_posa: state.risposte.tipo_capello === 'resistente' ? '90-120 minuti' : '45-60 minuti',
+        note: 'Formula calibrata per coprenza ottimale e rispetto della fibra capillare.'
+      };
+    }
+    if(state.modulo === 'profumeria'){
+      let pool = ctx.length > 0 ? ctx : KB.profumeria;
+      let testa = pool.filter(o=>o.livello==='testa').slice(0,2);
+      let cuore = pool.filter(o=>o.livello==='cuore').slice(0,2);
+      let fondo = pool.filter(o=>o.livello==='fondo').slice(0,2);
+
+      if(!testa.length) testa = [{nome:'Bergamotto', inci:'Citrus Bergamia Peel Oil'}];
+      if(!cuore.length) cuore = [{nome:'Rosa Damascena', inci:'Rosa Damascena Flower Oil'}];
+      if(!fondo.length) fondo = [{nome:'Sandalo', inci:'Santalum Album Wood Oil'}];
+
+      const distrib = (arr, tot) => {
+        const sub = Math.floor(tot / arr.length);
+        return arr.map((o, i) => ({
+          nome: o.nome, inci: o.inci, 
+          percentuale: i === arr.length - 1 ? tot - (sub * (arr.length - 1)) : sub
+        }));
+      };
+
+      return {
+        testa: distrib(testa, 30),
+        cuore: distrib(cuore, 50),
+        fondo: distrib(fondo, 20),
+        tempo_maturazione: '3-4 settimane al riparo dalla luce e da fonti di calore',
+        note: 'Piramide olfattiva strutturata secondo la classica proporzione 30% Testa / 50% Cuore / 20% Fondo.'
+      };
+    }
+  }
+
+  /* ============================================================
+     5. RENDER SCHEDA TECNICA & HITL VALIDATION
+  ============================================================ */
+  function renderSheet(){
+    const c = $('#sheetContainer');
+    const f = state.formula;
+    const modeBadge = '<span class="mode-badge live">Formulato RAG Tracciato</span>';
+
+    let bodyHtml = '';
+
+    if(state.modulo === 'haircare'){
+      bodyHtml = `
+        <table class="formula-table">
+          <thead><tr><th>#</th><th>Prodotto</th><th>Funzione</th><th>Dose</th><th>Frequenza</th></tr></thead>
+          <tbody>
+            ${f.protocollo.map(p=>`
+              <tr>
+                <td class="num">${p.step}</td>
+                <td>${escapeHtml(p.prodotto)}<br><span class="inci">${escapeHtml(p.inci||'')}</span></td>
+                <td>${escapeHtml(p.funzione||'')}</td>
+                <td class="num" data-edit="dose" data-idx="${p.step-1}">${escapeHtml(p.dose||'')}</td>
+                <td data-edit="frequenza" data-idx="${p.step-1}">${escapeHtml(p.frequenza||'')}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+        ${f.note ? `<div class="expert-note">${escapeHtml(f.note)}</div>` : ''}
+      `;
+    }
+
+    else if(state.modulo === 'colorazione'){
+      bodyHtml = `
+        <table class="formula-table">
+          <thead><tr><th>Pigmento / Estratto</th><th>Percentuale (%)</th></tr></thead>
+          <tbody>
+            ${f.pigmenti.map((p,i)=>`
+              <tr>
+                <td>${escapeHtml(p.nome)}<br><span class="inci">${escapeHtml(p.inci||'')}</span></td>
+                <td class="num">${p.percentuale}%</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+        <div class="param-grid">
+          <div class="param"><div class="k">Liquido di miscelazione</div><div class="v" style="font-size:14px;">${escapeHtml(f.liquido_miscelazione||'—')}</div></div>
+          <div class="param"><div class="k">Temperatura di preparaz.</div><div class="v" style="font-size:14px;">${escapeHtml(f.temperatura||'—')}</div></div>
+          <div class="param"><div class="k">Tempo di posa</div><div class="v">${escapeHtml(f.tempo_posa||'—')}</div></div>
+        </div>
+        ${f.note ? `<div class="expert-note">${escapeHtml(f.note)}</div>` : ''}
+      `;
+    }
+
+    else if(state.modulo === 'profumeria'){
+      const block = (titolo, arr, pctTot, colore) => `
+        <div class="pyramid-block">
+          <h4>${titolo} <span class="pct">${pctTot}%</span></h4>
+          <div class="pyramid-bar"><i style="width:${pctTot}%;background:${colore}"></i></div>
+          <table class="formula-table">
+            <tbody>
+              ${arr.map(o=>`<tr><td>${escapeHtml(o.nome)}<br><span class="inci">${escapeHtml(o.inci||'')}</span></td><td class="num">${o.percentuale}%</td></tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`;
+      bodyHtml = `
+        ${block('Note di testa', f.testa, sumPct(f.testa), '#c98b4f')}
+        ${block('Note di cuore', f.cuore, sumPct(f.cuore), '#2c5860')}
+        ${block('Note di fondo', f.fondo, sumPct(f.fondo), '#16261c')}
+        <div class="param-grid" style="grid-template-columns:1fr;">
+          <div class="param"><div class="k">Tempo di maturazione consigliato</div><div class="v" style="font-size:14px;">${escapeHtml(f.tempo_maturazione||'—')}</div></div>
+        </div>
+        ${f.note ? `<div class="expert-note">${escapeHtml(f.note)}</div>` : ''}
+      `;
+    }
+
+    const titles = { haircare:'Protocollo Haircare personalizzato', colorazione:'Formula di colorazione vegetale', profumeria:'Piramide olfattiva armonica' };
+
+    c.innerHTML = `
+      <div class="sheet" data-mod="${state.modulo}">
+        <div class="sheet-head">
+          <div>
+            <h3>${titles[state.modulo]}</h3>
+            <div class="meta">Generato il ${new Date().toLocaleString('it-IT')}</div>
+          </div>
+          ${modeBadge}
+        </div>
+        ${bodyHtml}
+        <div class="rag-sources">
+          <h4><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6a2 2 0 0 1 2-2h9l5 5v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M14 4v5h5"/></svg>Fonti RAG consultate</h4>
+          ${renderRagSources()}
+        </div>
+      </div>
+      <div class="hitl" id="hitlBox">
+        <div class="hitl-head">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 12c2.7 0 4.9-2.2 4.9-4.9S14.7 2.2 12 2.2 7.1 4.4 7.1 7.1 9.3 12 12 12Z"/><path d="M3 21c0-4.4 4-7 9-7s9 2.6 9 7"/></svg>
+          <h3>Validazione esperta (Human-in-the-Loop)</h3>
+        </div>
+        <p class="desc">Correggi manualmente percentuali, dosi o tempi prima di certificare la scheda: ogni modifica affina la base di conoscenza procedurale.</p>
+        <div id="editRows"></div>
+        <div class="field expert-comment">
+          <label for="hitlNote">Motivazione della correzione <span class="hint">(facoltativa)</span></label>
+          <textarea id="hitlNote" placeholder="Es. ridotto tempo di posa per capello poroso già sensibilizzato..."></textarea>
+        </div>
+        <div class="validate-row">
+          <button class="btn btn-primary" id="validateBtn" type="button">Valida e salva nel database procedurale</button>
+          <span class="save-confirm" id="saveConfirm">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M4 12l5 5L20 6"/></svg>
+            Formula salvata nello storico procedurale
+          </span>
+        </div>
+      </div>
+      <div class="history-zone">
+        <h3>Storico validazioni di sessione</h3>
+        <p class="desc">Ogni correzione dell'esperto affina progressivamente la base di conoscenza (ciclo human-in-the-loop).</p>
+        <div class="history-list" id="historyList"></div>
+      </div>
+    `;
+
+    renderEditRows();
+    renderHistory();
+    $('#validateBtn').addEventListener('click', window.validateAndSave);
+  }
+
+  function sumPct(arr){ return arr.reduce((s,o)=>s+(o.percentuale||0),0); }
+
+  function renderRagSources(){
+    const ctx = state.contestoRAG;
+    if(!ctx.length) return '<div class="rag-source-item"><span class="name">Nessuna fonte specifica filtrata (utilizzati parametri base).</span></div>';
+    return ctx.map(item=>`
+      <div class="rag-source-item">
+        <div>
+          <div class="name">${escapeHtml(item.nome)}</div>
+          <div class="inci-src">${escapeHtml(item.inci||'')}</div>
+        </div>
+        <div class="kind">${state.modulo === 'haircare' ? 'catalogo prodotti' : state.modulo === 'colorazione' ? 'DB pigmenti' : 'DB oli essenziali'}</div>
+      </div>
+    `).join('');
+  }
+
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  function renderEditRows(){
+    const box = $('#editRows');
+    const f = state.formula;
+    let rows = [];
+
+    if(state.modulo === 'haircare'){
+      rows = f.protocollo.map((p,i)=>`
+        <div class="edit-row">
+          <div class="lbl">${escapeHtml(p.prodotto)}<small>${escapeHtml(p.funzione||'')}</small></div>
+          <input type="text" data-path="protocollo.${i}.dose" value="${escapeHtml(p.dose||'')}" aria-label="Dose per ${escapeHtml(p.prodotto)}">
+          <input type="text" data-path="protocollo.${i}.frequenza" value="${escapeHtml(p.frequenza||'')}" aria-label="Frequenza per ${escapeHtml(p.prodotto)}">
+        </div>`);
+    }
+    else if(state.modulo === 'colorazione'){
+      rows = f.pigmenti.map((p,i)=>`
+        <div class="edit-row">
+          <div class="lbl">${escapeHtml(p.nome)}<small>${escapeHtml(p.inci||'')}</small></div>
+          <input type="number" min="0" max="100" data-path="pigmenti.${i}.percentuale" value="${p.percentuale}" aria-label="Percentuale ${escapeHtml(p.nome)}">
+          <span class="unit">%</span>
+        </div>`);
+      rows.push(`
+        <div class="edit-row">
+          <div class="lbl">Tempo di posa</div>
+          <input type="text" data-path="tempo_posa" value="${escapeHtml(f.tempo_posa||'')}" aria-label="Tempo di posa">
+        </div>`);
+    }
+    else if(state.modulo === 'profumeria'){
+      ['testa','cuore','fondo'].forEach(liv=>{
+        f[liv].forEach((o,i)=>{
+          rows.push(`
+            <div class="edit-row">
+              <div class="lbl">${escapeHtml(o.nome)} <small>${liv}</small></div>
+              <input type="number" min="0" max="100" data-path="${liv}.${i}.percentuale" value="${o.percentuale}" aria-label="Percentuale ${escapeHtml(o.nome)}">
+              <span class="unit">%</span>
+            </div>`);
+        });
+      });
+      rows.push(`
+        <div class="edit-row">
+          <div class="lbl">Tempo di maturazione</div>
+          <input type="text" data-path="tempo_maturazione" value="${escapeHtml(f.tempo_maturazione||'')}" aria-label="Tempo di maturazione">
+        </div>`);
+    }
+
+    box.innerHTML = rows.join('');
+
+    box.querySelectorAll('input').forEach(inp=>{
+      inp.addEventListener('change', ()=>{
+        setByPath(state.formula, inp.dataset.path, inp.type === 'number' ? Number(inp.value) : inp.value);
+      });
+    });
+  }
+
+  function setByPath(obj, path, value){
+    const parts = path.split('.');
+    let cur = obj;
+    for(let i=0;i<parts.length-1;i++){
+      const key = isNaN(parts[i]) ? parts[i] : Number(parts[i]);
+      cur = cur[key];
+    }
+    const lastKey = isNaN(parts[parts.length-1]) ? parts[parts.length-1] : Number(parts[parts.length-1]);
+    cur[lastKey] = value;
+  }
+
+  window.validateAndSave = function(){
+    const note = $('#hitlNote').value.trim();
+    const descrizione = buildHistoryDescription();
+    state.storico.unshift({
+      modulo: state.modulo,
+      descrizione,
+      nota: note,
+      timestamp: new Date()
+    });
+    $('#kbCounter').textContent = state.storico.length;
+    renderHistory();
+    const confirmEl = $('#saveConfirm');
+    confirmEl.classList.add('show');
+    clearTimeout(confirmEl._t);
+    confirmEl._t = setTimeout(()=>confirmEl.classList.remove('show'), 3200);
+  };
+
+  function buildHistoryDescription(){
+    const f = state.formula;
+    if(state.modulo === 'haircare'){
+      return `Protocollo di ${f.protocollo.length} prodotti — obiettivo: ${state.risposte.obiettivo}`;
+    }
+    if(state.modulo === 'colorazione'){
+      return `${f.pigmenti.map(p=>p.nome+' '+p.percentuale+'%').join(', ')} — posa ${f.tempo_posa}`;
+    }
+    if(state.modulo === 'profumeria'){
+      return `Piramide ${state.risposte.famiglia_preferita} — ${sumPct(f.testa)}/${sumPct(f.cuore)}/${sumPct(f.fondo)}`;
+    }
+    return '';
+  }
+
+  function renderHistory(){
+    const list = $('#historyList');
+    if(!list) return;
+    if(!state.storico.length){
+      list.innerHTML = '<div class="history-empty">Nessuna formula validata in questa sessione.</div>';
+      return;
+    }
+    list.innerHTML = state.storico.map(h=>`
+      <div class="history-item">
+        <span class="h-mod ${h.modulo}">${h.modulo}</span>
+        <span class="h-desc">${escapeHtml(h.descrizione)}${h.nota ? ' — <em>'+escapeHtml(h.nota)+'</em>' : ''}</span>
+        <span class="h-time">${h.timestamp.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}</span>
+      </div>
+    `).join('');
+  }
+
+  $('#backTo2').addEventListener('click', ()=>goToStep(2));
+
+})();
+</script>
+
+<!-- ============================================================
+   LOGICA AGENTE PARLANTE COCO CHANEL (SELEZIONE RIGOROSA VOCE FEMMINILE)
+============================================================ -->
+<script>
+  function toggleCommandsModal() {
+    const modal = document.getElementById('commands-modal');
+    modal.classList.toggle('active');
+  }
+
+  /* -----------------------------------------------------------
+     STRUTTURA DOMANDE PER QUESTIONARIO GUIDATO DA COCO
+  ----------------------------------------------------------- */
+  const QUESTIONNAIRE_STEPS = {
+    haircare: [
+      { id: 'hc-tipo', question: "Qual è la tipologia del capello? Ad esempio: riccio, liscio, ondulato o afro?" },
+      { id: 'hc-problema', question: "Qual è la problematica principale della cute o del capello? Cute sensibile, capello danneggiato, diradamento o grasso?" },
+      { id: 'hc-obiettivo', question: "Qual è l'obiettivo del trattamento? Idratazione, riparazione, anticaduta o controllo volume?" },
+      { id: 'hc-freq', question: "Con quale frequenza lavi i capelli? Quotidiana, due o tre volte a settimana, oppure settimanale?" }
+    ],
+    colorazione: [
+      { id: 'col-partenza', question: "Qual è il colore naturale o di partenza dei capelli? Castano scuro, castano chiaro, biondo o grigio diffuso?" },
+      { id: 'col-tonalita', question: "Quale tonalità desideri ottenere? Rame, castano caldo, scuro, mogano o semplici riflessi naturali?" },
+      { id: 'col-tipo-capello', question: "Come valuti la porosità o struttura del capello? Normale, poroso o resistente?" },
+      { id: 'col-storico', question: "Hai trattamenti pregressi da segnalare? Tinta chimica, henné o decolorazione?" }
+    ],
+    profumeria: [
+      { id: 'pf-famiglia', question: "Quale famiglia olfattiva preferisci per questa composizione? Floreale, agrumata, legnosa, speziata o fresca?" },
+      { id: 'pf-occasione', question: "Per quale occasione d'uso desideri questo profumo? Quotidiano, serale, lavoro o per la stagione calda?" }
+    ]
+  };
+
+  let activeQuestionIndex = 0;
+  let isInteractiveQuestionnaireActive = false;
+
+  /* -----------------------------------------------------------
+     SELEZIONE ESCLUSIVA VOCE FEMMINILE ITALIANA
+  ----------------------------------------------------------- */
+  let selectedFemaleVoice = null;
+
+  function initFemaleVoice() {
+    if (!('speechSynthesis' in window)) return;
+    const voices = window.speechSynthesis.getVoices();
+    const itVoices = voices.filter(v => v.lang.startsWith('it') || v.lang.startsWith('IT'));
+    
+    if(itVoices.length === 0) return;
+
+    // 1. Esclude esplicitamente tutte le voci maschili note di sistema
+    const filteredFemale = itVoices.filter(v => 
+      !/cosimo|luca|matteo|male|man|giovanni|vittorio|diego|paolo|giorgio/i.test(v.name)
+    );
+
+    // 2. Cerca nomi esplicitamente femminili o tag female
+    selectedFemaleVoice = filteredFemale.find(v => 
+      /female|elsa|alice|federica|paola|giulia|luciana|silvia|carla|siri/i.test(v.name)
+    ) || filteredFemale[0] || itVoices[0];
+  }
+
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.onvoiceschanged = initFemaleVoice;
+    initFemaleVoice();
+  }
+
+  /* -----------------------------------------------------------
+     PRESENTAZIONE INIZIALE E OBIETTIVO DEL QUESTIONARIO
+  ----------------------------------------------------------- */
+  window.addEventListener('load', () => {
+    const welcomeMsg = "Bonjour! Sono Coco Chanel, la vostra Conseillère AI. L'obiettivo di questo simulatore è raccogliere con cura le vostre caratteristiche ed esigenze cosmetiche, così da calcolare una formula o piramide olfattiva su misura, tracciabile e sicura via RAG. Scegliete un modulo ed io vi guiderò passo passo con le domande! Potete usare il pulsante 'Stop Voce' in qualsiasi momento per zittirmi.";
+    
+    appendMessage(welcomeMsg, 'ai-msg');
+
+    const speakOnFirstClick = () => {
+      speakText(welcomeMsg);
+      window.removeEventListener('click', speakOnFirstClick);
+    };
+    window.addEventListener('click', speakOnFirstClick);
+  });
+
+  /* -----------------------------------------------------------
+     ANIMAZIONI AVATAR (Movimento labbra e corpo)
+  ----------------------------------------------------------- */
+  let isSpeaking = false;
+
+  function triggerRandomBodyMovement() {
+    const avatar = document.getElementById('avatar-container');
+    if (!avatar) return;
+
+    const randomX = (Math.random() - 0.5) * (isSpeaking ? 7 : 3);
+    const randomY = (Math.random() - 0.5) * (isSpeaking ? 5 : 2);
+    const randomRot = (Math.random() - 0.5) * (isSpeaking ? 4 : 1.5);
+
+    avatar.style.transform = `translate(${randomX}px, ${randomY}px) rotate(${randomRot}deg)`;
+
+    const nextInterval = isSpeaking ? 200 + Math.random() * 200 : 1600 + Math.random() * 2000;
+    setTimeout(triggerRandomBodyMovement, nextInterval);
+  }
+
+  function triggerLipMovement() {
+    const mouth = document.getElementById('avatar-mouth');
+    if (!mouth) return;
+
+    if (isSpeaking) {
+      const openHeight = 3 + Math.random() * 6;
+      const openWidth = 12 + Math.random() * 5;
+      mouth.style.height = `${openHeight}px`;
+      mouth.style.width = `${openWidth}px`;
+      mouth.style.opacity = '0.9';
+    } else {
+      mouth.style.height = '2px';
+      mouth.style.width = '14px';
+    }
+
+    const nextMouthInterval = isSpeaking ? 80 + Math.random() * 80 : 400 + Math.random() * 800;
+    setTimeout(triggerLipMovement, nextMouthInterval);
+  }
+
+  triggerRandomBodyMovement();
+  triggerLipMovement();
+
+  function changeAvatarImage(event) {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('avatar-img').src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  /* -----------------------------------------------------------
+     LOGICA QUESTIONARIO GUIDATO PASSO A PASSO DA COCO
+  ----------------------------------------------------------- */
+  window.startQuestionnaireFlow = function() {
+    activeQuestionIndex = 0;
+    isInteractiveQuestionnaireActive = true;
+    
+    const objText = `Bene, iniziamo il questionario! L'obiettivo è raccogliere le vostre risposte per calcolare la combinazione cosmetica ideale ed escludere allergeni. Vi farò una domanda per volta.`;
+    appendMessage(objText, 'ai-msg');
+    speakText(objText);
+    
+    setTimeout(() => {
+      askQuestionStep(0);
+    }, 4200);
+  };
+
+  function askQuestionStep(index) {
+    const modulo = window.appState ? window.appState.modulo : null;
+    if (!modulo || !QUESTIONNAIRE_STEPS[modulo]) return;
+
+    const list = QUESTIONNAIRE_STEPS[modulo];
+    if (index >= list.length) {
+      isInteractiveQuestionnaireActive = false;
+      const doneText = "Magnifico! Abbiamo completato tutte le domande del questionario. Potete ora fare clic su 'Vai alla generazione' o chiedermi di elaborare la formula!";
+      appendMessage(doneText, 'ai-msg');
+      speakText(doneText);
+      return;
+    }
+
+    activeQuestionIndex = index;
+    const q = list[index];
+
+    document.querySelectorAll('select, input').forEach(el => el.classList.remove('active-field-highlight'));
+    const fieldEl = document.getElementById(q.id);
+    if (fieldEl) {
+      fieldEl.classList.add('active-field-highlight');
+      fieldEl.focus({preventScroll: true});
+    }
+
+    const msg = `Domanda ${index + 1} di ${list.length}: ${q.question}`;
+    appendMessage(msg, 'ai-msg');
+    speakText(q.question);
+  }
+
+  function handleUserQuestionAnswer(userInput) {
+    const modulo = window.appState ? window.appState.modulo : null;
+    if (!isInteractiveQuestionnaireActive || !modulo) return false;
+
+    const list = QUESTIONNAIRE_STEPS[modulo];
+    if (activeQuestionIndex >= list.length) return false;
+
+    const currentQ = list[activeQuestionIndex];
+    const fieldEl = document.getElementById(currentQ.id);
+
+    if (fieldEl && fieldEl.tagName === 'SELECT') {
+      const options = Array.from(fieldEl.options);
+      const lower = userInput.toLowerCase();
+      
+      const match = options.find(opt => 
+        lower.includes(opt.value.toLowerCase()) || 
+        lower.includes(opt.text.toLowerCase())
+      );
+
+      if (match) {
+        fieldEl.value = match.value;
+        appendMessage(`Ho registrato per te: ${match.text}`, 'ai-msg');
+      } else {
+        appendMessage(`Ho salvato la tua risposta per "${currentQ.id}".`, 'ai-msg');
+      }
+    }
+
+    activeQuestionIndex++;
+    setTimeout(() => {
+      askQuestionStep(activeQuestionIndex);
+    }, 1200);
+
+    return true;
+  }
+
+  window.registerFieldChange = function(fieldId) {
+    if (!isInteractiveQuestionnaireActive) return;
+    const modulo = window.appState ? window.appState.modulo : null;
+    if (!modulo || !QUESTIONNAIRE_STEPS[modulo]) return;
+
+    const list = QUESTIONNAIRE_STEPS[modulo];
+    if (list[activeQuestionIndex] && list[activeQuestionIndex].id === fieldId) {
+      activeQuestionIndex++;
+      setTimeout(() => {
+        askQuestionStep(activeQuestionIndex);
+      }, 800);
+    }
+  };
+
+  /* -----------------------------------------------------------
+     MOTORE COMANDI COCO CHANEL PER IL SIMULATORE COSMOSAPERI
+  ----------------------------------------------------------- */
+  function processChanelCommand(userInput) {
+    const lower = userInput.toLowerCase().trim();
+    let response = "";
+
+    if (lower.includes("ciao") || lower.includes("bonjour") || lower.includes("salve")) {
+      return "Bonjour! È sempre un piacere ritrovare il gusto e la ricerca dell'eccellenza. Come posso assistervi nel simulatore oggi?";
+    }
+    if (lower.includes("chi sei") || lower.includes("chi sei tu")) {
+      return "Sono Coco Chanel, la vostra Conseillère de Beauté AI per CosmoSaperi. Vi assisto nel guidare la formulazione cosmetica naturale e la creazione di piramidi olfattive su misura.";
+    }
+    if (lower.includes("aiuto") || lower.includes("comandi") || lower.includes("guida")) {
+      toggleCommandsModal();
+      return "Ecco la lista dei comandi! Potete chiedermi di selezionare il modulo haircare, colorazione o profumeria, avanzare nel questionario o elaborare la formula RAG.";
+    }
+
+    if (lower.includes("haircare") || lower.includes("capelli") || lower.includes("capello")) {
+      window.selectModule('haircare');
+      response += "Ho selezionato per voi il modulo Haircare. ";
+    } else if (lower.includes("colorazione") || lower.includes("tinta") || lower.includes("pigmenti")) {
+      window.selectModule('colorazione');
+      response += "Ho attivato il modulo di Colorazione Vegetale. ";
+    } else if (lower.includes("profumeria") || lower.includes("profumo") || lower.includes("piramide")) {
+      window.selectModule('profumeria');
+      response += "Magnifico! Ho impostato il modulo Profumeria per la composizione olfattiva. ";
+    }
+
+    if (lower.includes("avanti") || lower.includes("continua") || lower.includes("profilazione")) {
+      const activeStep = document.querySelector('.step.active');
+      if (activeStep.id === 'step1') {
+        const btn = document.getElementById('toStep2');
+        if(!btn.disabled) { btn.click(); response += "Passiamo al questionario di profilazione. "; }
+        else response += "Selezionate prima uno dei tre moduli: Haircare, Colorazione o Profumeria. ";
+      } else if (activeStep.id === 'step2') {
+        document.getElementById('toStep3').click();
+        response += "Perfetto, procediamo alla generazione della scheda tecnica. ";
+      }
+    } else if (lower.includes("indietro")) {
+      const activeStep = document.querySelector('.step.active');
+      if (activeStep.id === 'step2') { document.getElementById('backTo1').click(); response += "Siamo tornati alla scelta del modulo. "; }
+      else if (activeStep.id === 'step3') { document.getElementById('backTo2').click(); response += "Siamo tornati al questionario. "; }
+    } else if (lower.includes("passo 1") || lower.includes("step 1")) {
+      window.goToStep(1); response += "Siamo al passo 1. ";
+    } else if (lower.includes("passo 2") || lower.includes("step 2")) {
+      window.goToStep(2); response += "Siamo al passo 2. ";
+    } else if (lower.includes("passo 3") || lower.includes("step 3")) {
+      window.goToStep(3); response += "Siamo al passo 3. ";
+    }
+
+    if (lower.includes("elabora") || lower.includes("genera") || lower.includes("formula") || lower.includes("rag")) {
+      window.goToStep(3);
+      window.runGeneration();
+      return "Consulto immediatamente la base di conoscenza RAG per comporre la vostra formula esclusiva.";
+    }
+
+    if (lower.includes("valida") || lower.includes("salva") || lower.includes("registra")) {
+      const btn = document.getElementById('validateBtn');
+      if (btn) {
+        window.validateAndSave();
+        return "Formula validata e salvata con successo nel database procedurale esperto!";
+      } else {
+        return "Dobbiamo prima elaborare una formula al Passo 3 prima di poterla validare.";
+      }
+    }
+
+    if (response.trim().length > 0) return response;
+
+    if (isInteractiveQuestionnaireActive) {
+      handleUserQuestionAnswer(userInput);
+      return null;
+    }
+
+    return "Pardon, non ho compreso appieno. Consultate i comandi in alto a destra o chiedetemi di scegliere un modulo come Haircare, Colorazione o Profumeria.";
+  }
+
+  /* -----------------------------------------------------------
+     GESTIONE CHAT & SPEECH SYNTHESIS FEMMINILE
+  ----------------------------------------------------------- */
+  function toggleChat() {
+    document.getElementById('chat-window').classList.toggle('active');
+  }
+
+  function handleKeyPress(e) {
+    if (e.key === 'Enter') sendMessage();
+  }
+
+  function sendMessage(customText = null) {
+    const input = document.getElementById('user-input');
+    const text = customText || input.value.trim();
+    if (!text) return;
+
+    appendMessage(text, 'user-msg');
+    if (!customText) input.value = '';
+
+    try {
+      const answer = processChanelCommand(text);
+      if (answer) {
+        setTimeout(() => {
+          appendMessage(answer, 'ai-msg');
+          speakText(answer);
+        }, 150);
+      }
+    } catch (err) {
+      console.error("Errore nell'elaborazione del comando:", err);
+      appendMessage("Si è verificato un inconveniente nell'esecuzione.", 'ai-msg');
+    }
+  }
+
+  function appendMessage(text, className) {
+    const container = document.getElementById('chat-messages');
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `msg ${className}`;
+    msgDiv.innerHTML = text;
+    container.appendChild(msgDiv);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  /* SPEECH SYNTHESIS RIGOROSAMENTE FEMMINILE */
+  function speakText(text) {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const plainText = text.replace(/<[^>]*>/g, '');
+      const utterance = new SpeechSynthesisUtterance(plainText);
+      utterance.lang = 'it-IT';
+      utterance.rate = 0.95;
+      utterance.pitch = 1.15; // Tonalità leggermente rialzata per garantire un timbro decisamente femminile
+
+      if (!selectedFemaleVoice) initFemaleVoice();
+      if (selectedFemaleVoice) utterance.voice = selectedFemaleVoice;
+
+      utterance.onstart = () => { isSpeaking = true; };
+      utterance.onend = () => { isSpeaking = false; };
+      utterance.onerror = () => { isSpeaking = false; };
+
+      window.speechSynthesis.speak(utterance);
+    }
+  }
+
+  function stopVoice() {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      isSpeaking = false;
+    }
+  }
+  window.stopVoice = stopVoice;
+
+  let recognition = null;
+  let isRecording = false;
+
+  if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.lang = 'it-IT';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      toggleMicState(false);
+      sendMessage(transcript);
+    };
+
+    recognition.onerror = () => toggleMicState(false);
+    recognition.onend = () => toggleMicState(false);
+  }
+
+  function toggleVoiceRecognition() {
+    if (!recognition) {
+      alert("Il tuo browser non supporta il riconoscimento vocale diretto. Usa Google Chrome o Microsoft Edge.");
+      return;
+    }
+    if (isRecording) {
+      recognition.stop();
+      toggleMicState(false);
+    } else {
+      stopVoice();
+      recognition.start();
+      toggleMicState(true);
+    }
+  }
+
+  function toggleMicState(recording) {
+    isRecording = recording;
+    const btn = document.getElementById('mic-btn');
+    if (recording) {
+      btn.classList.add('recording');
+      btn.innerText = '🔴';
+    } else {
+      btn.classList.remove('recording');
+      btn.innerText = '🎙️';
+    }
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rete del Packaging Mondiale - Global Packaging Ecosystem</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #070a0f; color: #f8fafc; overflow: hidden; }
+        #canvas-container { width: 100vw; height: 100vh; position: relative; }
+        canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+        canvas:active { cursor: grabbing; }
+        
+        /* Control Panel UI */
+        .ui-panel { position: absolute; top: 16px; left: 16px; background: rgba(11, 15, 25, 0.92); backdrop-filter: blur(14px); border: 1px solid #1e293b; padding: 18px; border-radius: 12px; width: 360px; box-shadow: 0 12px 32px rgba(0,0,0,0.75); z-index: 10; max-height: 95vh; overflow-y: auto; }
+        .ui-panel h1 { font-size: 1.15rem; font-weight: 700; margin-bottom: 4px; color: #10b981; letter-spacing: -0.02em; }
+        .ui-panel p { font-size: 0.78rem; color: #94a3b8; margin-bottom: 12px; line-height: 1.35; }
+        .ui-panel .hint { font-size: 0.72rem; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.25); margin-bottom: 14px; }
+        
+        .control-group { margin-bottom: 12px; }
+        .control-group label { display: block; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; margin-bottom: 4px; font-weight: 600; }
+        input[type="text"], select { width: 100%; padding: 8px 10px; background: #020617; border: 1px solid #334155; border-radius: 6px; color: #fff; font-size: 0.82rem; outline: none; transition: border-color 0.2s; }
+        input[type="text"]:focus, select:focus { border-color: #10b981; }
+        select { cursor: pointer; }
+        input[type="range"] { width: 100%; accent-color: #10b981; cursor: pointer; }
+        
+        /* Sim Control Bar */
+        .sim-control-bar { display: flex; align-items: center; justify-content: space-between; background: #020617; padding: 8px 12px; border-radius: 8px; border: 1px solid #1e293b; margin-bottom: 12px; }
+        .sim-status { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 600; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; }
+        .status-dot.paused { background: #ef4444; }
+        .btn-toggle { background: #10b981; color: #020617; border: none; padding: 5px 10px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+        .btn-toggle:hover { background: #059669; color: #fff; }
+
+        /* Legend Grid */
+        .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 12px 0; padding: 8px; background: rgba(2, 6, 23, 0.6); border-radius: 6px; border: 1px solid #1e293b; }
+        .legend-item { display: flex; align-items: center; font-size: 0.68rem; color: #cbd5e1; }
+        .legend-color { width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; flex-shrink: 0; }
+
+        .stats { display: flex; justify-content: space-between; font-size: 0.72rem; color: #94a3b8; padding-top: 10px; border-top: 1px solid #1e293b; }
+        
+        /* Info Card Panel */
+        #info-card { position: absolute; bottom: 20px; right: 20px; background: rgba(11, 15, 25, 0.94); backdrop-filter: blur(14px); border: 1px solid #334155; padding: 18px; border-radius: 12px; width: 350px; display: none; z-index: 10; box-shadow: 0 10px 25px rgba(0,0,0,0.6); }
+        #info-card h2 { font-size: 1.15rem; color: #f8fafc; margin-bottom: 4px; line-height: 1.2; }
+        #info-card .category-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.68rem; font-weight: 600; margin-bottom: 8px; text-transform: uppercase; }
+        #info-card .meta { font-size: 0.8rem; color: #10b981; font-weight: 500; margin-bottom: 10px; }
+        #info-card .details { font-size: 0.76rem; color: #cbd5e1; line-height: 1.5; }
+        #info-card .partners { margin-top: 8px; padding-top: 8px; border-top: 1px solid #334155; font-size: 0.72rem; color: #94a3b8; }
+
+        /* Context Menu Modal */
+        #work-modal { position: absolute; display: none; background: rgba(11, 15, 25, 0.96); backdrop-filter: blur(16px); border: 1px solid #10b981; border-radius: 12px; padding: 18px; width: 340px; box-shadow: 0 15px 35px rgba(0,0,0,0.85); z-index: 100; animation: popup 0.15s ease-out; }
+        @keyframes popup { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+        #work-modal .close-btn { position: absolute; top: 10px; right: 12px; background: none; border: none; color: #64748b; font-size: 1.2rem; cursor: pointer; }
+        #work-modal .close-btn:hover { color: #fff; }
+        #work-modal h3 { font-size: 1.05rem; color: #f8fafc; margin-bottom: 2px; padding-right: 20px; }
+        #work-modal .designer-sub { font-size: 0.75rem; color: #10b981; margin-bottom: 12px; font-weight: 500; }
+        #work-modal .work-box { background: #020617; border: 1px solid #1e293b; padding: 12px; border-radius: 8px; margin-bottom: 14px; }
+        #work-modal .work-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 4px; font-weight: 700; }
+        #work-modal .work-title { font-size: 0.88rem; color: #f1f5f9; font-weight: 600; line-height: 1.35; }
+        #work-modal .open-link-btn { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 10px; background: #059669; color: #fff; border: none; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: background 0.2s; text-decoration: none; }
+        #work-modal .open-link-btn:hover { background: #047857; }
+    </style>
+</head>
+<body>
+
+<div id="canvas-container">
+    <canvas id="networkCanvas"></canvas>
+    
+    <div class="ui-panel">
+        <h1>Global Packaging Network</h1>
+        <p>Mappa concettuale di 200 nodi dell'Ecosistema Globale dell'Imballaggio: colossi industriali, carte e biomateriali, rigidi, flessibili, macchine d'automazione, smart packaging ed economia circolare.</p>
+        <div class="hint">💡 <strong>Tasto Destro:</strong> Clicca su un nodo per avviare una ricerca di approfondimento sull'azienda o tecnologia.</div>
+
+        <div class="sim-control-bar">
+            <div class="sim-status">
+                <span id="status-dot" class="status-dot"></span>
+                <span id="status-text">Simulazione Attiva</span>
+            </div>
+            <button id="toggleSimBtn" class="btn-toggle" onclick="toggleSimulation()">Pausa</button>
+        </div>
+
+        <div class="control-group">
+            <label for="layoutSelect">Modalità di Visualizzazione</label>
+            <select id="layoutSelect" onchange="changeLayout(this.value)">
+                <option value="radial">Radiale (Epicentro Industriale al Centro)</option>
+                <option value="force">Fisica Dinamica (Force-Directed)</option>
+                <option value="cluster">Cluster per Categoria Tematica</option>
+                <option value="circular">Anello Circolare Perimetrale</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="categorySelect">Filtra per Categoria</label>
+            <select id="categorySelect">
+                <option value="ALL">Tutte le Categorie</option>
+                <option value="GIANTS_CONGLOMERATES">Colossi & Gruppi Globali</option>
+                <option value="SUSTAINABLE_BIO">Eco-Materiali & Sostenibilità</option>
+                <option value="RIGID_METAL_GLASS">Imballaggi Rigidi, Vetro & Metallo</option>
+                <option value="FLEXIBLE_BARRIER">Flessibile, Film & Barriera</option>
+                <option value="MACHINERY_AUTOMATION">Macchine, Automazione & Filling</option>
+                <option value="SMART_LUXURY_DESIGN">Smart Packaging, RFID & Lusso</option>
+                <option value="CIRCULAR_REGULATION">Economia Circolare & Normative</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="searchInput">Cerca Gruppo, Materiale, Tecnologia o Norma</label>
+            <input type="text" id="searchInput" placeholder="es. Amcor, Tetra Pak, Ball, rPET, Coesia, PPWR, RFID...">
+        </div>
+
+        <div class="legend">
+            <div class="legend-item"><div class="legend-color" style="background:#3b82f6"></div>Colossi Globali</div>
+            <div class="legend-item"><div class="legend-color" style="background:#10b981"></div>Eco-Materiali</div>
+            <div class="legend-item"><div class="legend-color" style="background:#f59e0b"></div>Rigidi, Vetro & Lattine</div>
+            <div class="legend-item"><div class="legend-color" style="background:#ec4899"></div>Flessibili & Barriere</div>
+            <div class="legend-item"><div class="legend-color" style="background:#8b5cf6"></div>Macchine & Imbottigliamento</div>
+            <div class="legend-item"><div class="legend-color" style="background:#06b6d4"></div>Smart Packaging & RFID</div>
+            <div class="legend-item" style="grid-column: span 2;"><div class="legend-color" style="background:#ef4444"></div>Economia Circolare & PPWR</div>
+        </div>
+        
+        <div class="control-group" id="repulsionControl" style="display:none;">
+            <label for="repulsionSlider">Forza di Repulsione Fisica</label>
+            <input type="range" id="repulsionSlider" min="50" max="600" value="260">
+        </div>
+
+        <div class="stats">
+            <span>Nodi Connessi: <strong id="stat-nodes">200</strong></span>
+            <span>Relazioni: <strong id="stat-edges">0</strong></span>
+            <span>FPS: <strong id="stat-fps">60</strong></span>
+        </div>
+    </div>
+
+    <!-- Info Card Panel -->
+    <div id="info-card">
+        <h2 id="card-title">-</h2>
+        <span id="card-badge" class="category-badge">-</span>
+        <div id="card-meta" class="meta">-</div>
+        <div id="card-details" class="details"></div>
+        <div id="card-partners" class="partners"></div>
+    </div>
+
+    <!-- Right-Click Modal -->
+    <div id="work-modal">
+        <button class="close-btn" onclick="closeWorkModal()">&times;</button>
+        <h3 id="modal-node-name">Nome Nodo</h3>
+        <div id="modal-node-meta" class="designer-sub">Categoria • Rilevanza</div>
+        <div class="work-box">
+            <div class="work-label">Profilo Settoriale Packaging</div>
+            <div id="modal-node-title" class="work-title">Dettaglio approfondito dell'ecosistema globale</div>
+        </div>
+        <a id="modal-web-link" href="#" target="_blank" class="open-link-btn">
+            🔍 Approfondisci su Global Packaging ↗
+        </a>
+    </div>
+</div>
+
+<script>
+// --- CATEGORIE DELL'ECOSISTEMA GLOBALE DEL PACKAGING ---
+const CATEGORIES = {
+    GIANTS_CONGLOMERATES: { name: 'Colossi & Gruppi Globali', color: '#3b82f6' },
+    SUSTAINABLE_BIO: { name: 'Eco-Materiali & Sostenibilità', color: '#10b981' },
+    RIGID_METAL_GLASS: { name: 'Rigidi, Vetro & Metallo', color: '#f59e0b' },
+    FLEXIBLE_BARRIER: { name: 'Flessibile & Barriera', color: '#ec4899' },
+    MACHINERY_AUTOMATION: { name: 'Macchine & Filling', color: '#8b5cf6' },
+    SMART_LUXURY_DESIGN: { name: 'Smart Packaging & RFID', color: '#06b6d4' },
+    CIRCULAR_REGULATION: { name: 'Circolarità & Normative', color: '#ef4444' }
+};
+
+// --- DATASET SEED GLOBAL PACKAGING (50 NODI CHIAVE MONDIALI) ---
+const SEED_NODES = [
+    { name: "Global Packaging Industry", category: "GIANTS_CONGLOMERATES", relevance: 1, sub: "Epicentro Industriale Mondiale", details: "L'industria globale del packaging supera i 1.000 miliardi di dollari di valore, unendo innovazione nei materiali, automazione di linea e transizione verso la sostenibilità.", connections: ["Tetra Pak", "Amcor Group", "Smurfit Westrock", "Ball Corporation", "Coesia Group", "PPWR European Regulation", "Ellen MacArthur Foundation"] },
+    
+    // COLOSSI & CONGLOMERATE GLOBALI
+    { name: "Tetra Pak", category: "GIANTS_CONGLOMERATES", relevance: 1, sub: "Leader Mondiale Cartone Asettico", details: "Multinazionale svedese/svizzera pioniera nelle soluzioni di confezionamento asettico in cartone multilayer per alimenti liquidi, bevande e latticini.", connections: ["Global Packaging Industry", "Cartone Asettico Multilayer", "SIG Combibloc", "Krones AG"] },
+    { name: "Amcor Group", category: "GIANTS_CONGLOMERATES", relevance: 1, sub: "Gigante dell'Imballaggio Flessibile e Rigido", details: "Leader globale nato in Australia con presenza in oltre 40 paesi, specializzato in film flessibili ad alta barriera, contenitori fustellati e packaging medico.", connections: ["Global Packaging Industry", "Film Barriera EVOH", "Berry Global", "Plastica Riciclata PCR"] },
+    { name: "Smurfit Westrock", category: "GIANTS_CONGLOMERATES", relevance: 1, sub: "Leader Mondiale Cartone Ondulato", details: "Colosso mondiale nato dalla fusione tra Smurfit Kappa e WestRock, dominatore assoluto nelle scatole in cartone, e-commerce packaging e soluzioni cartotecniche.", connections: ["Global Packaging Industry", "Cartone Ondulato Riciclato (OCC)", "DS Smith", "Mondi Group"] },
+    { name: "Berry Global", category: "GIANTS_CONGLOMERATES", relevance: 1, sub: "Produttore di Plastica & Chiusure", details: "Multinazionale americana specializzata in contenitori termoformati, flaconi soffiati, film estensibili e sistemi di chiusura ad alta ingegnerizzazione.", connections: ["Amcor Group", "Plastica Riciclata PCR", "Sistemi di Chiusura & Tappi Tethered"] },
+    { name: "SIG Combibloc", category: "GIANTS_CONGLOMERATES", relevance: 2, sub: "Sistemi Asettici per Bevande", details: "Gruppo svizzero pioniere nei cartoni sagomati monodose e sistemi avanzati di riempimento ad alta velocità per succo, latte e bevande vegetali.", connections: ["Tetra Pak", "Cartone Asettico Multilayer"] },
+    { name: "Packaging Corporation of America (PCA)", category: "GIANTS_CONGLOMERATES", relevance: 2, sub: "Cartone Pesante & Containerboard", details: "Uno dei maggiori produttori nordamericani di cartone da imballo, carte kraft e contenitori da trasporto per la grande distribuzione.", connections: ["Smurfit Westrock"] },
+
+    // RIGIDI, VETRO & METALLO
+    { name: "Ball Corporation", category: "RIGID_METAL_GLASS", relevance: 1, sub: "Leader Mondiale Lattine Alluminio", details: "Colosso statunitense primario fornitore di lattine in alluminio riciclabile all'infinito per la grande industria del beverage e della birra.", connections: ["Global Packaging Industry", "Alluminio Infinitamente Riciclabile", "Crown Holdings", "Can-Making Machinery"] },
+    { name: "Crown Holdings", category: "RIGID_METAL_GLASS", relevance: 1, sub: "Imballaggi Metallo & Tappi", details: "Produttore globale di lattine per alimenti e bevande, bombolette spray e capsule metalliche di chiusura.", connections: ["Ball Corporation", "Alluminio Infinitamente Riciclabile"] },
+    { name: "Owens-Illinois (O-I)", category: "RIGID_METAL_GLASS", relevance: 1, sub: "Primo Produttore Mondiale Vetro", details: "Multinazionale americana leader nella produzione di bottiglie e vasi in vetro per vino, birra, spirits e alimenti conservati.", connections: ["Global Packaging Industry", "Vetro Cavo & Vetro Riciclato (Cullet)", "Verallia"] },
+    { name: "Verallia", category: "RIGID_METAL_GLASS", relevance: 1, sub: "Vetro di Lusso & Food European Leader", details: "Terzo produttore mondiale e leader europeo nel packaging in vetro per bevande e prodotti alimentari con forte focus sull'alleggerimento.", connections: ["Owens-Illinois (O-I)", "Alleggerimento del Peso Bottiglie"] },
+    { name: "Gerresheimer", category: "RIGID_METAL_GLASS", relevance: 2, sub: "Vetro e Plastica Speciale Pharma", details: "Specialista tedesco in fiale in vetro borosilicato, siringhe preriempite e contenitori sterili per l'industria farmaceutica.", connections: ["AptarGroup", "Vetro Cavo & Vetro Riciclato (Cullet)"] },
+    { name: "Ardagh Group", category: "RIGID_METAL_GLASS", relevance: 2, sub: "Soluzioni Metallo e Vetro Sostenibile", details: "Fornitore globale di imballaggi rigidi in metallo riciclabile e contenitori in vetro per i principali brand di consumo.", connections: ["Ball Corporation", "Verallia"] },
+
+    // ECO-MATERIALI & SOSTENIBILITÀ
+    { name: "Stora Enso", category: "SUSTAINABLE_BIO", relevance: 1, sub: "Materiali Rinnovabili & Bio-Compositi", details: "Gruppo finlandese leader nella bioeconomia che trasforma il legno in biomateriali, cartoncini vergini per pieghevoli e fibre barriera.", connections: ["Global Packaging Industry", "Cartoncino Vergine Kraft", "Mondi Group", "Sostituzione della Plastica Monouso"] },
+    { name: "Mondi Group", category: "SUSTAINABLE_BIO", relevance: 1, sub: "Carta Sostenibile e Flessibili Eco", details: "Gruppo multinazionale focalizzato su sacchi in carta industriale, soluzioni di cartone ondulato e film barriera mono-materiale riciclabili.", connections: ["Stora Enso", "Smurfit Westrock", "Mono-Materiale Polietilene (PE)"] },
+    { name: "DS Smith", category: "SUSTAINABLE_BIO", relevance: 1, sub: "Cartone Ondulato & Design Circolare", details: "Specialista britannico del packaging in fibra riciclata e pioniere del Circular Design Metrics per l'e-commerce sostenibile.", connections: ["Smurfit Westrock", "Ellen MacArthur Foundation", "Cartone Ondulato Riciclato (OCC)"] },
+    { name: "Huhtamaki", category: "SUSTAINABLE_BIO", relevance: 2, sub: "Fibra Stampata & Foodservice", details: "Azienda finlandese pioniere nella produzione di contenitori in fibra di cellulosa stampata, bicchieri compostabili e packaging per il cibo da asporto.", connections: ["Sostituzione della Plastica Monouso", "Bioplastiche PLA & PHA"] },
+    { name: "UPM Raflatac", category: "SUSTAINABLE_BIO", relevance: 2, sub: "Materiali per Etichettatura Ecologica", details: "Leader mondiale nei frontalini e adesivi per etichette riciclabili e certificati da fonti forestali gestite in modo sostenibile.", connections: ["Avery Dennison", "Cartoncino Vergine Kraft"] },
+    { name: "Bioplastiche PLA & PHA", category: "SUSTAINABLE_BIO", relevance: 2, sub: "Polimeri Bio-Basati Compostabili", details: "Nuova generazione di plastiche derivate da mais, canna da zucchero o fermentazione batterica in grado di biodegradarsi.", connections: ["Sostituzione della Plastica Monouso", "Huhtamaki"] },
+
+    // FLESSIBILE & BARRIERA
+    { name: "Sealed Air (Cryovac)", category: "FLEXIBLE_BARRIER", relevance: 1, sub: "Protezione Alimentare & Sottovuoto", details: "Multinazionale nota per il marchio Cryovac, specializzata in film termoretraibili ad altissima barriera all'ossigeno per carne e formaggi.", connections: ["Amcor Group", "Film Barriera EVOH", "Pouch Flessibili Stand-Up"] },
+    { name: "Constantia Flexibles", category: "FLEXIBLE_BARRIER", relevance: 2, sub: "Foil di Alluminio & Blister Pharma", details: "Fornitore globale di packaging flessibile basato su fogli d'alluminio sottile per l'industria farmaceutica e alimentare.", connections: ["Amcor Group", "Pouch Flessibili Stand-Up"] },
+    { name: "Film Barriera EVOH", category: "FLEXIBLE_BARRIER", relevance: 2, sub: "Tecnologia di Coestrusione Plastica", details: "Copolimero etilene-alcool vinilico applicato in strati microscopici per bloccare la penetrazione di ossigeno e umidità.", connections: ["Sealed Air (Cryovac)", "Amcor Group", "Mono-Materiale Polietilene (PE)"] },
+    { name: "Mono-Materiale Polietilene (PE)", category: "FLEXIBLE_BARRIER", relevance: 2, sub: "Strutture Flessibili 100% Riciclabili", details: "Innovazione di processo che sostituisce le strutture multi-materiale non riciclabili con un unico polimero facilmente lavorabile nei canali di riciclo.", connections: ["Amcor Group", "Mondi Group", "Plastica Riciclata PCR"] },
+    { name: "Pouch Flessibili Stand-Up", category: "FLEXIBLE_BARRIER", relevance: 3, sub: "Buste Richiudibili con Zip", details: "Formato flessibile di grande successo per salse, snack e detergenti che riduce drasticamente il peso del packaging rispetto ai contenitori rigidi.", connections: ["Sealed Air (Cryovac)"] },
+
+    // MACCHINE & AUTOMAZIONE
+    { name: "Coesia Group (Italia)", category: "MACHINERY_AUTOMATION", relevance: 1, sub: "Polo Mondiale Macchine Automatiche", details: "Holding industriale italiana con sede a Bologna, leader globale nelle macchine per il packaging di prodotti di consumo, pharma e manifattura.", connections: ["Global Packaging Industry", "IMA Group", "Marchesini Group", "Sidel / Tetra Laval"] },
+    { name: "IMA Group (Italia)", category: "MACHINERY_AUTOMATION", relevance: 1, sub: "Automazione Pharma, Tea & Food", details: "Gigante dell'ingegneria del confezionamento con sede a Ozzano dell'Emilia, punto di riferimento per le macchine imbustatrici e confezionatrici.", connections: ["Coesia Group (Italia)", "Marchesini Group", "Confezionamento Farmaceutico Blister"] },
+    { name: "Krones AG (Germania)", category: "MACHINERY_AUTOMATION", relevance: 1, sub: "Impianti Imbottigliamento Bevande", details: "Leader mondiale nell'ingegneria e realizzazione di linee complete di lavaggio, riempimento, etichettatura e imballaggio per liquidi.", connections: ["Global Packaging Industry", "Tetra Pak", "Sidel / Tetra Laval"] },
+    { name: "Marchesini Group (Italia)", category: "MACHINERY_AUTOMATION", relevance: 2, sub: "Linee Packaging Farmaceutico & Cosmetico", details: "Azienda leader nelle soluzioni robotizzate di astucciamento, riempimento fiale e blisteratrici sterili.", connections: ["IMA Group (Italia)", "Gerresheimer"] },
+    { name: "Sidel / Tetra Laval", category: "MACHINERY_AUTOMATION", relevance: 2, sub: "Soffiaggio PET & Imbottigliamento", details: "Divisione del gruppo Tetra Laval specializzata nelle macchine di soffiaggio di bottiglie in PET e linee di confezionamento liquidi.", connections: ["Tetra Pak", "Krones AG"] },
+    { name: "Multivac (Germania)", category: "MACHINERY_AUTOMATION", relevance: 2, sub: "Termoformatrici e Sottovuoto", details: "Leader nelle macchine confezionatrici termoformatrici per alimenti freschi, piatti pronti e dispositivi medici.", connections: ["Sealed Air (Cryovac)"] },
+    { name: "Syntegon (ex Bosch Packaging)", category: "MACHINERY_AUTOMATION", relevance: 2, sub: "Tecnologie Processo & Confezionamento", details: "Azienda tedesca primaria fornitrice di macchine per il dosaggio, la sigillatura e il confezionamento secondario.", connections: ["Coesia Group (Italia)"] },
+
+    // SMART PACKAGING, RFID & LUSSO
+    { name: "Avery Dennison", category: "SMART_LUXURY_DESIGN", relevance: 1, sub: "Leader Etichette & Soluzioni RFID", details: "Multinazionale statunitense pioniere nelle etichette sensibili alla pressione e nello sviluppo di intarsi RFID per la tracciabilità intelligente.", connections: ["UPM Raflatac", "Smart Packaging RFID/NFC", "Tracciabilità Supply Chain Digital"] },
+    { name: "AptarGroup", category: "SMART_LUXURY_DESIGN", relevance: 1, sub: "Sistemi Erogazione & Dispensing Lusso", details: "Fornitore globale di valvole, pompe spray, erogatori e chiusure ermetiche per profumi, cosmetica, alimentari e pharma.", connections: ["Gerresheimer", "Chiusure & Valvole di Dosaggio"] },
+    { name: "Smart Packaging RFID/NFC", category: "SMART_LUXURY_DESIGN", relevance: 1, sub: "Connettività Digitale & Anti-Contraffazione", details: "Integrazione di microchip nell'imballaggio che consentono l'autenticazione del prodotto, la gestione dell'inventario e la comunicazione con lo smartphone del consumatore.", connections: ["Avery Dennison", "Tracciabilità Supply Chain Digital"] },
+    { name: "Fedrigoni Packaging", category: "SMART_LUXURY_DESIGN", relevance: 2, sub: "Carte Speciali & Astucci di Lusso", details: "Gruppo italiano rinomato nel mondo per le carte pregiate destinate al confezionamento di vini d'alta gamma, profumi e cosmetici.", connections: ["Cartoncino Vergine Kraft"] },
+
+    // CIRCOLARITÀ & NORMATIVE
+    { name: "PPWR European Regulation", category: "CIRCULAR_REGULATION", relevance: 1, sub: "Normativa UE Packaging & Waste", details: "Regolamento Europeo che impone target vincolanti di riduzione dei rifiuti, riutilizzo, contenuto minimo di riciclato e riciclabilità totale entro il 2030.", connections: ["Global Packaging Industry", "Ellen MacArthur Foundation", "Plastica Riciclata PCR", "Sistemi di Chiusura & Tappi Tethered"] },
+    { name: "Ellen MacArthur Foundation", category: "CIRCULAR_REGULATION", relevance: 1, sub: "Global Commitment per l'Economia Circolare", details: "Fondazione internazionale che guida il trattato globale contro l'inquinamento da plastica e stabilisce i criteri per l'imballaggio circolare.", connections: ["Global Packaging Industry", "PPWR European Regulation", "DS Smith"] },
+    { name: "Plastica Riciclata PCR (Post-Consumer)", category: "CIRCULAR_REGULATION", relevance: 1, sub: "Polimeri rPET, rHDPE, rPP", details: "Resine plastiche ricavate dal riciclo dei rifiuti domestici, fondamentali per ridurre il consumo di petrolio vergine negli imballaggi.", connections: ["PPWR European Regulation", "Amcor Group", "Berry Global"] },
+    { name: "Alluminio Infinitamente Riciclabile", category: "CIRCULAR_REGULATION", relevance: 1, sub: "Loop Chiuso del Metallo", details: "Proprietà dell'alluminio di essere rifuso all'infinito senza perdere le sue proprietà meccaniche e di barriera, risparmiando il 95% di energia.", connections: ["Ball Corporation", "Crown Holdings"] },
+    { name: "Sistemi di Chiusura & Tappi Tethered", category: "CIRCULAR_REGULATION", relevance: 2, sub: "Direttiva SUP (Single-Use Plastics)", details: "Obbligo normativo di ancorare i tappi alle bottiglie per evitare che si disperdano nell'ambiente e facilitarne il riciclo congiunto.", connections: ["PPWR European Regulation", "Berry Global"] }
+];
+
+// GENERAZIONE DATASET ESPANSO (200 NODI COMPLETI ED EQUILIBRATI)
+function generatePackagingDataset() {
+    const nodes = [];
+    const nodeMap = new Map();
+
+    // Inserisci i nodi Seed
+    SEED_NODES.forEach((d, idx) => {
+        const node = {
+            id: idx + 1,
+            name: d.name,
+            category: d.category,
+            relevance: d.relevance,
+            sub: d.sub,
+            details: d.details,
+            radius: Math.max(17 - d.relevance * 2.8, 7),
+            x: (Math.random() - 0.5) * 1000,
+            y: (Math.random() - 0.5) * 700,
+            targetX: 0, targetY: 0,
+            vx: 0, vy: 0,
+            connections: []
+        };
+        nodes.push(node);
+        nodeMap.set(d.name, node);
+    });
+
+    const categoryKeys = Object.keys(CATEGORIES);
+    const globalHubs = ["USA", "Germania", "Italia", "Svezia", "Svizzera", "Giappone", "UK", "Francia", "Finlandia", "Cina"];
+    const techWords = ["Barriera Gas", "Termoformatura", "Cartone Cromo", "PET Trasparente", "Fustellatura Laser", "Bioliquefazione", "Soffiaggio Robotizzato", "Inchiostri ad Acqua"];
+
+    // Genera nodi procedurali coerenti fino a 200
+    for (let i = nodes.length; i < 200; i++) {
+        const id = i + 1;
+        const category = categoryKeys[i % categoryKeys.length];
+        const location = globalHubs[i % globalHubs.length];
+        const tech = techWords[i % techWords.length];
+
+        let name = "";
+        let sub = "";
+        let details = "";
+
+        if (category === "GIANTS_CONGLOMERATES") {
+            name = `Conglomerato Packaging ${location} #${id}`;
+            sub = `Polo di Produzione Multiragionale`;
+            details = `Gruppo industriale integrato specializzato nella fornitura su larga scala di soluzioni per imballaggi primari e secondari.`;
+        } else if (category === "SUSTAINABLE_BIO") {
+            name = `Fibra di Cellulosa Sostenibile ${tech} #${id}`;
+            sub = `Materiale Rinnovabile & Biodegradabile`;
+            details = `Sviluppo di substrati in carta e biomateriali ad alta resistenza meccanica ed elevata riciclabilità nel circuito della carta.`;
+        } else if (category === "RIGID_METAL_GLASS") {
+            name = `Impianto Vetro/Metallo ${location} [${tech}]`;
+            sub = `Contenitori Ad Alta Resistenza Termica`;
+            details = `Linea di produzione per bottiglie in vetro ad alleggerimento strutturato o flaconi in alluminio per aerosol.`;
+        } else if (category === "FLEXIBLE_BARRIER") {
+            name = `Laminato Flessibile ${tech} #${id}`;
+            sub = `Film Coestruso Multistrato`;
+            details = `Soluzione di packaging flessibile per la conservazione prolungata degli alimenti e barriera totale contro luce ed umidità.`;
+        } else if (category === "MACHINERY_AUTOMATION") {
+            name = `Linea di Confezionamento Robotizzata #${id}`;
+            sub = `Automazione & Inserimento Veloce`;
+            details = `Sistema di confezionamento ad alta velocità integrato con sistemi di visione artificiale per il controllo qualità del sigillo.`;
+        } else if (category === "SMART_LUXURY_DESIGN") {
+            name = `Etichetta Intelligente NFC/Sensore #${id}`;
+            sub = `Tracciabilità & Engagement Digitale`;
+            details = `Dispositivo passivo applicato all'imballaggio per il monitoraggio della temperatura di conservazione e l'anticoppia.`;
+        } else {
+            name = `Standard di Riciclabilità ${location} #${id}`;
+            sub = `Normativa & Certificazione Circolare`;
+            details = `Linee guida di progettazione per garantire che l'imballaggio possa essere facilmente raccolto, separato e riutilizzato.`;
+        }
+
+        const node = {
+            id: id,
+            name: name,
+            category: category,
+            relevance: 3,
+            sub: sub,
+            details: details,
+            radius: Math.max(7 - (id * 0.015), 4),
+            x: (Math.random() - 0.5) * 1600,
+            y: (Math.random() - 0.5) * 1100,
+            targetX: 0, targetY: 0,
+            vx: 0, vy: 0,
+            connections: []
+        };
+        nodes.push(node);
+        nodeMap.set(name, node);
+    }
+
+    // GENERAZIONE ARCHI E CONNESSI
+    const edges = [];
+    const edgeSet = new Set();
+
+    function addEdge(source, target, weight = 1) {
+        if (!source || !target || source.id === target.id) return;
+        const key = source.id < target.id ? `${source.id}-${target.id}` : `${target.id}-${source.id}`;
+        if (!edgeSet.has(key)) {
+            edgeSet.add(key);
+            const edge = { source, target, weight };
+            edges.push(edge);
+            source.connections.push(target);
+            target.connections.push(source);
+        }
+    }
+
+    // Connetti archi definiti nei seed
+    SEED_NODES.forEach(d => {
+        const src = nodeMap.get(d.name);
+        if (d.connections) {
+            d.connections.forEach(targetName => {
+                const tgt = nodeMap.get(targetName);
+                if (tgt) addEdge(src, tgt, 2.2);
+            });
+        }
+    });
+
+    // Connessioni dinamiche per il grafo generale
+    const centerHub = nodes[0]; // Global Packaging Industry
+    const tetraNode = nodeMap.get("Tetra Pak");
+    const amcorNode = nodeMap.get("Amcor Group");
+    const ballNode = nodeMap.get("Ball Corporation");
+    const coesiaNode = nodeMap.get("Coesia Group (Italia)");
+    const ppwrNode = nodeMap.get("PPWR European Regulation");
+
+    for (let i = 1; i < nodes.length; i++) {
+        const nodeA = nodes[i];
+        
+        // Link all'hub centrale
+        if (Math.random() < 0.45) {
+            addEdge(nodeA, centerHub, 1.5);
+        }
+
+        // Link ai sotto-hub di categoria
+        if (nodeA.category === "GIANTS_CONGLOMERATES" && tetraNode && Math.random() < 0.5) {
+            addEdge(nodeA, tetraNode, 1.3);
+        }
+        if (nodeA.category === "FLEXIBLE_BARRIER" && amcorNode && Math.random() < 0.5) {
+            addEdge(nodeA, amcorNode, 1.3);
+        }
+        if (nodeA.category === "RIGID_METAL_GLASS" && ballNode && Math.random() < 0.5) {
+            addEdge(nodeA, ballNode, 1.3);
+        }
+        if (nodeA.category === "MACHINERY_AUTOMATION" && coesiaNode && Math.random() < 0.5) {
+            addEdge(nodeA, coesiaNode, 1.3);
+        }
+        if (nodeA.category === "CIRCULAR_REGULATION" && ppwrNode && Math.random() < 0.5) {
+            addEdge(nodeA, ppwrNode, 1.3);
+        }
+
+        // Connetti nodi della stessa categoria
+        const extraConnections = Math.floor(Math.random() * 2) + 1;
+        for (let k = 0; k < extraConnections; k++) {
+            const targetIdx = Math.floor(Math.random() * nodes.length);
+            const nodeB = nodes[targetIdx];
+            if (nodeA.category === nodeB.category && nodeA.id !== nodeB.id) {
+                addEdge(nodeA, nodeB, 0.75);
+            }
+        }
+    }
+
+    return { nodes, edges };
+}
+
+// --- ENGINE CANVAS & FISICA DINAMICA ---
+const canvas = document.getElementById('networkCanvas');
+const ctx = canvas.getContext('2d');
+
+let width, height;
+let graphData = generatePackagingDataset();
+let nodes = graphData.nodes;
+let edges = graphData.edges;
+
+let transform = { x: 0, y: 0, scale: 1 };
+let isDragging = false;
+let dragStart = { x: 0, y: 0 };
+let hoveredNode = null;
+let selectedNode = null;
+let draggedNode = null;
+
+let searchQuery = "";
+let selectedCategory = "ALL";
+let currentLayout = "radial";
+
+// CONTROLLO SIMULAZIONE E FISICA
+let isSimulating = true;
+let simFrames = 0;
+const MAX_SIM_FRAMES = 360;
+let totalKineticEnergy = 100;
+
+let repulsionStrength = 260;
+const damping = 0.85;
+const springLength = 85;
+const springStiffness = 0.035;
+
+document.getElementById('stat-nodes').innerText = nodes.length;
+document.getElementById('stat-edges').innerText = edges.length;
+
+function resizeCanvas() {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+    if (transform.x === 0 && transform.y === 0) {
+        transform.x = width / 2;
+        transform.y = height / 2;
+    }
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// --- LAYOUTS ALTERNATIVI ---
+function computeLayoutTargets(layout) {
+    if (layout === 'radial') {
+        nodes.forEach(n => {
+            if (n.id === 1) { // Global Packaging Hub al centro
+                n.targetX = 0;
+                n.targetY = 0;
+            } else {
+                const ring = n.relevance;
+                const angle = (n.id % 32) * (Math.PI * 2 / 32) + (n.relevance * 0.2);
+                const radius = 120 + ring * 130 + ((n.id % 8) * 18);
+                n.targetX = Math.cos(angle) * radius;
+                n.targetY = Math.sin(angle) * radius;
+            }
+        });
+    } else if (layout === 'cluster') {
+        const catKeys = Object.keys(CATEGORIES);
+        const cols = 3;
+        const spacingX = 490;
+        const spacingY = 390;
+
+        catKeys.forEach((cat, idx) => {
+            const cx = ((idx % cols) - 1) * spacingX;
+            const cy = (Math.floor(idx / cols) - 0.5) * spacingY;
+            const catNodes = nodes.filter(n => n.category === cat);
+
+            catNodes.forEach((n, i) => {
+                const angle = i * 0.45;
+                const r = 25 + Math.sqrt(i) * 22;
+                n.targetX = cx + Math.cos(angle) * r;
+                n.targetY = cy + Math.sin(angle) * r;
+            });
+        });
+    } else if (layout === 'circular') {
+        const total = nodes.length;
+        const radius = 640;
+        const sorted = nodes.slice().sort((a, b) => a.category.localeCompare(b.category));
+        
+        sorted.forEach((n, i) => {
+            const angle = (i / total) * Math.PI * 2;
+            n.targetX = Math.cos(angle) * radius;
+            n.targetY = Math.sin(angle) * radius;
+        });
+    }
+}
+
+// Inizializza il layout radiale di default
+computeLayoutTargets('radial');
+
+function changeLayout(newLayout) {
+    currentLayout = newLayout;
+    computeLayoutTargets(newLayout);
+    document.getElementById('repulsionControl').style.display = newLayout === 'force' ? 'block' : 'none';
+    wakeSimulation();
+}
+
+// --- FISICA ---
+function wakeSimulation() {
+    isSimulating = true;
+    simFrames = 0;
+    updateSimUI(true);
+}
+
+function toggleSimulation() {
+    isSimulating = !isSimulating;
+    if (isSimulating) simFrames = 0;
+    updateSimUI(isSimulating);
+}
+
+function updateSimUI(active) {
+    const dot = document.getElementById('status-dot');
+    const text = document.getElementById('status-text');
+    const btn = document.getElementById('toggleSimBtn');
+
+    if (active) {
+        dot.classList.remove('paused');
+        text.innerText = "Simulazione Attiva";
+        btn.innerText = "Pausa";
+    } else {
+        dot.classList.add('paused');
+        text.innerText = "Rete Stabilizzata";
+        btn.innerText = "Riprendi";
+    }
+}
+
+function updatePhysics() {
+    if (!isSimulating) return;
+
+    if (currentLayout === 'force') {
+        totalKineticEnergy = 0;
+
+        for (let i = 0; i < nodes.length; i++) {
+            const n1 = nodes[i];
+            for (let j = i + 1; j < nodes.length; j++) {
+                const n2 = nodes[j];
+                let dx = n2.x - n1.x;
+                let dy = n2.y - n1.y;
+                let distSq = dx * dx + dy * dy + 0.1;
+                let dist = Math.sqrt(distSq);
+
+                if (dist < 420) {
+                    let force = (repulsionStrength * 10) / distSq;
+                    let fx = (dx / dist) * force;
+                    let fy = (dy / dist) * force;
+
+                    n1.vx -= fx;
+                    n1.vy -= fy;
+                    n2.vx += fx;
+                    n2.vy += fy;
+                }
+            }
+        }
+
+        for (let i = 0; i < edges.length; i++) {
+            const edge = edges[i];
+            let dx = edge.target.x - edge.source.x;
+            let dy = edge.target.y - edge.source.y;
+            let dist = Math.sqrt(dx * dx + dy * dy) + 0.1;
+            let force = (dist - springLength) * springStiffness * edge.weight;
+
+            let fx = (dx / dist) * force;
+            let fy = (dy / dist) * force;
+
+            edge.source.vx += fx;
+            edge.source.vy += fy;
+            edge.target.vx -= fx;
+            edge.target.vy -= fy;
+        }
+
+        for (let i = 0; i < nodes.length; i++) {
+            const n = nodes[i];
+            if (n === draggedNode) continue;
+
+            n.vx -= n.x * 0.0004;
+            n.vy -= n.y * 0.0004;
+
+            n.vx *= damping;
+            n.vy *= damping;
+
+            n.x += n.vx;
+            n.y += n.vy;
+
+            totalKineticEnergy += Math.abs(n.vx) + Math.abs(n.vy);
+        }
+
+        simFrames++;
+        if (totalKineticEnergy < 0.8 || simFrames > MAX_SIM_FRAMES) {
+            isSimulating = false;
+            updateSimUI(false);
+        }
+    } else {
+        let maxMovement = 0;
+        nodes.forEach(n => {
+            if (n === draggedNode) return;
+            let dx = n.targetX - n.x;
+            let dy = n.targetY - n.y;
+            n.x += dx * 0.08;
+            n.y += dy * 0.08;
+
+            maxMovement += Math.abs(dx) + Math.abs(dy);
+        });
+
+        simFrames++;
+        if (maxMovement < 0.5 || simFrames > 180) {
+            isSimulating = false;
+            updateSimUI(false);
+        }
+    }
+}
+
+let lastTime = performance.now();
+let frameCount = 0;
+
+function render() {
+    const now = performance.now();
+    frameCount++;
+    if (now - lastTime >= 1000) {
+        document.getElementById('stat-fps').innerText = frameCount;
+        frameCount = 0;
+        lastTime = now;
+    }
+
+    updatePhysics();
+
+    ctx.save();
+    ctx.fillStyle = '#070a0f';
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.translate(transform.x, transform.y);
+    ctx.scale(transform.scale, transform.scale);
+
+    const isFilterActive = selectedCategory !== "ALL" || searchQuery !== "";
+
+    // Archi
+    for (let i = 0; i < edges.length; i++) {
+        const edge = edges[i];
+        const isHighlight = (hoveredNode || selectedNode) && 
+            (edge.source === hoveredNode || edge.target === hoveredNode || edge.source === selectedNode || edge.target === selectedNode);
+        
+        ctx.beginPath();
+        ctx.moveTo(edge.source.x, edge.source.y);
+        ctx.lineTo(edge.target.x, edge.target.y);
+
+        if (isHighlight) {
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 2.4;
+        } else {
+            ctx.strokeStyle = isFilterActive ? 'rgba(30, 41, 59, 0.15)' : 'rgba(51, 65, 85, 0.28)';
+            ctx.lineWidth = 0.6;
+        }
+        ctx.stroke();
+    }
+
+    // Nodi
+    for (let i = 0; i < nodes.length; i++) {
+        const n = nodes[i];
+        const catColor = CATEGORIES[n.category]?.color || '#94a3b8';
+        
+        const matchesCategory = (selectedCategory === "ALL" || n.category === selectedCategory);
+        const matchesSearch = searchQuery === "" || 
+            n.name.toLowerCase().includes(searchQuery) || 
+            n.sub.toLowerCase().includes(searchQuery) || 
+            n.details.toLowerCase().includes(searchQuery);
+
+        const isMatch = matchesCategory && matchesSearch;
+        const isSelected = n === selectedNode;
+        const isHovered = n === hoveredNode;
+
+        ctx.save();
+        
+        if (isFilterActive && !isMatch && !isSelected && !isHovered) {
+            ctx.globalAlpha = 0.12;
+        }
+
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, isSelected || isHovered ? n.radius + 4 : n.radius, 0, Math.PI * 2);
+
+        ctx.fillStyle = isFilterActive && isMatch ? '#ffffff' : catColor;
+        ctx.fill();
+
+        if (isSelected || isHovered || (isFilterActive && isMatch)) {
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+        }
+
+        if (transform.scale > 0.75 || n.relevance <= 2 || isHovered || isSelected || (isFilterActive && isMatch)) {
+            ctx.fillStyle = isSelected || isHovered ? '#ffffff' : '#e2e8f0';
+            ctx.font = `${Math.max(10 / transform.scale, 8)}px -apple-system, sans-serif`;
+            ctx.fillText(`${n.name}`, n.x + n.radius + 5, n.y + 3);
+        }
+
+        ctx.restore();
+    }
+
+    ctx.restore();
+    requestAnimationFrame(render);
+}
+
+function getCanvasCoords(e) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+        x: (e.clientX - rect.left - transform.x) / transform.scale,
+        y: (e.clientY - rect.top - transform.y) / transform.scale
+    };
+}
+
+function findNodeAt(coords) {
+    for (let i = nodes.length - 1; i >= 0; i--) {
+        const n = nodes[i];
+        const dx = n.x - coords.x;
+        const dy = n.y - coords.y;
+        if (dx * dx + dy * dy <= (n.radius + 6) * (n.radius + 6)) {
+            return n;
+        }
+    }
+    return null;
+}
+
+// EVENTI MOUSE
+canvas.addEventListener('mousedown', (e) => {
+    if (e.button === 2) return;
+    closeWorkModal();
+
+    const coords = getCanvasCoords(e);
+    const node = findNodeAt(coords);
+
+    if (node) {
+        draggedNode = node;
+        selectedNode = node;
+        updateInfoCard(node);
+        wakeSimulation();
+    } else {
+        isDragging = true;
+        dragStart = { x: e.clientX - transform.x, y: e.clientY - transform.y };
+    }
+});
+
+canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    const coords = getCanvasCoords(e);
+    const node = findNodeAt(coords);
+
+    if (node) {
+        selectedNode = node;
+        openWorkModal(node, e.clientX, e.clientY);
+    } else {
+        closeWorkModal();
+    }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+    const coords = getCanvasCoords(e);
+
+    if (draggedNode) {
+        draggedNode.x = coords.x;
+        draggedNode.y = coords.y;
+        draggedNode.vx = 0;
+        draggedNode.vy = 0;
+        wakeSimulation();
+    } else if (isDragging) {
+        transform.x = e.clientX - dragStart.x;
+        transform.y = e.clientY - dragStart.y;
+    } else {
+        hoveredNode = findNodeAt(coords);
+    }
+});
+
+window.addEventListener('mouseup', () => {
+    isDragging = false;
+    draggedNode = null;
+});
+
+canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const zoomFactor = 1.1;
+    const mouseX = e.clientX;
+    const mouseY = e.clientY;
+
+    let newScale = e.deltaY < 0 ? transform.scale * zoomFactor : transform.scale / zoomFactor;
+    newScale = Math.max(0.18, Math.min(newScale, 4.5));
+
+    transform.x = mouseX - (mouseX - transform.x) * (newScale / transform.scale);
+    transform.y = mouseY - (mouseY - transform.y) * (newScale / transform.scale);
+    transform.scale = newScale;
+}, { passive: false });
+
+// CONTROLLI
+document.getElementById('categorySelect').addEventListener('change', (e) => { selectedCategory = e.target.value; wakeSimulation(); });
+document.getElementById('searchInput').addEventListener('input', (e) => { searchQuery = e.target.value.toLowerCase().trim(); wakeSimulation(); });
+document.getElementById('repulsionSlider').addEventListener('input', (e) => { repulsionStrength = parseFloat(e.target.value); wakeSimulation(); });
+
+function updateInfoCard(node) {
+    const card = document.getElementById('info-card');
+    if (!node) {
+        card.style.display = 'none';
+        return;
+    }
+    
+    const catObj = CATEGORIES[node.category] || { name: 'Nodo', color: '#10b981' };
+    
+    document.getElementById('card-title').innerText = node.name;
+    const badge = document.getElementById('card-badge');
+    badge.innerText = catObj.name;
+    badge.style.backgroundColor = catObj.color;
+    badge.style.color = '#020617';
+
+    document.getElementById('card-meta').innerText = `📦 ${node.sub}`;
+    
+    const partnersList = node.connections.map(c => `• ${c.name}`).slice(0, 6).join('<br>');
+    
+    document.getElementById('card-details').innerHTML = `
+        <strong>Ruolo nell'Ecosistema del Packaging:</strong><br>${node.details}
+    `;
+    
+    document.getElementById('card-partners').innerHTML = `
+        <strong>Connessioni di Filiera & Materiali:</strong><br>${partnersList || 'Nessun collegamento diretto'}
+    `;
+    
+    card.style.display = 'block';
+}
+
+function openWorkModal(node, mouseX, mouseY) {
+    const modal = document.getElementById('work-modal');
+    
+    document.getElementById('modal-node-name').innerText = node.name;
+    document.getElementById('modal-node-meta').innerText = `${CATEGORIES[node.category]?.name} • ${node.sub}`;
+    document.getElementById('modal-node-title').innerText = node.details;
+    
+    const searchQuery = encodeURIComponent(`Global Packaging Industry ${node.name} ${node.sub}`);
+    const searchUrl = `https://www.google.com/search?q=${searchQuery}`;
+    
+    const linkBtn = document.getElementById('modal-web-link');
+    linkBtn.href = searchUrl;
+
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    
+    let posX = mouseX + 10;
+    let posY = mouseY + 10;
+
+    if (posX + 340 > windowWidth) posX = mouseX - 340;
+    if (posY + 240 > windowHeight) posY = mouseY - 240;
+
+    modal.style.left = `${Math.max(10, posX)}px`;
+    modal.style.top = `${Math.max(10, posY)}px`;
+    modal.style.display = 'block';
+}
+
+function closeWorkModal() {
+    document.getElementById('work-modal').style.display = 'none';
+}
+
+// Start
+requestAnimationFrame(render);
+</script>
+</body>
+</html>

@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Haute Parfumerie - 3D Packaging Studio & Typography Configurator</title>
+    <!-- Google Fonts per Tipografia di Lusso -->
+    <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,700;1,6..96,400&family=Cinzel:wght@400;600;700&family=Montserrat:wght@300;400;600&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Cormorant+Garamond:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-dark: #06080d;
+            --panel-bg: rgba(10, 14, 23, 0.88);
+            --border-color: rgba(234, 179, 8, 0.3);
+            --gold: #eab308;
+            --gold-hover: #ca8a04;
+            --text-light: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-light); overflow: hidden; height: 100vh; width: 100vw; }
+
+        #webgl-container { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
+
+        /* UI Header */
+        .header-title {
+            position: absolute; top: 20px; left: 24px; z-index: 10;
+            pointer-events: none;
+        }
+        .header-title h1 { font-size: 1.3rem; font-weight: 700; color: var(--gold); letter-spacing: 0.05em; text-transform: uppercase; }
+        .header-title p { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
+
+        /* Control Panel Side Bar */
+        .control-panel {
+            position: absolute; top: 20px; right: 24px; z-index: 10;
+            width: 360px; max-height: calc(100vh - 40px); overflow-y: auto;
+            background: var(--panel-bg); backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color); border-radius: 14px;
+            padding: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            scrollbar-width: thin; scrollbar-color: var(--gold) transparent;
+        }
+
+        .panel-section { margin-bottom: 22px; padding-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+        .panel-section:last-child { margin-bottom: 0; border-bottom: none; }
+        .section-title { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gold); margin-bottom: 12px; font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
+
+        .control-group { margin-bottom: 12px; }
+        .control-group label { display: block; font-size: 0.73rem; color: var(--text-muted); margin-bottom: 5px; }
+
+        /* Inputs Styling */
+        input[type="text"], select {
+            width: 100%; background: #020617; border: 1px solid #334155; color: #fff;
+            padding: 8px 10px; border-radius: 6px; font-size: 0.8rem; outline: none; transition: border-color 0.2s;
+        }
+        input[type="text"]:focus, select:focus { border-color: var(--gold); }
+
+        .range-container { display: flex; align-items: center; gap: 10px; }
+        input[type="range"] { flex: 1; accent-color: var(--gold); cursor: pointer; }
+        .range-value { font-size: 0.75rem; color: var(--gold); font-weight: 600; min-width: 35px; text-align: right; }
+
+        /* Color Swatches Grid */
+        .color-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+        .color-btn {
+            width: 100%; aspect-ratio: 1; border-radius: 50%; border: 2px solid #334155;
+            cursor: pointer; transition: transform 0.2s, border-color 0.2s; position: relative;
+        }
+        .color-btn:hover { transform: scale(1.1); }
+        .color-btn.active { border-color: var(--gold); transform: scale(1.15); box-shadow: 0 0 10px rgba(234, 179, 8, 0.4); }
+
+        /* Action Buttons */
+        .btn-group { display: flex; gap: 8px; margin-top: 8px; }
+        .btn {
+            flex: 1; padding: 10px; background: #1e293b; border: 1px solid #334155;
+            color: #fff; font-size: 0.75rem; font-weight: 600; border-radius: 6px;
+            cursor: pointer; transition: all 0.2s; text-align: center;
+        }
+        .btn:hover { background: #334155; border-color: var(--gold); color: var(--gold); }
+        .btn.active { background: var(--gold); color: #020617; border-color: var(--gold); font-weight: 700; }
+        
+        .btn-cad {
+            width: 100%; padding: 12px; background: linear-gradient(135deg, #eab308, #ca8a04);
+            color: #020617; font-weight: 700; font-size: 0.8rem; border: none; border-radius: 8px;
+            cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; margin-top: 6px;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-cad:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(234, 179, 8, 0.4); }
+
+        /* Technical Specs Card */
+        .tech-card {
+            position: absolute; bottom: 24px; left: 24px; z-index: 10;
+            width: 320px; background: var(--panel-bg); backdrop-filter: blur(16px);
+            border: 1px solid #1e293b; border-radius: 12px; padding: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+        }
+        .tech-card h3 { font-size: 0.85rem; color: #fff; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+        .tech-list { list-style: none; font-size: 0.72rem; color: var(--text-muted); line-height: 1.6; }
+        .tech-list strong { color: var(--text-light); }
+
+        @media (max-width: 768px) {
+            .control-panel { width: calc(100% - 32px); top: auto; bottom: 16px; right: 16px; left: 16px; max-height: 50vh; }
+            .tech-card { display: none; }
+        }
+    </style>
+
+    <!-- Three.js & OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+    <div class="header-title">
+        <h1>Haute Parfumerie 3D</h1>
+        <p>Studio Tipografico &amp; Visualizzatore CAD Packaging</p>
+    </div>
+
+    <div id="webgl-container"></div>
+
+    <!-- Scheda Tecniche -->
+    <div class="tech-card">
+        <h3>📐 Specifiche Tecniche Packaging</h3>
+        <ul class="tech-list">
+            <li><strong>Flacone:</strong> Vetro PCR Extra-Chiaro 100ml (55×55×90 mm)</li>
+            <li><strong>Etichetta:</strong> Serigrafia Foil Diretta UV ad Alta Risoluzione</li>
+            <li><strong>Fondo Vetro:</strong> 18 mm Poinçon Pesante</li>
+            <li><strong>Capsula:</strong> Zama Magnetica / Bio-Materiale (Ø 32 mm)</li>
+            <li><strong>Astuccio:</strong> Carte Goffrate FSC 350 g/m² (61.5×144 mm)</li>
+        </ul>
+    </div>
+
+    <!-- Pannello di Controllo -->
+    <div class="control-panel">
+        
+        <!-- Vista Esplosa -->
+        <div class="panel-section">
+            <div class="section-title">
+                <span>💥 Vista Esplosa Struttura</span>
+                <span id="explodeVal" class="range-value">0%</span>
+            </div>
+            <div class="control-group">
+                <input type="range" id="explodeRange" min="0" max="100" value="0">
+            </div>
+            <div class="btn-group">
+                <button class="btn" id="btnRotate">🔄 Auto Rotazione</button>
+                <button class="btn" id="btnResetView">🎯 Reset Camera</button>
+            </div>
+        </div>
+
+        <!-- Personalizzazione Tipografica (BRAND & TESTI) -->
+        <div class="panel-section">
+            <div class="section-title">✍️ Personalizzazione Tipografica</div>
+            
+            <div class="control-group">
+                <label>Nome Maison (Livello 1)</label>
+                <input type="text" id="inputMaison" value="MAISON D'ALCHIMIE" maxlength="30">
+            </div>
+            
+            <div class="control-group">
+                <label>Nome Fragranza (Livello 2)</label>
+                <input type="text" id="inputFragrance" value="L'ÉLIXIR RARE" maxlength="25">
+            </div>
+
+            <div class="control-group">
+                <label>Dettaglio Concentrazione (Livello 3)</label>
+                <input type="text" id="inputSubtext" value="EAU DE PARFUM - 100 ML" maxlength="35">
+            </div>
+
+            <div class="control-group">
+                <label>Carattere Font (Font Family)</label>
+                <select id="fontSelect">
+                    <option value="'Bodoni Moda', serif">Bodoni Moda (Serif High-Contrast)</option>
+                    <option value="'Cinzel', serif">Cinzel (Roman Imperial Classic)</option>
+                    <option value="'Playfair Display', serif">Playfair Display (Haute Elegance)</option>
+                    <option value="'Cormorant Garamond', serif">Cormorant Garamond (Graceful Serif)</option>
+                    <option value="'Montserrat', sans-serif">Montserrat (Modern Luxury Sans)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>Colore Stampa / Foil Hot Stamping</label>
+                <select id="textColorSelect">
+                    <option value="#d4af37">Foil Oro Lucido 24K</option>
+                    <option value="#f8fafc">Foil Argento Cristallo</option>
+                    <option value="#f43f5e">Foil Oro Rosa Metallic</option>
+                    <option value="#0f172a">Nero Lucido Serigrafico</option>
+                    <option value="#ffffff">Bianco Puro Opaco</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <div class="section-title" style="color:var(--text-muted); font-size:0.7rem; margin-bottom:4px;">
+                    <span>Dimensione Testi</span>
+                    <span id="textSizeVal" class="range-value">1.0x</span>
+                </div>
+                <input type="range" id="textSizeRange" min="0.7" max="1.4" step="0.05" value="1.0">
+            </div>
+        </div>
+
+        <!-- Esposizione Fustella CAD -->
+        <div class="panel-section">
+            <div class="section-title">📐 Cartotecnica &amp; Lay-out</div>
+            <button class="btn-cad" id="btnOpenDieCut">
+                <span>🖨️ Apri Fustella Stesa (2D CAD)</span>
+            </button>
+        </div>
+
+        <!-- Capsula & Materiali -->
+        <div class="panel-section">
+            <div class="section-title">👑 Finitura Capsula in Zama</div>
+            <div class="color-grid" id="capColors">
+                <button class="color-btn active" style="background: linear-gradient(135deg, #d4af37, #fef08a);" data-finish="gold" title="Oro Lucido"></button>
+                <button class="color-btn" style="background: linear-gradient(135deg, #0f172a, #334155);" data-finish="black" title="Nero Magnetico"></button>
+                <button class="color-btn" style="background: linear-gradient(135deg, #e2e8f0, #94a3b8);" data-finish="chrome" title="Cromo Specchio"></button>
+                <button class="color-btn" style="background: linear-gradient(135deg, #b45309, #f97316);" data-finish="copper" title="Rame / Oro Rosa"></button>
+            </div>
+        </div>
+
+        <!-- Liquido Fragranza -->
+        <div class="panel-section">
+            <div class="section-title">🧪 Tonalità Fragranza Olfattiva</div>
+            <div class="color-grid" id="liquidColors">
+                <button class="color-btn active" style="background: #eab308;" data-color="0xeab308" title="Oro Ambrato"></button>
+                <button class="color-btn" style="background: #f43f5e;" data-color="0xf43f5e" title="Rosa Champagne"></button>
+                <button class="color-btn" style="background: #10b981;" data-color="0x10b981" title="Verde Smeraldo"></button>
+                <button class="color-btn" style="background: #38bdf8;" data-color="0x38bdf8" title="Blu Acqua Profonda"></button>
+                <button class="color-btn" style="background: #e2e8f0;" data-color="0xf8fafc" title="Cristallo Trasparente"></button>
+            </div>
+        </div>
+
+        <!-- Astuccio Esterno -->
+        <div class="panel-section">
+            <div class="section-title">📦 Astuccio Esterno (Fedrigoni)</div>
+            <div class="control-group">
+                <label>Colore Cartoncino</label>
+                <select id="boxColorSelect">
+                    <option value="0x0f172a">Nero Haute Parfumerie (Dark Slate)</option>
+                    <option value="0xf8fafc">Bianco Algro Design Pure</option>
+                    <option value="0x064e3b">Verde Smeraldo Lusso</option>
+                    <option value="0x1e1b4b">Blu Notte Reale</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Set Luci Studio -->
+        <div class="panel-section">
+            <div class="section-title">💡 Set di Luce Studio</div>
+            <div class="btn-group" id="lightPresetGroup">
+                <button class="btn active" data-preset="studio">Studio Neutral</button>
+                <button class="btn" data-preset="warm">Warm Luxury</button>
+                <button class="btn" data-preset="dramatic">Dramatic Contrast</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- 1. INIZIALIZZAZIONE THREE.JS SCENA ---
+        const container = document.getElementById('webgl-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x06080d);
+        scene.fog = new THREE.FogExp2(0x06080d, 0.015);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 15, 35);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 + 0.05;
+        controls.minDistance = 10;
+        controls.maxDistance = 70;
+        controls.target.set(0, 6, 0);
+
+        // --- 2. ILLUMINAZIONE STUDIO ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+        scene.add(ambientLight);
+
+        const keyLight = new THREE.DirectionalLight(0xfffaed, 2.5);
+        keyLight.position.set(15, 25, 15);
+        keyLight.castShadow = true;
+        keyLight.shadow.mapSize.width = 2048;
+        keyLight.shadow.mapSize.height = 2048;
+        keyLight.shadow.bias = -0.0001;
+        scene.add(keyLight);
+
+        const fillLight = new THREE.DirectionalLight(0x93c5fd, 1.2);
+        fillLight.position.set(-15, 15, -10);
+        scene.add(fillLight);
+
+        const rimLight = new THREE.DirectionalLight(0xffeedd, 2.0);
+        rimLight.position.set(0, 20, -20);
+        scene.add(rimLight);
+
+        // Pedestallo Riflettente
+        const floorGeo = new THREE.PlaneGeometry(100, 100);
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x0a0e17, roughness: 0.25, metalness: 0.5 });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        // --- 3. GENERATORE TESSITURA CANVAS DINAMICA (SERIGRAFIA/FOIL) ---
+        const labelCanvas = document.createElement('canvas');
+        labelCanvas.width = 1024;
+        labelCanvas.height = 1024;
+        const labelCtx = labelCanvas.getContext('2d');
+        const labelTexture = new THREE.CanvasTexture(labelCanvas);
+        labelTexture.anisotropy = 16;
+
+        function updateLabelTexture() {
+            const maisonText = document.getElementById('inputMaison').value || "MAISON D'ALCHIMIE";
+            const fragranceText = document.getElementById('inputFragrance').value || "L'ÉLIXIR RARE";
+            const subtext = document.getElementById('inputSubtext').value || "EAU DE PARFUM - 100 ML";
+            const fontFamily = document.getElementById('fontSelect').value;
+            const textColor = document.getElementById('textColorSelect').value;
+            const scale = parseFloat(document.getElementById('textSizeRange').value);
+
+            document.getElementById('textSizeVal').innerText = scale.toFixed(2) + 'x';
+
+            // Pulisci Canvas (Trasparente)
+            labelCtx.clearRect(0, 0, 1024, 1024);
+
+            labelCtx.textAlign = 'center';
+            labelCtx.textBaseline = 'middle';
+            labelCtx.fillStyle = textColor;
+
+            // Livello 1: Maison
+            labelCtx.font = `${Math.round(40 * scale)}px ${fontFamily}`;
+            labelCtx.fillText(maisonText.toUpperCase(), 512, 360);
+
+            // Filetto Decorativo
+            labelCtx.strokeStyle = textColor;
+            labelCtx.lineWidth = Math.max(1, Math.round(2 * scale));
+            labelCtx.beginPath();
+            labelCtx.moveTo(412, 410);
+            labelCtx.lineTo(612, 410);
+            labelCtx.stroke();
+
+            // Livello 2: Fragranza
+            labelCtx.font = `600 ${Math.round(62 * scale)}px ${fontFamily}`;
+            labelCtx.fillText(fragranceText.toUpperCase(), 512, 500);
+
+            // Livello 3: Concentrazione
+            labelCtx.font = `300 ${Math.round(26 * scale)}px 'Montserrat', sans-serif`;
+            labelCtx.fillText(subtext.toUpperCase(), 512, 600);
+
+            labelTexture.needsUpdate = true;
+        }
+
+        // --- 4. MATERIALI E COSTRUZIONE MODELLI 3D ---
+        const glassMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0xffffff, transparent: true, opacity: 1, transmission: 0.95,
+            roughness: 0.04, ior: 1.52, thickness: 1.8, reflectivity: 0.9, clearcoat: 1.0
+        });
+
+        const liquidMaterial = new THREE.MeshPhysicalMaterial({
+            color: new THREE.Color(0xeab308), transparent: true, opacity: 0.85,
+            transmission: 0.5, roughness: 0.1, ior: 1.33
+        });
+
+        const capMaterial = new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.95, roughness: 0.18 });
+        const collarMaterial = new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.95, roughness: 0.15 });
+        const boxMaterial = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.75, metalness: 0.05 });
+
+        // Materiale Etichetta UV/Foil
+        const labelMaterial = new THREE.MeshStandardMaterial({
+            map: labelTexture, transparent: true, roughness: 0.2, metalness: 0.8, depthWrite: false
+        });
+
+        const rootGroup = new THREE.Group();
+        scene.add(rootGroup);
+
+        const bottleGroup = new THREE.Group();
+        const liquidGroup = new THREE.Group();
+        const collarGroup = new THREE.Group();
+        const capGroup = new THREE.Group();
+        const boxGroup = new THREE.Group();
+
+        rootGroup.add(bottleGroup);
+        rootGroup.add(liquidGroup);
+        rootGroup.add(collarGroup);
+        rootGroup.add(capGroup);
+        rootGroup.add(boxGroup);
+
+        // Flacone Vetro (5.5x5.5 x 9.0 cm)
+        const outerGlassGeo = new THREE.BoxGeometry(5.5, 9.0, 5.5);
+        const outerGlassMesh = new THREE.Mesh(outerGlassGeo, glassMaterial);
+        outerGlassMesh.position.y = 4.5;
+        outerGlassMesh.castShadow = true;
+        bottleGroup.add(outerGlassMesh);
+
+        // Collo Vetro
+        const neckGeo = new THREE.CylinderGeometry(0.8, 0.9, 1.2, 32);
+        const neckMesh = new THREE.Mesh(neckGeo, glassMaterial);
+        neckMesh.position.y = 9.6;
+        bottleGroup.add(neckMesh);
+
+        // Serigrafia / Etichetta Frontale Flacone
+        const bottleLabelGeo = new THREE.PlaneGeometry(5.0, 5.0);
+        const bottleLabelMesh = new THREE.Mesh(bottleLabelGeo, labelMaterial);
+        bottleLabelMesh.position.set(0, 4.5, 2.76); // Aderente alla superficie frontale del vetro
+        bottleGroup.add(bottleLabelMesh);
+
+        // Liquido
+        const liquidGeo = new THREE.BoxGeometry(4.5, 5.8, 4.5);
+        const liquidMesh = new THREE.Mesh(liquidGeo, liquidMaterial);
+        liquidMesh.position.y = 4.7;
+        liquidGroup.add(liquidMesh);
+
+        // Collarino & Spray
+        const collarGeo = new THREE.CylinderGeometry(0.85, 0.85, 1.0, 32);
+        const collarMesh = new THREE.Mesh(collarGeo, collarMaterial);
+        collarMesh.position.y = 9.8;
+        collarGroup.add(collarMesh);
+
+        const sprayHeadGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.6, 24);
+        const sprayHeadMesh = new THREE.Mesh(sprayHeadGeo, collarMaterial);
+        sprayHeadMesh.position.y = 10.4;
+        collarGroup.add(sprayHeadMesh);
+
+        // Capsula Zama (Diametro 3.2cm, H 3.8cm)
+        const capGeo = new THREE.CylinderGeometry(1.6, 1.6, 3.8, 48);
+        const capMesh = new THREE.Mesh(capGeo, capMaterial);
+        capMesh.position.y = 12.3;
+        capMesh.castShadow = true;
+        capGroup.add(capMesh);
+
+        // Astuccio Secondario
+        const boxGeo = new THREE.BoxGeometry(6.15, 14.4, 6.15);
+        const boxMesh = new THREE.Mesh(boxGeo, boxMaterial);
+        boxMesh.position.set(10, 7.2, 0);
+        boxMesh.castShadow = true;
+        boxGroup.add(boxMesh);
+
+        // Serigrafia / Hot Stamping su Fronte Astuccio
+        const boxLabelGeo = new THREE.PlaneGeometry(5.5, 5.5);
+        const boxLabelMesh = new THREE.Mesh(boxLabelGeo, labelMaterial);
+        boxLabelMesh.position.set(10, 8.2, 3.09);
+        boxGroup.add(boxLabelMesh);
+
+        // Inizializza Tassello Grafico
+        setTimeout(updateLabelTexture, 200);
+
+        // --- 5. EVENT LISTENERS PER TIPOGRAFIA ---
+        ['inputMaison', 'inputFragrance', 'inputSubtext', 'fontSelect', 'textColorSelect', 'textSizeRange'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updateLabelTexture);
+        });
+
+        // --- 6. APERTURA FUSTELLA STESA CAD 2D (NUOVA FINESTRA) ---
+        document.getElementById('btnOpenDieCut').addEventListener('click', () => {
+            const maison = document.getElementById('inputMaison').value || "MAISON D'ALCHIMIE";
+            const fragrance = document.getElementById('inputFragrance').value || "L'ÉLIXIR RARE";
+            const subtext = document.getElementById('inputSubtext').value || "EAU DE PARFUM - 100 ML";
+            const font = document.getElementById('fontSelect').value;
+            const color = document.getElementById('textColorSelect').value;
+
+            const dieCutWin = window.open("", "_blank", "width=1250,height=880");
+            if (!dieCutWin) {
+                alert("Attiva i pop-up del browser per aprire il tracciato fustella CAD.");
+                return;
+            }
+
+            const cadHTML = `
+            <!DOCTYPE html>
+            <html lang="it">
+            <head>
+                <meta charset="UTF-8">
+                <title>Fustella Stesa 2D CAD - Haute Parfumerie Ecosystem</title>
+                <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:wght@400;700&family=Cinzel:wght@400;700&family=Montserrat:wght@300;400;600&family=Playfair+Display&family=Cormorant+Garamond&display=swap" rel="stylesheet">
+                <style>
+                    body { background: #080c14; color: #f8fafc; font-family: -apple-system, sans-serif; padding: 24px; margin: 0; }
+                    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #1e293b; padding-bottom: 16px; }
+                    h1 { color: #eab308; font-size: 1.4rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+                    p { font-size: 0.82rem; color: #94a3b8; margin-top: 4px; }
+                    
+                    .legend { display: flex; gap: 20px; background: #0f172a; border: 1px solid #1e293b; padding: 12px 20px; border-radius: 8px; font-size: 0.78rem; margin-bottom: 20px; flex-wrap: wrap; }
+                    .legend-item { display: flex; align-items: center; gap: 8px; }
+                    .line-sample { width: 28px; height: 3px; display: inline-block; }
+                    
+                    .canvas-container { background: #ffffff; border-radius: 12px; padding: 40px; display: flex; justify-content: center; box-shadow: 0 20px 40px rgba(0,0,0,0.6); overflow: auto; }
+                    svg { max-width: 1050px; width: 100%; height: auto; }
+
+                    .btn-print { background: linear-gradient(135deg, #eab308, #ca8a04); color: #020617; border: none; padding: 10px 20px; font-weight: 700; border-radius: 6px; cursor: pointer; }
+                    .btn-print:hover { opacity: 0.9; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <div>
+                        <h1>📐 Layout Fustella Stesa CAD (2D Die-Cut Layout)</h1>
+                        <p>Tracciato Vettoriale Cartotecnico Scala 1:1 per Astuccio Monostrato $350\text{ g/m}^2$ con Sovraimpressione Grafica.</p>
+                    </div>
+                    <button class="btn-print" onclick="window.print()">🖨️ Stampa Fustella PDF</button>
+                </div>
+
+                <div class="legend">
+                    <div class="legend-item"><span class="line-sample" style="background:#dc2626;"></span> <strong>Taglio Netto (#dc2626)</strong></div>
+                    <div class="legend-item"><span class="line-sample" style="border-top:2px dashed #2563eb;"></span> <strong>Cordonatura / Piega (#2563eb)</strong></div>
+                    <div class="legend-item"><span class="line-sample" style="border-top:2px dashed #16a34a;"></span> <strong>Mezzo Taglio / Incisione (#16a34a)</strong></div>
+                    <div class="legend-item"><span class="line-sample" style="background:rgba(100,116,139,0.25); border:1px solid #64748b;"></span> <strong>Area Incollaggio Priva Vernice</strong></div>
+                </div>
+
+                <div class="canvas-container">
+                    <svg viewBox="0 0 1100 680" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <pattern id="gluePattern" width="10" height="10" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+                                <line x1="0" y1="0" x2="0" y2="10" stroke="#94a3b8" stroke-width="1.5" />
+                            </pattern>
+                        </defs>
+
+                        <!-- PANNELLI PRINCIPALI (180px largh x 400px alt -> Scala Visiva) -->
+                        <!-- Glue Tab (Patta Incollaggio 40px) -->
+                        <path d="M 80 140 L 120 160 L 120 520 L 80 540 Z" fill="url(#gluePattern)" stroke="#dc2626" stroke-width="2"/>
+                        <text x="95" y="340" fill="#475569" font-size="10" transform="rotate(-90 95 340)" text-anchor="middle">Patta Incollaggio (14mm)</text>
+
+                        <!-- Pannello Posteriore -->
+                        <rect x="120" y="140" width="180" height="400" fill="none" stroke="#dc2626" stroke-width="2"/>
+                        <text x="210" y="340" fill="#94a3b8" font-size="12" text-anchor="middle">Pannello Posteriore</text>
+
+                        <!-- Pannello Lato Dx -->
+                        <rect x="300" y="140" width="180" height="400" fill="none" stroke="#dc2626" stroke-width="2"/>
+                        <text x="390" y="340" fill="#94a3b8" font-size="12" text-anchor="middle">Lato Destro</text>
+
+                        <!-- Pannello FRONTE (Sito Stampa Grafica) -->
+                        <rect x="480" y="140" width="180" height="400" fill="#fafafa" stroke="#dc2626" stroke-width="2"/>
+                        
+                        <!-- SOVRAIMPRESSIONE GRAFICA PERSONALIZZATA SU PANNELLO FRONTE -->
+                        <g>
+                            <!-- Maison -->
+                            <text x="570" y="270" fill="${color}" font-family="${font}" font-size="13" text-anchor="middle" letter-spacing="2">${maison.toUpperCase()}</text>
+                            <line x1="530" y1="285" x2="610" y2="285" stroke="${color}" stroke-width="1"/>
+                            <!-- Fragrance -->
+                            <text x="570" y="330" fill="${color}" font-family="${font}" font-weight="bold" font-size="20" text-anchor="middle" letter-spacing="1">${fragrance.toUpperCase()}</text>
+                            <!-- Subtext -->
+                            <text x="570" y="375" fill="${color}" font-family="Montserrat, sans-serif" font-size="9" text-anchor="middle">${subtext.toUpperCase()}</text>
+                        </g>
+
+                        <!-- Pannello Lato Sx -->
+                        <rect x="660" y="140" width="180" height="400" fill="none" stroke="#dc2626" stroke-width="2"/>
+                        <text x="750" y="340" fill="#94a3b8" font-size="12" text-anchor="middle">Lato Sinistro</text>
+
+                        <!-- LINEE DI CORDONATURA/PIEGA (BLU TRATTEGGIATO) -->
+                        <line x1="120" y1="140" x2="120" y2="540" stroke="#2563eb" stroke-width="2" stroke-dasharray="6,4"/>
+                        <line x1="300" y1="140" x2="300" y2="540" stroke="#2563eb" stroke-width="2" stroke-dasharray="6,4"/>
+                        <line x1="480" y1="140" x2="480" y2="540" stroke="#2563eb" stroke-width="2" stroke-dasharray="6,4"/>
+                        <line x1="660" y1="140" x2="660" y2="540" stroke="#2563eb" stroke-width="2" stroke-dasharray="6,4"/>
+                        <line x1="840" y1="140" x2="840" y2="540" stroke="#2563eb" stroke-width="2" stroke-dasharray="6,4"/>
+
+                        <line x1="120" y1="140" x2="840" y2="140" stroke="#2563eb" stroke-width="2" stroke-dasharray="6,4"/>
+                        <line x1="120" y1="540" x2="840" y2="540" stroke="#2563eb" stroke-width="2" stroke-dasharray="6,4"/>
+
+                        <!-- PATTE SUPERIORI (Tuck Flap & Dust Flaps) -->
+                        <!-- Dust Flap 1 -->
+                        <path d="M 300 140 C 300 90, 310 80, 320 80 L 460 80 C 470 80, 480 90, 480 140 Z" fill="none" stroke="#dc2626" stroke-width="2"/>
+                        <!-- Tuck Flap Principale (su Fronte) -->
+                        <path d="M 480 140 L 480 70 C 480 50, 490 40, 510 40 L 630 40 C 650 40, 660 50, 660 70 L 660 140 Z" fill="none" stroke="#dc2626" stroke-width="2"/>
+                        <line x1="480" y1="70" x2="660" y2="70" stroke="#16a34a" stroke-width="2" stroke-dasharray="4,4"/> <!-- Mezzo taglio d'invito -->
+                        <!-- Dust Flap 2 -->
+                        <path d="M 660 140 C 660 90, 670 80, 680 80 L 820 80 C 830 80, 840 90, 840 140 Z" fill="none" stroke="#dc2626" stroke-width="2"/>
+
+                        <!-- FONDO AUTO-MONTANTE / CHIUSURA INFERIORE -->
+                        <path d="M 120 540 L 210 610 L 300 540 Z" fill="none" stroke="#dc2626" stroke-width="2"/>
+                        <path d="M 300 540 L 390 610 L 480 540 Z" fill="none" stroke="#dc2626" stroke-width="2"/>
+                        <path d="M 480 540 L 570 610 L 660 540 Z" fill="none" stroke="#dc2626" stroke-width="2"/>
+                        <path d="M 660 540 L 750 610 L 840 540 Z" fill="none" stroke="#dc2626" stroke-width="2"/>
+
+                        <!-- QUOTE E ANNOTAZIONI TECNICHE CAD -->
+                        <g stroke="#0284c7" stroke-width="1">
+                            <!-- Quota Larghezza Pannello -->
+                            <line x1="480" y1="125" x2="660" y2="125"/>
+                            <text x="570" y="120" fill="#0284c7" font-size="10" text-anchor="middle">W = 61.5 mm</text>
+                            <!-- Quota Altezza -->
+                            <line x1="855" y1="140" x2="855" y2="540"/>
+                            <text x="895" y="340" fill="#0284c7" font-size="10" transform="rotate(90 895 340)" text-anchor="middle">H = 144 mm</text>
+                        </g>
+                    </svg>
+                </div>
+            </body>
+            </html>
+            `;
+
+            dieCutWin.document.write(cadHTML);
+            dieCutWin.document.close();
+        });
+
+        // --- 7. CONTROLLI INTERATTIVI UI ---
+        // Vista Esplosa Slider
+        const explodeRange = document.getElementById('explodeRange');
+        const explodeVal = document.getElementById('explodeVal');
+
+        explodeRange.addEventListener('input', (e) => {
+            const factor = parseFloat(e.target.value) / 100;
+            explodeVal.innerText = `${Math.round(factor * 100)}%`;
+
+            liquidGroup.position.y = -factor * 1.5;
+            collarGroup.position.y = factor * 3.0;
+            capGroup.position.y = factor * 7.0;
+            boxGroup.position.x = 10 + (factor * 6.0);
+            boxGroup.position.z = -factor * 2.0;
+        });
+
+        // Auto Rotazione
+        let isAutoRotating = false;
+        const btnRotate = document.getElementById('btnRotate');
+        btnRotate.addEventListener('click', () => {
+            isAutoRotating = !isAutoRotating;
+            btnRotate.classList.toggle('active', isAutoRotating);
+        });
+
+        // Reset Camera
+        document.getElementById('btnResetView').addEventListener('click', () => {
+            controls.reset();
+            camera.position.set(0, 15, 35);
+            controls.target.set(0, 6, 0);
+        });
+
+        // Finitura Capsula
+        document.querySelectorAll('#capColors .color-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('#capColors .color-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                const finish = e.target.getAttribute('data-finish');
+                if (finish === 'gold') {
+                    capMaterial.color.setHex(0xd4af37); capMaterial.metalness = 0.95; capMaterial.roughness = 0.18;
+                } else if (finish === 'black') {
+                    capMaterial.color.setHex(0x0f172a); capMaterial.metalness = 0.2; capMaterial.roughness = 0.8;
+                } else if (finish === 'chrome') {
+                    capMaterial.color.setHex(0xf8fafc); capMaterial.metalness = 1.0; capMaterial.roughness = 0.05;
+                } else if (finish === 'copper') {
+                    capMaterial.color.setHex(0xc2410c); capMaterial.metalness = 0.9; capMaterial.roughness = 0.25;
+                }
+            });
+        });
+
+        // Colore Liquido Fragranza
+        document.querySelectorAll('#liquidColors .color-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('#liquidColors .color-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                const hex = parseInt(e.target.getAttribute('data-color'));
+                liquidMaterial.color.setHex(hex);
+            });
+        });
+
+        // Colore Box Astuccio
+        document.getElementById('boxColorSelect').addEventListener('change', (e) => {
+            boxMaterial.color.setHex(parseInt(e.target.value));
+        });
+
+        // Preset Illuminazione
+        document.querySelectorAll('#lightPresetGroup .btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('#lightPresetGroup .btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+
+                const preset = e.target.getAttribute('data-preset');
+                if (preset === 'studio') {
+                    keyLight.color.setHex(0xfffaed); keyLight.intensity = 2.5;
+                    fillLight.color.setHex(0x93c5fd); fillLight.intensity = 1.2;
+                } else if (preset === 'warm') {
+                    keyLight.color.setHex(0xfde047); keyLight.intensity = 3.0;
+                    fillLight.color.setHex(0xf97316); fillLight.intensity = 0.8;
+                } else if (preset === 'dramatic') {
+                    keyLight.color.setHex(0xffffff); keyLight.intensity = 4.0;
+                    fillLight.color.setHex(0x1e1b4b); fillLight.intensity = 0.3;
+                }
+            });
+        });
+
+        // Resize Listener
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // --- 8. RENDER LOOP ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (isAutoRotating) {
+                rootGroup.rotation.y += 0.006;
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    </script>
+</body>
+</html>

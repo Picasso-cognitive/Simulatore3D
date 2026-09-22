@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Mappa 200 Istituzioni, Fiere & Università della Cosmetica</title>
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: #030712; color: #fff; height: 100vh; overflow: hidden; display: flex; }
+        #network { flex: 1; height: 100vh; background: #030712; }
+        .ui-panel { position: absolute; top: 16px; left: 16px; z-index: 10; background: rgba(15,23,42,0.95); padding: 14px 22px; border-radius: 12px; border: 2px solid #f59e0b; display: flex; gap: 16px; align-items: center; }
+        a.btn-home { color: #f59e0b; text-decoration: none; font-weight: 900; font-size: 0.9rem; text-transform: uppercase; }
+        .rank-legend { display: flex; gap: 12px; font-size: 0.8rem; color: #fff; font-weight: bold; }
+        .legend-item { display: flex; align-items: center; gap: 6px; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; border: 1.5px solid #fff; }
+        
+        .sidebar { width: 380px; height: 100vh; background: #0f172a; border-left: 2px solid #f59e0b; padding: 28px; overflow-y: auto; display: flex; flex-direction: column; }
+        .badge { background: #f59e0b; color: #000; font-size: 0.75rem; font-weight: 900; padding: 4px 8px; border-radius: 4px; align-self: flex-start; margin-bottom: 12px; }
+        h2 { font-size: 1.5rem; margin-bottom: 6px; color: #ffffff; font-weight: 800; }
+        .rank-tag { font-size: 0.85rem; font-weight: 900; color: #fbbf24; margin-bottom: 16px; text-transform: uppercase; }
+        p { font-size: 0.9rem; color: #cbd5e1; line-height: 1.6; margin-bottom: 20px; }
+        .rel-box { background: #1e293b; border: 1px solid #475569; padding: 14px; border-radius: 8px; margin-bottom: 20px; }
+        .rel-title { font-size: 0.75rem; text-transform: uppercase; color: #f59e0b; font-weight: 900; margin-bottom: 8px; }
+        
+        .btn-group { display: flex; flex-direction: column; gap: 10px; margin-top: auto; }
+        a.ext-btn { display: block; width: 100%; padding: 12px; text-align: center; font-weight: 900; font-size: 0.85rem; border-radius: 8px; text-decoration: none; text-transform: uppercase; }
+        .btn-img { background: #f59e0b; color: #000; }
+        .btn-web { background: #1e293b; color: #f59e0b; border: 1px solid #f59e0b; }
+    </style>
+</head>
+<body>
+    <div class="ui-panel">
+        <a href="index.html" class="btn-home">⬅ Hub Cosmetica</a>
+        <div class="rank-legend">
+            <span class="legend-item"><span class="dot" style="background:#f59e0b;"></span> Rank 1 (Ente/Fiera/Ateneo)</span>
+            <span class="legend-item"><span class="dot" style="background:#d97706;"></span> Rank 2 (Laboratorio/Dipartimento)</span>
+            <span class="legend-item"><span class="dot" style="background:#b45309;"></span> Rank 3 (Norma/Protocollo)</span>
+        </div>
+    </div>
+
+    <div id="network"></div>
+
+    <div class="sidebar">
+        <span class="badge">ISTITUTI, FIERE & UNIVERSITÀ</span>
+        <h2 id="s-title">Seleziona un Ente</h2>
+        <div class="rank-tag" id="s-rank">Rank: -</div>
+        <p id="s-desc">Clicca su un nodo per consultare le fiere mondiali della bellezza, i centri di ricerca cosmetologica e gli enti di certificazione.</p>
+        
+        <div class="rel-box">
+            <div class="rel-title">Network Istituzionale:</div>
+            <div id="s-rel" style="font-size:0.85rem; color:#fff;">Nessun nodo selezionato.</div>
+        </div>
+
+        <div class="btn-group" id="s-link-container"></div>
+    </div>
+
+    <script>
+        const institutions = [
+            { name: "Cosmoprof Worldwide Bologna", rank: 1, desc: "La fiera leader mondiale per l'intera industria della bellezza e della cosmetica professionale." },
+            { name: "Cosmetica Italia", rank: 1, desc: "L'associazione nazionale delle imprese cosmetiche che rappresenta oltre 600 aziende del settore." },
+            { name: "Accademia del Profumo", rank: 1, desc: "Istituzione fondata per valorizzare il profumo come elemento d'arte, cultura e creatività Made in Italy." },
+            { name: "Polo della Cosmesi Associazione", rank: 1, desc: "Associazione che unisce le eccellenze B2B della filiera cosmetica: dalla formulazione al macchinario." },
+            { name: "Master in Scienza e Tecnologia Cosmetiche (Univ. Ferrara)", rank: 1, desc: "Il più antico e rinomato master universitario italiano per la formazione di formulatori e cosmetologi (ICOT)." },
+            { name: "Master in Cosmetologia Università di Pavia", rank: 1, desc: "Centro di eccellenza accademico per la ricerca sulla veicolazione cutanea e valutazione di sicurezza." },
+            { name: "SICC - Società Italiana di Chimica e Scienze Cosmetologiche", rank: 1, desc: "Associazione scientifica che promuove il progresso della scienza cosmetica attraverso congressi e formazione." },
+            { name: "ICEA (Istituto Certificazione Etica ed Ambientale)", rank: 1, desc: "Ente di riferimento per la certificazione dei cosmetici biologici e naturali in Italia." },
+            { name: "CCPB Cosmetici Biologici", rank: 1, desc: "Organismo di controllo e certificazione per la sostenibilità e la purezza degli ingredienti biologici." },
+            { name: "Museo del Profumo di Milano", rank: 1, desc: "Unico museo italiano dedicato alla storia della flaconeria e alle fragranze d'epoca d'alta gioielleria." },
+            { name: "Esxence - The Art Perfumery Event", rank: 1, desc: "L'appuntamento mondiale di riferimento per la profumeria artistica e olfattiva di nicchia a Milano." },
+            { name: "Cosmopack", rank: 1, desc: "Il salone internazionale leader dedicato alla filiera produttiva della cosmetica (packaging, terzismo e formule)." },
+            { name: "Istituto Superiore di Sanità - Sezione Cosmetovigilanza", rank: 1, desc: "Ente regolatore responsabile della sorveglianza sulla sicurezza dei cosmetici immessi sul mercato." },
+            { name: "SANA Bologna (Sezione Biocosmesi)", rank: 1, desc: "Salone internazionale del biologico e del naturale focalizzato sull'ecobio cosmesi." },
+            { name: "Dipartimento di Scienze Farmaceutiche Università di Firenze", rank: 1, desc: "Centro di ricerca specializzato negli estratti vegetali della tradizione fito-farmaceutica toscana." },
+            { name: "Certiquality (Sezione Cosmetica)", rank: 1, desc: "Organismo accreditato per le certificazioni di qualità ISO 22716 (Good Manufacturing Practices cosmetiche)." },
+            { name: "Osservatorio Cosmetica Italia", rank: 1, desc: "Centro studi che analizza i consumi, l'export e i trend economici dell'industria beauty italiana." },
+            { name: "Accademia di Belle Arti e Cosmetologia di Milano", rank: 1, desc: "Istituto per la formazione di visual e makeup artist per le sfilate di moda ed il cinema." },
+            { name: "Natrue Italia", rank: 1, desc: "Associazione internazionale rigorosa per la tutela della vera cosmetica naturale e biologica." },
+            { name: "Federchimica", rank: 1, desc: "Federazione nazionale dell'industria chimica a cui aderiscono le aziende di materie prime cosmetiche." },
+            { name: "Dermatologia Clinica Università di Roma Tor Vergata", rank: 1, desc: "Polo di sperimentazione clinica e dermatologica sull'impatto dei cosmetici sulla barriera cutanea." },
+            { name: "Associazione Italiana ESI (Essenze e Sintetici)", rank: 1, desc: "Ente per la salvaguardia e regolamentazione delle essenze aromatiche italiane." },
+            { name: "Fondazione Umberto Veronesi (Progetto Cosmetica e Salute)", rank: 1, desc: "Partner per la ricerca sulla sicurezza e prevenzione oncologica applicata alla cura di sé." },
+            { name: "Milano Beauty Week", rank: 1, desc: "La settimana della cultura della bellezza e della cosmetica promossa da Cosmetica Italia." },
+            { name: "Laboratorio di Tossicologia In Vitro (Univ. Milano)", rank: 1, desc: "Centro d'avanguardia per i test di tollerabilità cutanea privi di sperimentazione animale." },
+            { name: "Dipartimento di Biotecnologie Università di Bologna", rank: 1, desc: "Polo specializzato nell'ingegnerizzazione di molecole peptidiche per la cosmetica anti-age." },
+            { name: "Sustanaible Beauty Coalition Italia", rank: 1, desc: "Network di aziende cosmetiche impegnate nell'azzeramento dell'impronta di carbonio." },
+            { name: "Accademia Nazionale di Acconciatura e Cosmesi", rank: 1, desc: "Ente di formazione storica per gli stilisti del capello e la cosmetica tricotrofica." },
+            { name: "Centro Studi Trendvision Beauty", rank: 1, desc: "Osservatorio sui trend cromatici, sensoriali e materiali per il packaging cosmetico del futuro." },
+            { name: "Biomedical Research Center per la Pelle (Pavia)", rank: 1, desc: "Laboratorio indipendente specializzato in test di efficacia anti-pollution e riparazione cellulare." },
+            { name: "Archivio Storico del Profumo di Venezia", rank: 1, desc: "Centro di documentazione sulla rotta delle spezie ed essenze della Serenissima presso Palazzo Mocenigo." }
+        ];
+
+        let nodes = [], edges = [];
+        let idCounter = 1;
+
+        institutions.forEach(i => {
+            let mId = idCounter++;
+            nodes.push({ 
+                id: mId, 
+                label: i.name, 
+                shape: 'diamond', 
+                size: 24, 
+                color: { background: '#f59e0b', border: '#ffffff', highlight: { background: '#fcd34d', border: '#ffffff' } },
+                borderWidth: 3,
+                font: { color: '#ffffff', size: 13, strokeWidth: 4, strokeColor: '#030712' },
+                rank: 1, 
+                desc: i.desc 
+            });
+
+            const subItems = ["Laboratorio Validazione", "Comitato Didattico", "Pubblicazioni Scientifiche", "Standard di Sicurezza Cosmetica"];
+            subItems.forEach(sub => {
+                let sId = idCounter++;
+                nodes.push({ 
+                    id: sId, 
+                    label: `${i.name} - ${sub}`, 
+                    shape: 'dot', 
+                    size: 14, 
+                    color: { background: '#d97706', border: '#ffffff' },
+                    borderWidth: 2,
+                    font: { color: '#fef3c7', size: 11, strokeWidth: 3, strokeColor: '#030712' },
+                    rank: 2, 
+                    desc: `Sezione operativa Rank 2 dell'ente ${i.name}.` 
+                });
+                edges.push({ from: mId, to: sId, width: 2, color: { color: '#f59e0b', opacity: 0.6 } });
+
+                let r3Id = idCounter++;
+                nodes.push({ 
+                    id: r3Id, 
+                    label: `Protocollo Validato (${sub.substring(0,6)})`, 
+                    shape: 'dot', 
+                    size: 8, 
+                    color: { background: '#b45309', border: '#fcd34d' },
+                    borderWidth: 1,
+                    font: { color: '#fcd34d', size: 9, strokeWidth: 2, strokeColor: '#030712' },
+                    rank: 3, 
+                    desc: `Atti e certificazioni di Rank 3.` 
+                });
+                edges.push({ from: sId, to: r3Id, width: 1, color: { color: '#d97706', opacity: 0.4 } });
+            });
+        });
+
+        const container = document.getElementById('network');
+        const data = { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) };
+        const options = { physics: { barnesHut: { gravitationalConstant: -4000, springLength: 70 } } };
+
+        const network = new vis.Network(container, data, options);
+
+        network.on("click", function (params) {
+            if (params.nodes.length > 0) {
+                const node = nodes.find(n => n.id === params.nodes[0]);
+                document.getElementById('s-title').innerText = node.label;
+                document.getElementById('s-rank').innerText = `Gerarchia: Rank #${node.rank}`;
+                document.getElementById('s-desc').innerText = node.desc;
+                
+                const conn = edges.filter(e => e.from === node.id || e.to === node.id).length;
+                document.getElementById('s-rel').innerText = `Ente interconnesso con ${conn} nodi di rete.`;
+
+                const cleanName = node.label.split(' - ')[0];
+                const query = encodeURIComponent(`${cleanName} cosmetica italia eventi`);
+
+                document.getElementById('s-link-container').innerHTML = `
+                    <a class="ext-btn btn-img" href="https://www.google.com/search?q=${query}&tbm=isch" target="_blank">
+                        🖼️ Immagini & Fiere Google ↗
+                    </a>
+                    <a class="ext-btn btn-web" href="https://www.google.com/search?q=${query}" target="_blank">
+                        🔍 Ricerca Web & Fonti ↗
+                    </a>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>

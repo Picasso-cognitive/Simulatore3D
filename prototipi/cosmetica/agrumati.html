@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rete Integrata degli Agrumati - Il Mondo Esperidato</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #06080d; color: #f8fafc; overflow: hidden; }
+        #canvas-container { width: 100vw; height: 100vh; position: relative; }
+        canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+        canvas:active { cursor: grabbing; }
+        
+        /* Control Panel UI */
+        .ui-panel { position: absolute; top: 16px; left: 16px; background: rgba(10, 14, 23, 0.92); backdrop-filter: blur(14px); border: 1px solid #1e293b; padding: 18px; border-radius: 12px; width: 360px; box-shadow: 0 12px 32px rgba(0,0,0,0.7); z-index: 10; max-height: 95vh; overflow-y: auto; }
+        .ui-panel h1 { font-size: 1.15rem; font-weight: 700; margin-bottom: 4px; color: #f59e0b; letter-spacing: -0.02em; }
+        .ui-panel p { font-size: 0.78rem; color: #94a3b8; margin-bottom: 12px; line-height: 1.35; }
+        .ui-panel .hint { font-size: 0.72rem; color: #f59e0b; background: rgba(245, 158, 11, 0.1); padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(245, 158, 11, 0.25); margin-bottom: 14px; }
+        
+        .control-group { margin-bottom: 12px; }
+        .control-group label { display: block; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; margin-bottom: 4px; font-weight: 600; }
+        input[type="text"], select { width: 100%; padding: 8px 10px; background: #020617; border: 1px solid #334155; border-radius: 6px; color: #fff; font-size: 0.82rem; outline: none; transition: border-color 0.2s; }
+        input[type="text"]:focus, select:focus { border-color: #f59e0b; }
+        select { cursor: pointer; }
+        input[type="range"] { width: 100%; accent-color: #f59e0b; cursor: pointer; }
+        
+        /* Sim Control Bar */
+        .sim-control-bar { display: flex; align-items: center; justify-content: space-between; background: #020617; padding: 8px 12px; border-radius: 8px; border: 1px solid #1e293b; margin-bottom: 12px; }
+        .sim-status { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 600; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; }
+        .status-dot.paused { background: #ef4444; }
+        .btn-toggle { background: #f59e0b; color: #020617; border: none; padding: 5px 10px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+        .btn-toggle:hover { background: #d97706; color: #fff; }
+
+        /* Legend Grid */
+        .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 12px 0; padding: 8px; background: rgba(2, 6, 23, 0.6); border-radius: 6px; border: 1px solid #1e293b; }
+        .legend-item { display: flex; align-items: center; font-size: 0.68rem; color: #cbd5e1; }
+        .legend-color { width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; flex-shrink: 0; }
+
+        .stats { display: flex; justify-content: space-between; font-size: 0.72rem; color: #94a3b8; padding-top: 10px; border-top: 1px solid #1e293b; }
+        
+        /* Info Card Panel */
+        #info-card { position: absolute; bottom: 20px; right: 20px; background: rgba(10, 14, 23, 0.94); backdrop-filter: blur(14px); border: 1px solid #334155; padding: 18px; border-radius: 12px; width: 340px; display: none; z-index: 10; box-shadow: 0 10px 25px rgba(0,0,0,0.6); }
+        #info-card h2 { font-size: 1.1rem; color: #f8fafc; margin-bottom: 4px; line-height: 1.2; }
+        #info-card .category-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.68rem; font-weight: 600; margin-bottom: 8px; text-transform: uppercase; }
+        #info-card .meta { font-size: 0.8rem; color: #f59e0b; font-weight: 500; margin-bottom: 10px; }
+        #info-card .details { font-size: 0.76rem; color: #cbd5e1; line-height: 1.5; }
+        #info-card .partners { margin-top: 8px; padding-top: 8px; border-top: 1px solid #334155; font-size: 0.72rem; color: #94a3b8; }
+
+        /* Context Menu Modal */
+        #work-modal { position: absolute; display: none; background: rgba(10, 14, 23, 0.96); backdrop-filter: blur(16px); border: 1px solid #f59e0b; border-radius: 12px; padding: 18px; width: 330px; box-shadow: 0 15px 35px rgba(0,0,0,0.85); z-index: 100; animation: popup 0.15s ease-out; }
+        @keyframes popup { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+        #work-modal .close-btn { position: absolute; top: 10px; right: 12px; background: none; border: none; color: #64748b; font-size: 1.2rem; cursor: pointer; }
+        #work-modal .close-btn:hover { color: #fff; }
+        #work-modal h3 { font-size: 1.05rem; color: #f8fafc; margin-bottom: 2px; padding-right: 20px; }
+        #work-modal .designer-sub { font-size: 0.75rem; color: #f59e0b; margin-bottom: 12px; font-weight: 500; }
+        #work-modal .work-box { background: #020617; border: 1px solid #1e293b; padding: 12px; border-radius: 8px; margin-bottom: 14px; }
+        #work-modal .work-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 4px; font-weight: 700; }
+        #work-modal .work-title { font-size: 0.88rem; color: #f1f5f9; font-weight: 600; line-height: 1.35; }
+        #work-modal .open-link-btn { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 10px; background: #d97706; color: #fff; border: none; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: background 0.2s; text-decoration: none; }
+        #work-modal .open-link-btn:hover { background: #b45309; }
+    </style>
+</head>
+<body>
+
+<div id="canvas-container">
+    <canvas id="networkCanvas"></canvas>
+    
+    <div class="ui-panel">
+        <h1>Citrus Ecosystem Map</h1>
+        <p>Mappa concettuale dei 200 nodi dell'Ecosistema Agrumato: botanica, varietali, chimica molecolare, note esperidate, profumeria e gastronomia.</p>
+        <div class="hint">💡 <strong>Tasto Destro:</strong> Clicca su qualsiasi nodo per approfondire la ricerca botanica o olfattiva.</div>
+
+        <div class="sim-control-bar">
+            <div class="sim-status">
+                <span id="status-dot" class="status-dot"></span>
+                <span id="status-text">Simulazione Attiva</span>
+            </div>
+            <button id="toggleSimBtn" class="btn-toggle" onclick="toggleSimulation()">Pausa</button>
+        </div>
+
+        <div class="control-group">
+            <label for="layoutSelect">Modalità di Visualizzazione</label>
+            <select id="layoutSelect" onchange="changeLayout(this.value)">
+                <option value="force">Fisica Dinamica (Force-Directed)</option>
+                <option value="radial">Radiale (Famiglia Rutaceae al Centro)</option>
+                <option value="cluster">Cluster per Categoria Tematica</option>
+                <option value="circular">Anello Circolare Perimetrale</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="categorySelect">Filtra per Categoria</label>
+            <select id="categorySelect">
+                <option value="ALL">Tutte le Categorie</option>
+                <option value="BOTANY">Botanica & Specie (Rutaceae)</option>
+                <option value="PERFUMERY">Profumeria & Accordi Esperidati</option>
+                <option value="CHEMISTRY">Chimica & Aromi Volatili</option>
+                <option value="GEOGRAPHY">Territori & Origini DOP</option>
+                <option value="FOOD_DRINK">Enogastronomia & Liquori</option>
+                <option value="HEALTH">Salute, Fitoterapia & Cosmesi</option>
+                <option value="HISTORY">Storia, Miti & Limonaie</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="searchInput">Cerca Agrume, Molecola, Profumo o Regione</label>
+            <input type="text" id="searchInput" placeholder="es. Limonene, Yuzu, Neroli, Amalfi, Cedro...">
+        </div>
+
+        <div class="legend">
+            <div class="legend-item"><div class="legend-color" style="background:#84cc16"></div>Botanica & Specie</div>
+            <div class="legend-item"><div class="legend-color" style="background:#f59e0b"></div>Profumeria</div>
+            <div class="legend-item"><div class="legend-color" style="background:#06b6d4"></div>Chimica Aromatica</div>
+            <div class="legend-item"><div class="legend-color" style="background:#f97316"></div>Territori DOP</div>
+            <div class="legend-item"><div class="legend-color" style="background:#a855f7"></div>Food & Drink</div>
+            <div class="legend-item"><div class="legend-color" style="background:#ec4899"></div>Salute & Benessere</div>
+            <div class="legend-item" style="grid-column: span 2;"><div class="legend-color" style="background:#3b82f6"></div>Storia & Mitologia</div>
+        </div>
+        
+        <div class="control-group" id="repulsionControl">
+            <label for="repulsionSlider">Forza di Repulsione Fisica</label>
+            <input type="range" id="repulsionSlider" min="50" max="600" value="260">
+        </div>
+
+        <div class="stats">
+            <span>Nodi Connessi: <strong id="stat-nodes">200</strong></span>
+            <span>Relazioni: <strong id="stat-edges">0</strong></span>
+            <span>FPS: <strong id="stat-fps">60</strong></span>
+        </div>
+    </div>
+
+    <!-- Info Card Panel -->
+    <div id="info-card">
+        <h2 id="card-title">-</h2>
+        <span id="card-badge" class="category-badge">-</span>
+        <div id="card-meta" class="meta">-</div>
+        <div id="card-details" class="details"></div>
+        <div id="card-partners" class="partners"></div>
+    </div>
+
+    <!-- Right-Click Modal -->
+    <div id="work-modal">
+        <button class="close-btn" onclick="closeWorkModal()">&times;</button>
+        <h3 id="modal-node-name">Nome Nodo</h3>
+        <div id="modal-node-meta" class="designer-sub">Categoria • Rilevanza</div>
+        <div class="work-box">
+            <div class="work-label">Descrizione Scientifica/Olfattiva</div>
+            <div id="modal-node-title" class="work-title">Dettaglio approfondito</div>
+        </div>
+        <a id="modal-web-link" href="#" target="_blank" class="open-link-btn">
+            🔍 Ricerca Approfondita (Google Search) ↗
+        </a>
+    </div>
+</div>
+
+<script>
+// --- CATEGORIE E COLORI PER GLI AGRUMATI ---
+const CATEGORIES = {
+    BOTANY: { name: 'Botanica & Specie', color: '#84cc16' },
+    PERFUMERY: { name: 'Profumeria & Esperidati', color: '#f59e0b' },
+    CHEMISTRY: { name: 'Chimica Aromatica', color: '#06b6d4' },
+    GEOGRAPHY: { name: 'Territori & Origini DOP', color: '#f97316' },
+    FOOD_DRINK: { name: 'Enogastronomia & Liquori', color: '#a855f7' },
+    HEALTH: { name: 'Salute & Cosmesi', color: '#ec4899' },
+    HISTORY: { name: 'Storia & Miti', color: '#3b82f6' }
+};
+
+// --- DATASET SEED AGRUMATI (45 NODI ICONICI FONDAMENTALI) ---
+const SEED_NODES = [
+    { name: "Famiglia Rutaceae (Agrumi)", category: "BOTANY", relevance: 1, sub: "Genere Citrus & Ibridi", details: "Famiglia botanica originaria del Sud-est asiatico, caratterizzata da frutti esperidi ricchi di tasche oleifere nella buccia.", connections: ["Limone", "Arancio Dolce", "Arancio Amaro", "Mandarino", "Bergamotto", "Pompelmo", "Cedro", "Lime", "Yuzu", "Chinotto"] },
+    { name: "Limone", category: "BOTANY", relevance: 1, sub: "Citrus limon", details: "L'agrume più diffuso e versatile al mondo. Ibrido antico tra cedro e arancio amaro, celebre per l'acidità citrica e l'olio essenziale brillante.", connections: ["Famiglia Rutaceae (Agrumi)", "d-Limonene", "Citrale", "Limone Costa d'Amalfi IGP", "Limoncello Tradizionale", "Eau de Cologne"] },
+    { name: "Arancio Dolce", category: "BOTANY", relevance: 1, sub: "Citrus sinensis", details: "L'agrume più coltivato sul pianeta. Produce essenze dolci, solari e fruttate fondamentali in bevande e profumi.", connections: ["Famiglia Rutaceae (Agrumi)", "d-Limonene", "Sinensal", "Arancia Rossa di Sicilia IGP", "Aqua Allegoria Mandarine Basilic"] },
+    { name: "Arancio Amaro", category: "BOTANY", relevance: 1, sub: "Citrus aurantium (Melangolo)", details: "Pilastro supremo della profumeria: dalla sua pianta si ricavano Olio di Bigarade (buccia), Neroli (fiori) e Petitgrain (foglie).", connections: ["Famiglia Rutaceae (Agrumi)", "Olio di Neroli", "Petitgrain", "Essenza di Bigarade", "Tom Ford Neroli Portofino", "Eau Sauvage"] },
+    { name: "Mandarino", category: "BOTANY", relevance: 1, sub: "Citrus reticulata", details: "Una delle specie ancestrali pure da cui derivano quasi tutti gli agrumi moderni. Aroma dolce, aromatico e lievemente succoso.", connections: ["Famiglia Rutaceae (Agrumi)", "Antranilato di Metile", "Clementina", "Mandarino Tardivo di Ciaculli"] },
+    { name: "Bergamotto", category: "BOTANY", relevance: 1, sub: "Citrus bergamia", details: "L'Oro Verde della Calabria. Agrume nobile indispensabile per l'apertura esperidata di oltre il 70% della profumeria fine.", connections: ["Famiglia Rutaceae (Agrumi)", "Bergamotto di Reggio Calabria", "Linalile Acetato", "Acqua di Parma Colonia", "Tè Earl Grey"] },
+    { name: "Pompelmo", category: "BOTANY", relevance: 1, sub: "Citrus x paradisi", details: "Ibrido naturale nato nei Caraibi tra arancio dolce e shaddock (pummelo). Aroma amarognolo, solfureo e rinfrescante.", connections: ["Famiglia Rutaceae (Agrumi)", "Nootkatone", "Pompelmo Rosa", "Terre d'Hermès"] },
+    { name: "Cedro", category: "BOTANY", relevance: 1, sub: "Citrus medica", details: "Uno dei tre agrumi originali primordiali. Buccia spessa e profumatissima, storicamente sacra nella tradizione ebraica (Etrog).", connections: ["Famiglia Rutaceae (Agrumi)", "Cedro di Calabria DOP", "Liquore al Cedro", "Etrog Sacro"] },
+    { name: "Lime (Limetta)", category: "BOTANY", relevance: 1, sub: "Citrus aurantiifolia / latifolia", details: "Agrume tropicale dall'aroma acido, tagliente e lievemente legnoso. Essenziale per la mixology caraibica e profumi estivi.", connections: ["Famiglia Rutaceae (Agrumi)", "Mojito & Mixology", "CK One", "Citrale"] },
+    { name: "Yuzu", category: "BOTANY", relevance: 1, sub: "Citrus junos", details: "Agrume iconico giapponese, incredibilmente resistente al freddo. Profilo olfattivo complesso tra pompelmo, mandarino e pino.", connections: ["Famiglia Rutaceae (Agrumi)", "Cucina Kaiseki", "Kōchi (Giappone)", "L'Eau d'Issey Miyake"] },
+    { name: "Chinotto", category: "BOTANY", relevance: 2, sub: "Citrus myrtifolia", details: "Agrume a foglie di mirto tipico della Liguria. Il suo estratto amaro e speziato è la base dell'iconica bevanda italiana.", connections: ["Famiglia Rutaceae (Agrumi)", "Chinotto di Savona Presidio Slow Food", "Bevanda Chinotto"] },
+    { name: "Finger Lime (Limone Caviale)", category: "BOTANY", relevance: 2, sub: "Citrus australasica", details: "Agrume nativo australiano con vescicole sferiche simili al caviale che esplodono in bocca con note acide e aromatiche.", connections: ["Famiglia Rutaceae (Agrumi)", "Alta Gastronomia Molecolare"] },
+    { name: "Kumquat (Mandarino Cinese)", category: "BOTANY", relevance: 2, sub: "Fortunella / Citrus japonica", details: "Piccolo agrume di cui si mangia l'intera buccia dolce, mentre la polpa interna conserva un'acidità intensa.", connections: ["Famiglia Rutaceae (Agrumi)", "Frutta Candita"] },
+    { name: "Combava (Kaffir Lime)", category: "BOTANY", relevance: 2, sub: "Citrus hystrix", details: "Agrume del Sud-est asiatico dalle foglie e buccia bitorzoluta ricchissime di citronellale, fondamentali nella cucina Thai.", connections: ["Famiglia Rutaceae (Agrumi)", "Citronellale", "Cucina Thailandese"] },
+
+    // CHIMICA MOLECOLARE
+    { name: "d-Limonene", category: "CHEMISTRY", relevance: 1, sub: "Monoterpene (fino al 95% negli agrumi)", details: "La molecola cardine di tutti gli agrumi. Dona la nota immediata di buccia fresca, frizzante e solare.", connections: ["Limone", "Arancio Dolce", "Limonene Sintetico", "Note Esperidate / Hesperidic"] },
+    { name: "Olio di Neroli", category: "CHEMISTRY", relevance: 1, sub: "Distillazione a vapore dei fiori d'Arancio Amaro", details: "Olio prezioso dal profilo floreale, fresco, verde e leggermente miele. Simbolo di purezza ed eleganza olfattiva.", connections: ["Arancio Amaro", "Tom Ford Neroli Portofino", "Eau de Cologne", "Petitgrain"] },
+    { name: "Petitgrain", category: "CHEMISTRY", relevance: 2, sub: "Distillazione di foglie e ramoscelli", details: "Estratto dall'arancio amaro, offre un aroma legnoso, verde, eraceo e leggermente acido.", connections: ["Arancio Amaro", "Olio di Neroli", "Linalile Acetato"] },
+    { name: "Citrale (Geraniale + Neral)", category: "CHEMISTRY", relevance: 1, sub: "Aldeide Monoterpenica", details: "Molecola chiave che conferisce il classico odore acuto di limone puro, erba cavallina e lemongrass.", connections: ["Limone", "Lime (Limetta)", "Verbena Odorosa"] },
+    { name: "Linalile Acetato", category: "CHEMISTRY", relevance: 2, sub: "Estere Aromatico", details: "Conferisce un tocco morbido, fruttato e leggermente bergamottato e lavandato agli accordi esperidati.", connections: ["Bergamotto", "Petitgrain", "Bergamote 22"] },
+    { name: "Nootkatone", category: "CHEMISTRY", relevance: 2, sub: "Sesquiterpene Caratteristico", details: "Composto responsabile del tipico aroma amaro, secco e legnoso del pompelmo rosa.", connections: ["Pompelmo", "Terre d'Hermès"] },
+    { name: "Sinensal", category: "CHEMISTRY", relevance: 2, sub: "Aldeide Sesquiterpenica", details: "Componente determinante per il profilo succoso, caldo e dolce dell'essenza d'arancia dolce.", connections: ["Arancio Dolce", "Note Esperidate / Hesperidic"] },
+    { name: "Antranilato di Metile", category: "CHEMISTRY", relevance: 3, sub: "Estere Aromatico", details: "Molecola speciale presente nel mandarino e nei fiori d'arancio che dona sfumature di uva fragola e fiori notturni.", connections: ["Mandarino", "Clementina"] },
+
+    // PROFUMERIA & FRAGRANZE ICONICHE
+    { name: "Note Esperidate / Hesperidic", category: "PERFUMERY", relevance: 1, sub: "Famiglia Olfattiva delle Note di Testa", details: "In profumeria indica l'insieme degli oli essenziali estratti dalle bucce degli agrumi. Volatili, freschi ed energetici.", connections: ["Eau de Cologne", "Acqua di Parma Colonia", "d-Limonene", "Bergamotto"] },
+    { name: "Eau de Cologne", category: "PERFUMERY", relevance: 1, sub: "Nascita della Profumeria Moderna (1709)", details: "Struttura classica dominata da bergamotto, limone, mandarino, neroli, lavanda e rosmarino su fondo leggero.", connections: ["Note Esperidate / Hesperidic", "Olio di Neroli", "Limone", "Acqua di Parma Colonia"] },
+    { name: "Acqua di Parma Colonia", category: "PERFUMERY", relevance: 1, sub: "Icona Italiana (1916)", details: "Capolavoro solare composto da agrumi di Sicilia, bergamotto, rosmarino e rose eleganti.", connections: ["Note Esperidate / Hesperidic", "Eau de Cologne", "Limone", "Agrumi di Sicilia"] },
+    { name: "Tom Ford Neroli Portofino", category: "PERFUMERY", relevance: 2, sub: "Interpretazione Lussuosa della Riviera", details: "Rivisita la classica Colonia italiana esplodendo di Neroli, Arancio Amaro, Bergamotto e Ambra.", connections: ["Olio di Neroli", "Arancio Amaro", "Bergamotto"] },
+    { name: "Terre d'Hermès", category: "PERFUMERY", relevance: 1, sub: "Jean-Claude Ellena (2006)", details: "Iconico accordo tra pompelmo amaro, arancia dolce, pepe rosa, selce e legni minerali.", connections: ["Pompelmo", "Arancio Dolce", "Nootkatone"] },
+    { name: "Aqua Allegoria Mandarine Basilic", category: "PERFUMERY", relevance: 2, sub: "Guerlain", details: "Celebre combinazione tra la dolcezza succosa del mandarino e la freschezza aromatica del basilico fresco.", connections: ["Mandarino", "Arancio Dolce"] },
+    { name: "CK One", category: "PERFUMERY", relevance: 2, sub: "Calvin Klein (1994)", details: "Rivoluzionario profumo unisex basato su un accordo frizzante di lime, bergamotto, tè verde e muschi.", connections: ["Lime (Limetta)", "Bergamotto", "Note Esperidate / Hesperidic"] },
+
+    // TERRITORI & GEOGRAFIA DOP
+    { name: "Agrumi di Sicilia", category: "GEOGRAPHY", relevance: 1, sub: "Territorio Vulcanico & Solare", details: "La culla italiana degli agrumi: limoni, arance rosse e mandarini favoriti dal terreno fertile dell'Etna.", connections: ["Limone", "Arancia Rossa di Sicilia IGP", "Conca d'Oro di Palermo", "Acqua di Parma Colonia"] },
+    { name: "Limone Costa d'Amalfi IGP", category: "GEOGRAPHY", relevance: 2, sub: "Lo Sfusato Amalfitano", details: "Coltivato sui terrazzamenti a picco sul mare. Ricchissimo di oli essenziali, poco acido e commestibile interamente.", connections: ["Limone", "Limoncello Tradizionale", "Terrazzamenti Amalfitani"] },
+    { name: "Bergamotto di Reggio Calabria", category: "GEOGRAPHY", relevance: 1, sub: "DOP Unica al Mondo", details: "Microclima unico fra Stretto di Messina e Aspromonte che rende l'essenza calabrese inimitabile.", connections: ["Bergamotto", "Linalile Acetato"] },
+    { name: "Arancia Rossa di Sicilia IGP", category: "GEOGRAPHY", relevance: 2, sub: "Varietà Tarocco, Moro, Sanguinello", details: "Agrume pigmentato da antociani grazie alle fortissime escursioni termiche invernali dell'Etna.", connections: ["Arancio Dolce", "Agrumi di Sicilia"] },
+    { name: "Limonaie del Lago di Garda", category: "GEOGRAPHY", relevance: 2, sub: "Gargnano & Limone sul Garda", details: "Spettacolari strutture storiche in muratura e legno costruite per coltivare limoni ai piedi delle Alpi fin dal '1200.", connections: ["Limone", "Giardino delle Esperidi"] },
+    { name: "Kōchi (Giappone)", category: "GEOGRAPHY", relevance: 2, sub: "Patria dello Yuzu", details: "Prefettura montuosa giapponese celebre per la produzione del più pregiato Yuzu biologico.", connections: ["Yuzu", "Cucina Kaiseki"] },
+
+    // ENOGASTRONOMIA & COCKTAIL
+    { name: "Limoncello Tradizionale", category: "FOOD_DRINK", relevance: 1, sub: "Liquore della Tradizione Campana", details: "Infusione di scorze di limone sfusato in alcool puro e sciroppo di zucchero.", connections: ["Limone Costa d'Amalfi IGP", "Limone"] },
+    { name: "Mojito & Mixology", category: "FOOD_DRINK", relevance: 2, sub: "Cocktail Classico a Base di Lime", details: "Il lime è il pilastro acido irrinunciabile per balance nei cocktail tipo Margarita, Caipirinha e Mojito.", connections: ["Lime (Limetta)", "d-Limonene"] },
+    { name: "Tè Earl Grey", category: "FOOD_DRINK", relevance: 2, sub: "Tè Nero Aromatizzato", details: "Miscela britannica storica insaporita con gocce di olio essenziale puro di bergamotto calabrese.", connections: ["Bergamotto", "Tè Nero"] },
+    { name: "Marmellata di Arance Amare", category: "FOOD_DRINK", relevance: 2, sub: "Tradizione Marmalade Britannica", details: "Tipica confettura dal gusto amarognolo preparata con arance di Siviglia integre.", connections: ["Arancio Amaro"] },
+
+    // SALUTE & STORIA
+    { name: "Vitamina C (Acido Ascorbico)", category: "HEALTH", relevance: 1, sub: "Antiossidante Essenziale", details: "Molecola fondamentale contenuta negli agrumi che storicamente sconfisse lo scorbuto tra i marinai.", connections: ["Limone", "Scorbuto dei Marinai", "Antiossidanti Naturali"] },
+    { name: "Aromaterapia Energetica", category: "HEALTH", relevance: 2, sub: "Stimolazione Psichica", details: "Gli oli essenziali agrumati stimolano la produzione di serotonina, donando vitalità e riducendo lo stress.", connections: ["Note Esperidate / Hesperidic", "Bergamotto"] },
+    { name: "Mito delle Esperidi", category: "HISTORY", relevance: 1, sub: "I Pomi d'Oro della Mitologia Greca", details: "Leggenda greca in cui Eracle ruba i pomi d'oro custoditi dal drago nel giardino delle ninfe Esperidi (identificati negli agrumi).", connections: ["Note Esperidate / Hesperidic", "Limonaie del Lago di Garda"] },
+    { name: "Scorbuto dei Marinai", category: "HISTORY", relevance: 2, sub: "James Lind e la Marina Britannica (1747)", details: "La scoperta che il succo di limone e lime preveniva la letale malattia dei navigatori oceanici.", connections: ["Vitamina C (Acido Ascorbico)", "Limone", "Lime (Limetta)"] }
+];
+
+// GENERAZIONE DATASET ESPANSO (200 NODI COMPLETI ED EQUILIBRATI)
+function generateCitrusDataset() {
+    const nodes = [];
+    const nodeMap = new Map();
+
+    // Inserisci i nodi Seed
+    SEED_NODES.forEach((d, idx) => {
+        const node = {
+            id: idx + 1,
+            name: d.name,
+            category: d.category,
+            relevance: d.relevance,
+            sub: d.sub,
+            details: d.details,
+            radius: Math.max(16 - d.relevance * 2.5, 7),
+            x: (Math.random() - 0.5) * 1000,
+            y: (Math.random() - 0.5) * 700,
+            targetX: 0, targetY: 0,
+            vx: 0, vy: 0,
+            connections: []
+        };
+        nodes.push(node);
+        nodeMap.set(d.name, node);
+    });
+
+    const categoryKeys = Object.keys(CATEGORIES);
+    const perfumeHouses = ["Guerlain", "Dior", "Acqua di Parma", "Hermès", "Tom Ford", "Jo Malone", "Diptyque", "Chanel", "Le Labo", "Byredo"];
+    const citrusTowns = ["Mentone", "Siviglia", "Sorrento", "Diamante", "Savona", "Palermo", "Catania", "Nizza", "Orlando (Florida)", "Kōchi"];
+    const aromaMolecules = ["Myrcene", "Alpha-Pinene", "Beta-Pinene", "Octanal", "Nonanal", "Decanal", "Geraniol", "Citronellolo", "Linalolo", "Terpineolo"];
+
+    // Genera nodi procedurali coerenti fino a 200
+    for (let i = nodes.length; i < 200; i++) {
+        const id = i + 1;
+        const category = categoryKeys[i % categoryKeys.length];
+        let name = "";
+        let sub = "";
+        let details = "";
+
+        if (category === "PERFUMERY") {
+            const house = perfumeHouses[i % perfumeHouses.length];
+            name = `Citrus Accord Vol. ${id} [${house}]`;
+            sub = `Creazione Esperidata • ${house}`;
+            details = `Formulazione di alta profumeria incentrata sul contrasto tra agrumi di testa e sfaccettature muschiate o legnose.`;
+        } else if (category === "GEOGRAPHY") {
+            const town = citrusTowns[i % citrusTowns.length];
+            name = `Frutteto & Limonaia Storica a ${town}`;
+            sub = `Territorio & Terroir Agrumato`;
+            details = `Microclima ideale caratterizzato da esposizione solare, terreni drenati e antica tradizione colturale.`;
+        } else if (category === "CHEMISTRY") {
+            const mol = aromaMolecules[i % aromaMolecules.length];
+            name = `${mol} (Frazione #${id})`;
+            sub = `Isolato Aromatico Volatile`;
+            details = `Molecola presente nei fitocomplessi agrumati, fondamentale per definire le note frizzanti, erbacee o fruttate.`;
+        } else if (category === "BOTANY") {
+            name = `Cultivar & Ibrido Citrus #${id}`;
+            sub = `Selezione Varietale / Varietà Locale`;
+            details = `Mutazione naturale o incrocio agronomico volto a migliorare la resistenza della pianta e l'aroma dei frutti.`;
+        } else if (category === "HEALTH") {
+            name = `Applicazione Dermica/Salute #${id}`;
+            sub = `Proprietà Fitoterapiche degli Agrumi`;
+            details = `Studio sull'efficacia degli oli essenziali agrumati per l'azione purificante, antiossidante o tonificante.`;
+        } else if (category === "FOOD_DRINK") {
+            name = `Specialità Enogastronomica #${id}`;
+            sub = `Cucina, Dolci & Mixology`;
+            details = `Uso gastronomico della buccia candita, dei succhi acidi o degli estratti aromatici in bevande e piatti.`;
+        } else {
+            name = `Trattato Botanico / Archivio #${id}`;
+            sub = `Documento Storico sugli Agrumi`;
+            details = `Riferimento d'archivio sulla diffusione degli agrumi lungo le rotte commerciali storiche del Mediterraneo.`;
+        }
+
+        const node = {
+            id: id,
+            name: name,
+            category: category,
+            relevance: 3,
+            sub: sub,
+            details: details,
+            radius: Math.max(7 - (id * 0.015), 4),
+            x: (Math.random() - 0.5) * 1600,
+            y: (Math.random() - 0.5) * 1100,
+            targetX: 0, targetY: 0,
+            vx: 0, vy: 0,
+            connections: []
+        };
+        nodes.push(node);
+        nodeMap.set(name, node);
+    }
+
+    // GENERAZIONE ARCHI E CONNESSI
+    const edges = [];
+    const edgeSet = new Set();
+
+    function addEdge(source, target, weight = 1) {
+        if (!source || !target || source.id === target.id) return;
+        const key = source.id < target.id ? `${source.id}-${target.id}` : `${target.id}-${source.id}`;
+        if (!edgeSet.has(key)) {
+            edgeSet.add(key);
+            const edge = { source, target, weight };
+            edges.push(edge);
+            source.connections.push(target);
+            target.connections.push(source);
+        }
+    }
+
+    // Connetti archi definiti nei seed
+    SEED_NODES.forEach(d => {
+        const src = nodeMap.get(d.name);
+        if (d.connections) {
+            d.connections.forEach(targetName => {
+                const tgt = nodeMap.get(targetName);
+                if (tgt) addEdge(src, tgt, 2.2);
+            });
+        }
+    });
+
+    // Connessioni dinamiche per il grafo generale
+    const hubNode = nodes[0]; // Famiglia Rutaceae
+    const hesperidicNode = nodeMap.get("Note Esperidate / Hesperidic");
+    const limoneneNode = nodeMap.get("d-Limonene");
+
+    for (let i = 1; i < nodes.length; i++) {
+        const nodeA = nodes[i];
+        
+        // Link all'hub botanico centrale
+        if (nodeA.category === "BOTANY" && Math.random() < 0.6) {
+            addEdge(nodeA, hubNode, 1.4);
+        }
+        // Link all'hub olfattivo
+        if (nodeA.category === "PERFUMERY" && hesperidicNode && Math.random() < 0.5) {
+            addEdge(nodeA, hesperidicNode, 1.3);
+        }
+        // Link alla molecola universale
+        if (nodeA.category === "CHEMISTRY" && limoneneNode && Math.random() < 0.4) {
+            addEdge(nodeA, limoneneNode, 1.2);
+        }
+
+        // Connetti nodi vicini/della stessa categoria
+        const extraConnections = Math.floor(Math.random() * 2) + 1;
+        for (let k = 0; k < extraConnections; k++) {
+            const targetIdx = Math.floor(Math.random() * nodes.length);
+            const nodeB = nodes[targetIdx];
+            if (nodeA.category === nodeB.category && nodeA.id !== nodeB.id) {
+                addEdge(nodeA, nodeB, 0.75);
+            }
+        }
+    }
+
+    return { nodes, edges };
+}
+
+// --- ENGINE CANVAS & FISICA DINAMICA ---
+const canvas = document.getElementById('networkCanvas');
+const ctx = canvas.getContext('2d');
+
+let width, height;
+let graphData = generateCitrusDataset();
+let nodes = graphData.nodes;
+let edges = graphData.edges;
+
+let transform = { x: 0, y: 0, scale: 1 };
+let isDragging = false;
+let dragStart = { x: 0, y: 0 };
+let hoveredNode = null;
+let selectedNode = null;
+let draggedNode = null;
+
+let searchQuery = "";
+let selectedCategory = "ALL";
+let currentLayout = "force";
+
+// CONTROLLO SIMULAZIONE E FISICA
+let isSimulating = true;
+let simFrames = 0;
+const MAX_SIM_FRAMES = 360;
+let totalKineticEnergy = 100;
+
+let repulsionStrength = 260;
+const damping = 0.85;
+const springLength = 85;
+const springStiffness = 0.035;
+
+document.getElementById('stat-nodes').innerText = nodes.length;
+document.getElementById('stat-edges').innerText = edges.length;
+
+function resizeCanvas() {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+    if (transform.x === 0 && transform.y === 0) {
+        transform.x = width / 2;
+        transform.y = height / 2;
+    }
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// --- LAYOUTS ALTERNATIVI ---
+function computeLayoutTargets(layout) {
+    if (layout === 'radial') {
+        nodes.forEach(n => {
+            if (n.id === 1) { // Rutaceae Hub
+                n.targetX = 0;
+                n.targetY = 0;
+            } else {
+                const ring = n.relevance;
+                const angle = (n.id % 32) * (Math.PI * 2 / 32);
+                const radius = 110 + ring * 125 + (n.id * 1.4);
+                n.targetX = Math.cos(angle) * radius;
+                n.targetY = Math.sin(angle) * radius;
+            }
+        });
+    } else if (layout === 'cluster') {
+        const catKeys = Object.keys(CATEGORIES);
+        const cols = 3;
+        const spacingX = 490;
+        const spacingY = 390;
+
+        catKeys.forEach((cat, idx) => {
+            const cx = ((idx % cols) - 1) * spacingX;
+            const cy = (Math.floor(idx / cols) - 0.5) * spacingY;
+            const catNodes = nodes.filter(n => n.category === cat);
+
+            catNodes.forEach((n, i) => {
+                const angle = i * 0.45;
+                const r = 25 + Math.sqrt(i) * 22;
+                n.targetX = cx + Math.cos(angle) * r;
+                n.targetY = cy + Math.sin(angle) * r;
+            });
+        });
+    } else if (layout === 'circular') {
+        const total = nodes.length;
+        const radius = 640;
+        const sorted = nodes.slice().sort((a, b) => a.category.localeCompare(b.category));
+        
+        sorted.forEach((n, i) => {
+            const angle = (i / total) * Math.PI * 2;
+            n.targetX = Math.cos(angle) * radius;
+            n.targetY = Math.sin(angle) * radius;
+        });
+    }
+}
+
+function changeLayout(newLayout) {
+    currentLayout = newLayout;
+    computeLayoutTargets(newLayout);
+    document.getElementById('repulsionControl').style.display = newLayout === 'force' ? 'block' : 'none';
+    wakeSimulation();
+}
+
+// --- FISICA ---
+function wakeSimulation() {
+    isSimulating = true;
+    simFrames = 0;
+    updateSimUI(true);
+}
+
+function toggleSimulation() {
+    isSimulating = !isSimulating;
+    if (isSimulating) simFrames = 0;
+    updateSimUI(isSimulating);
+}
+
+function updateSimUI(active) {
+    const dot = document.getElementById('status-dot');
+    const text = document.getElementById('status-text');
+    const btn = document.getElementById('toggleSimBtn');
+
+    if (active) {
+        dot.classList.remove('paused');
+        text.innerText = "Simulazione Attiva";
+        btn.innerText = "Pausa";
+    } else {
+        dot.classList.add('paused');
+        text.innerText = "Rete Stabilizzata";
+        btn.innerText = "Riprendi";
+    }
+}
+
+function updatePhysics() {
+    if (!isSimulating) return;
+
+    if (currentLayout === 'force') {
+        totalKineticEnergy = 0;
+
+        for (let i = 0; i < nodes.length; i++) {
+            const n1 = nodes[i];
+            for (let j = i + 1; j < nodes.length; j++) {
+                const n2 = nodes[j];
+                let dx = n2.x - n1.x;
+                let dy = n2.y - n1.y;
+                let distSq = dx * dx + dy * dy + 0.1;
+                let dist = Math.sqrt(distSq);
+
+                if (dist < 420) {
+                    let force = (repulsionStrength * 10) / distSq;
+                    let fx = (dx / dist) * force;
+                    let fy = (dy / dist) * force;
+
+                    n1.vx -= fx;
+                    n1.vy -= fy;
+                    n2.vx += fx;
+                    n2.vy += fy;
+                }
+            }
+        }
+
+        for (let i = 0; i < edges.length; i++) {
+            const edge = edges[i];
+            let dx = edge.target.x - edge.source.x;
+            let dy = edge.target.y - edge.source.y;
+            let dist = Math.sqrt(dx * dx + dy * dy) + 0.1;
+            let force = (dist - springLength) * springStiffness * edge.weight;
+
+            let fx = (dx / dist) * force;
+            let fy = (dy / dist) * force;
+
+            edge.source.vx += fx;
+            edge.source.vy += fy;
+            edge.target.vx -= fx;
+            edge.target.vy -= fy;
+        }
+
+        for (let i = 0; i < nodes.length; i++) {
+            const n = nodes[i];
+            if (n === draggedNode) continue;
+
+            n.vx -= n.x * 0.0004;
+            n.vy -= n.y * 0.0004;
+
+            n.vx *= damping;
+            n.vy *= damping;
+
+            n.x += n.vx;
+            n.y += n.vy;
+
+            totalKineticEnergy += Math.abs(n.vx) + Math.abs(n.vy);
+        }
+
+        simFrames++;
+        if (totalKineticEnergy < 0.8 || simFrames > MAX_SIM_FRAMES) {
+            isSimulating = false;
+            updateSimUI(false);
+        }
+    } else {
+        let maxMovement = 0;
+        nodes.forEach(n => {
+            if (n === draggedNode) return;
+            let dx = n.targetX - n.x;
+            let dy = n.targetY - n.y;
+            n.x += dx * 0.08;
+            n.y += dy * 0.08;
+
+            maxMovement += Math.abs(dx) + Math.abs(dy);
+        });
+
+        simFrames++;
+        if (maxMovement < 0.5 || simFrames > 180) {
+            isSimulating = false;
+            updateSimUI(false);
+        }
+    }
+}
+
+let lastTime = performance.now();
+let frameCount = 0;
+
+function render() {
+    const now = performance.now();
+    frameCount++;
+    if (now - lastTime >= 1000) {
+        document.getElementById('stat-fps').innerText = frameCount;
+        frameCount = 0;
+        lastTime = now;
+    }
+
+    updatePhysics();
+
+    ctx.save();
+    ctx.fillStyle = '#06080d';
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.translate(transform.x, transform.y);
+    ctx.scale(transform.scale, transform.scale);
+
+    const isFilterActive = selectedCategory !== "ALL" || searchQuery !== "";
+
+    // Archi
+    for (let i = 0; i < edges.length; i++) {
+        const edge = edges[i];
+        const isHighlight = (hoveredNode || selectedNode) && 
+            (edge.source === hoveredNode || edge.target === hoveredNode || edge.source === selectedNode || edge.target === selectedNode);
+        
+        ctx.beginPath();
+        ctx.moveTo(edge.source.x, edge.source.y);
+        ctx.lineTo(edge.target.x, edge.target.y);
+
+        if (isHighlight) {
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 2.4;
+        } else {
+            ctx.strokeStyle = isFilterActive ? 'rgba(30, 41, 59, 0.15)' : 'rgba(51, 65, 85, 0.28)';
+            ctx.lineWidth = 0.6;
+        }
+        ctx.stroke();
+    }
+
+    // Nodi
+    for (let i = 0; i < nodes.length; i++) {
+        const n = nodes[i];
+        const catColor = CATEGORIES[n.category]?.color || '#94a3b8';
+        
+        const matchesCategory = (selectedCategory === "ALL" || n.category === selectedCategory);
+        const matchesSearch = searchQuery === "" || 
+            n.name.toLowerCase().includes(searchQuery) || 
+            n.sub.toLowerCase().includes(searchQuery) || 
+            n.details.toLowerCase().includes(searchQuery);
+
+        const isMatch = matchesCategory && matchesSearch;
+        const isSelected = n === selectedNode;
+        const isHovered = n === hoveredNode;
+
+        ctx.save();
+        
+        if (isFilterActive && !isMatch && !isSelected && !isHovered) {
+            ctx.globalAlpha = 0.12;
+        }
+
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, isSelected || isHovered ? n.radius + 4 : n.radius, 0, Math.PI * 2);
+
+        ctx.fillStyle = isFilterActive && isMatch ? '#ffffff' : catColor;
+        ctx.fill();
+
+        if (isSelected || isHovered || (isFilterActive && isMatch)) {
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+        }
+
+        if (transform.scale > 0.75 || n.relevance <= 2 || isHovered || isSelected || (isFilterActive && isMatch)) {
+            ctx.fillStyle = isSelected || isHovered ? '#ffffff' : '#e2e8f0';
+            ctx.font = `${Math.max(10 / transform.scale, 8)}px -apple-system, sans-serif`;
+            ctx.fillText(`${n.name}`, n.x + n.radius + 5, n.y + 3);
+        }
+
+        ctx.restore();
+    }
+
+    ctx.restore();
+    requestAnimationFrame(render);
+}
+
+function getCanvasCoords(e) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+        x: (e.clientX - rect.left - transform.x) / transform.scale,
+        y: (e.clientY - rect.top - transform.y) / transform.scale
+    };
+}
+
+function findNodeAt(coords) {
+    for (let i = nodes.length - 1; i >= 0; i--) {
+        const n = nodes[i];
+        const dx = n.x - coords.x;
+        const dy = n.y - coords.y;
+        if (dx * dx + dy * dy <= (n.radius + 6) * (n.radius + 6)) {
+            return n;
+        }
+    }
+    return null;
+}
+
+// EVENTI MOUSE
+canvas.addEventListener('mousedown', (e) => {
+    if (e.button === 2) return;
+    closeWorkModal();
+
+    const coords = getCanvasCoords(e);
+    const node = findNodeAt(coords);
+
+    if (node) {
+        draggedNode = node;
+        selectedNode = node;
+        updateInfoCard(node);
+        wakeSimulation();
+    } else {
+        isDragging = true;
+        dragStart = { x: e.clientX - transform.x, y: e.clientY - transform.y };
+    }
+});
+
+canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    const coords = getCanvasCoords(e);
+    const node = findNodeAt(coords);
+
+    if (node) {
+        selectedNode = node;
+        openWorkModal(node, e.clientX, e.clientY);
+    } else {
+        closeWorkModal();
+    }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+    const coords = getCanvasCoords(e);
+
+    if (draggedNode) {
+        draggedNode.x = coords.x;
+        draggedNode.y = coords.y;
+        draggedNode.vx = 0;
+        draggedNode.vy = 0;
+        wakeSimulation();
+    } else if (isDragging) {
+        transform.x = e.clientX - dragStart.x;
+        transform.y = e.clientY - dragStart.y;
+    } else {
+        hoveredNode = findNodeAt(coords);
+    }
+});
+
+window.addEventListener('mouseup', () => {
+    isDragging = false;
+    draggedNode = null;
+});
+
+canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const zoomFactor = 1.1;
+    const mouseX = e.clientX;
+    const mouseY = e.clientY;
+
+    let newScale = e.deltaY < 0 ? transform.scale * zoomFactor : transform.scale / zoomFactor;
+    newScale = Math.max(0.18, Math.min(newScale, 4.5));
+
+    transform.x = mouseX - (mouseX - transform.x) * (newScale / transform.scale);
+    transform.y = mouseY - (mouseY - transform.y) * (newScale / transform.scale);
+    transform.scale = newScale;
+}, { passive: false });
+
+// CONTROLLI
+document.getElementById('categorySelect').addEventListener('change', (e) => { selectedCategory = e.target.value; wakeSimulation(); });
+document.getElementById('searchInput').addEventListener('input', (e) => { searchQuery = e.target.value.toLowerCase().trim(); wakeSimulation(); });
+document.getElementById('repulsionSlider').addEventListener('input', (e) => { repulsionStrength = parseFloat(e.target.value); wakeSimulation(); });
+
+function updateInfoCard(node) {
+    const card = document.getElementById('info-card');
+    if (!node) {
+        card.style.display = 'none';
+        return;
+    }
+    
+    const catObj = CATEGORIES[node.category] || { name: 'Nodo', color: '#f59e0b' };
+    
+    document.getElementById('card-title').innerText = node.name;
+    const badge = document.getElementById('card-badge');
+    badge.innerText = catObj.name;
+    badge.style.backgroundColor = catObj.color;
+    badge.style.color = '#020617';
+
+    document.getElementById('card-meta').innerText = `🍊 ${node.sub}`;
+    
+    const partnersList = node.connections.map(c => `• ${c.name}`).slice(0, 6).join('<br>');
+    
+    document.getElementById('card-details').innerHTML = `
+        <strong>Dettagli Concettuali:</strong><br>${node.details}
+    `;
+    
+    document.getElementById('card-partners').innerHTML = `
+        <strong>Connessioni nell'Ecosistema Agrumato:</strong><br>${partnersList || 'Nessun collegamento diretto'}
+    `;
+    
+    card.style.display = 'block';
+}
+
+function openWorkModal(node, mouseX, mouseY) {
+    const modal = document.getElementById('work-modal');
+    
+    document.getElementById('modal-node-name').innerText = node.name;
+    document.getElementById('modal-node-meta').innerText = `${CATEGORIES[node.category]?.name} • ${node.sub}`;
+    document.getElementById('modal-node-title').innerText = node.details;
+    
+    const searchQuery = encodeURIComponent(`Agrumi ${node.name} ${node.sub}`);
+    const searchUrl = `https://www.google.com/search?q=${searchQuery}`;
+    
+    const linkBtn = document.getElementById('modal-web-link');
+    linkBtn.href = searchUrl;
+
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    
+    let posX = mouseX + 10;
+    let posY = mouseY + 10;
+
+    if (posX + 340 > windowWidth) posX = mouseX - 340;
+    if (posY + 240 > windowHeight) posY = mouseY - 240;
+
+    modal.style.left = `${Math.max(10, posX)}px`;
+    modal.style.top = `${Math.max(10, posY)}px`;
+    modal.style.display = 'block';
+}
+
+function closeWorkModal() {
+    document.getElementById('work-modal').style.display = 'none';
+}
+
+// Start
+requestAnimationFrame(render);
+</script>
+</body>
+</html>

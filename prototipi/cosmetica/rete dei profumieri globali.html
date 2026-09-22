@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulatore Rete dei 200 Maîtres Parfumeurs - Visualizzazioni Multiple & Auto-Stabilizzazione</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #0a0d14; color: #f8fafc; overflow: hidden; }
+        #canvas-container { width: 100vw; height: 100vh; position: relative; }
+        canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+        canvas:active { cursor: grabbing; }
+        
+        /* Control Panel UI */
+        .ui-panel { position: absolute; top: 16px; left: 16px; background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(12px); border: 1px solid #1e293b; padding: 18px; border-radius: 12px; width: 350px; box-shadow: 0 12px 30px rgba(0,0,0,0.6); z-index: 10; max-height: 95vh; overflow-y: auto; }
+        .ui-panel h1 { font-size: 1.15rem; font-weight: 700; margin-bottom: 4px; color: #fbbf24; letter-spacing: -0.02em; }
+        .ui-panel p { font-size: 0.78rem; color: #94a3b8; margin-bottom: 12px; line-height: 1.3; }
+        .ui-panel .hint { font-size: 0.72rem; color: #fbbf24; background: rgba(251, 191, 36, 0.1); padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(251, 191, 36, 0.2); margin-bottom: 14px; }
+        
+        .control-group { margin-bottom: 12px; }
+        .control-group label { display: block; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; margin-bottom: 4px; font-weight: 600; }
+        input[type="text"], select { width: 100%; padding: 8px 10px; background: #070a10; border: 1px solid #334155; border-radius: 6px; color: #fff; font-size: 0.82rem; outline: none; transition: border-color 0.2s; }
+        input[type="text"]:focus, select:focus { border-color: #fbbf24; }
+        select { cursor: pointer; }
+        input[type="range"] { width: 100%; accent-color: #fbbf24; cursor: pointer; }
+        
+        /* Sim Control Bar */
+        .sim-control-bar { display: flex; align-items: center; justify-content: space-between; background: #070a10; padding: 8px 12px; border-radius: 8px; border: 1px solid #1e293b; margin-bottom: 12px; }
+        .sim-status { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 600; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; }
+        .status-dot.paused { background: #ef4444; }
+        .btn-toggle { background: #fbbf24; color: #0a0d14; border: none; padding: 5px 10px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+        .btn-toggle:hover { background: #d97706; color: #fff; }
+
+        /* Legend Grid */
+        .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 12px 0; padding: 8px; background: rgba(2, 6, 23, 0.5); border-radius: 6px; border: 1px solid #1e293b; }
+        .legend-item { display: flex; align-items: center; font-size: 0.68rem; color: #cbd5e1; }
+        .legend-color { width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; flex-shrink: 0; }
+
+        .stats { display: flex; justify-content: space-between; font-size: 0.72rem; color: #94a3b8; padding-top: 10px; border-top: 1px solid #1e293b; }
+        
+        /* Info Card Panel (Left Click) */
+        #info-card { position: absolute; bottom: 20px; right: 20px; background: rgba(15, 23, 42, 0.94); backdrop-filter: blur(12px); border: 1px solid #334155; padding: 18px; border-radius: 12px; width: 330px; display: none; z-index: 10; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        #info-card h2 { font-size: 1.1rem; color: #f8fafc; margin-bottom: 4px; line-height: 1.2; }
+        #info-card .category-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.68rem; font-weight: 600; margin-bottom: 8px; text-transform: uppercase; }
+        #info-card .meta { font-size: 0.8rem; color: #fbbf24; font-weight: 500; margin-bottom: 10px; }
+        #info-card .details { font-size: 0.76rem; color: #cbd5e1; line-height: 1.5; }
+        #info-card .partners { margin-top: 8px; padding-top: 8px; border-top: 1px solid #334155; font-size: 0.72rem; color: #94a3b8; }
+
+        /* Context Menu Window / Modal (Right Click) */
+        #work-modal { position: absolute; display: none; background: rgba(15, 23, 42, 0.96); backdrop-filter: blur(16px); border: 1px solid #fbbf24; border-radius: 12px; padding: 18px; width: 320px; box-shadow: 0 15px 35px rgba(0,0,0,0.8); z-index: 100; animation: popup 0.15s ease-out; }
+        @keyframes popup { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+        #work-modal .close-btn { position: absolute; top: 10px; right: 12px; background: none; border: none; color: #64748b; font-size: 1.2rem; cursor: pointer; }
+        #work-modal .close-btn:hover { color: #fff; }
+        #work-modal h3 { font-size: 1.05rem; color: #f8fafc; margin-bottom: 2px; padding-right: 20px; }
+        #work-modal .designer-sub { font-size: 0.75rem; color: #fbbf24; margin-bottom: 12px; font-weight: 500; }
+        #work-modal .work-box { background: #070a10; border: 1px solid #1e293b; padding: 12px; border-radius: 8px; margin-bottom: 14px; }
+        #work-modal .work-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 4px; font-weight: 700; }
+        #work-modal .work-title { font-size: 0.88rem; color: #f1f5f9; font-weight: 600; line-height: 1.35; }
+        #work-modal .open-link-btn { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 10px; background: #d97706; color: #fff; border: none; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: background 0.2s; text-decoration: none; }
+        #work-modal .open-link-btn:hover { background: #b45309; }
+    </style>
+</head>
+<body>
+
+<div id="canvas-container">
+    <canvas id="networkCanvas"></canvas>
+    
+    <div class="ui-panel">
+        <h1>Global Perfumers Network</h1>
+        <p>Mappa di influenza, maestri e fragranze iconiche tra i 200 Maîtres Parfumeurs.</p>
+        <div class="hint">💡 <strong>Tasto Destro:</strong> Clicca con il tasto destro per esplorare la fragranza iconica.</div>
+
+        <!-- Barra Stato Simulazione e Pausa -->
+        <div class="sim-control-bar">
+            <div class="sim-status">
+                <span id="status-dot" class="status-dot"></span>
+                <span id="status-text">Simulazione Attiva</span>
+            </div>
+            <button id="toggleSimBtn" class="btn-toggle" onclick="toggleSimulation()">Pausa</button>
+        </div>
+
+        <!-- Selettore Modalità di Visualizzazione (Layout) -->
+        <div class="control-group">
+            <label for="layoutSelect">Modalità di Visualizzazione</label>
+            <select id="layoutSelect" onchange="changeLayout(this.value)">
+                <option value="force">Fisica Dinamica (Force-Directed)</option>
+                <option value="radial">Radiale per Ranking (Centrato sui Top)</option>
+                <option value="cluster">Cluster per Famiglia Olfattiva</option>
+                <option value="circular">Anello Circolare Perimetrale</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="familySelect">Filtra per Famiglia Olfattiva</label>
+            <select id="familySelect">
+                <option value="ALL">Tutte le Famiglie Olfattive</option>
+                <option value="FLORAL">Fiorita / Floreale (Floral)</option>
+                <option value="WOODY">Legnosa / Boisé (Woody)</option>
+                <option value="ORIENTAL">Orientale / Ambrata (Amber)</option>
+                <option value="CITRUS">Agrumata / Esperidata (Citrus)</option>
+                <option value="CHYPRE">Chypre & Fougère</option>
+                <option value="FRESH">Fresca / Acquatica / Gourmand</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="countrySelect">Filtra per Paese d'Origine</label>
+            <select id="countrySelect">
+                <option value="ALL">Tutti i Paesi</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="searchInput">Cerca Naso, Maison o Fragranza</label>
+            <input type="text" id="searchInput" placeholder="es. Ellena, Shalimar, Chanel, Guerlain...">
+        </div>
+
+        <div class="legend">
+            <div class="legend-item"><div class="legend-color" style="background:#ec4899"></div>Fiorita / Floral</div>
+            <div class="legend-item"><div class="legend-color" style="background:#10b981"></div>Legnosa / Woody</div>
+            <div class="legend-item"><div class="legend-color" style="background:#f59e0b"></div>Orientale / Amber</div>
+            <div class="legend-item"><div class="legend-color" style="background:#facc15"></div>Agrumata / Citrus</div>
+            <div class="legend-item"><div class="legend-color" style="background:#a855f7"></div>Chypre & Fougère</div>
+            <div class="legend-item"><div class="legend-color" style="background:#38bdf8"></div>Fresca / Acquatica</div>
+        </div>
+        
+        <div class="control-group" id="repulsionControl">
+            <label for="repulsionSlider">Forza di Repulsione Fisica</label>
+            <input type="range" id="repulsionSlider" min="50" max="600" value="280">
+        </div>
+
+        <div class="stats">
+            <span>Parfumeurs: <strong id="stat-nodes">200</strong></span>
+            <span>Relazioni: <strong id="stat-edges">0</strong></span>
+            <span>FPS: <strong id="stat-fps">60</strong></span>
+        </div>
+    </div>
+
+    <!-- Card Sinistra/Basso per Click Sinistro -->
+    <div id="info-card">
+        <h2 id="card-title">-</h2>
+        <span id="card-badge" class="category-badge">-</span>
+        <div id="card-meta" class="meta">-</div>
+        <div id="card-details" class="details"></div>
+        <div id="card-partners" class="partners"></div>
+    </div>
+
+    <!-- Pop-up Window per Tasto Destro (Fragranze Iconiche) -->
+    <div id="work-modal">
+        <button class="close-btn" onclick="closeWorkModal()">&times;</button>
+        <h3 id="modal-designer-name">Nome Parfumeur</h3>
+        <div id="modal-designer-meta" class="designer-sub">Paese • Maison / Stile</div>
+        <div class="work-box">
+            <div class="work-label">Fragranza / Capolavoro Iconico</div>
+            <div id="modal-work-title" class="work-title">Titolo della Fragranza</div>
+        </div>
+        <a id="modal-web-link" href="#" target="_blank" class="open-link-btn">
+            🔍 Vedi Fragranza in Rete ↗
+        </a>
+    </div>
+</div>
+
+<script>
+// --- MAPPA DELLE FAMIGLIE OLFATTIVE E COLORI ---
+const FAMILIES = {
+    FLORAL: { name: 'Fiorita / Floreale', color: '#ec4899' },
+    WOODY: { name: 'Legnosa / Boisé', color: '#10b981' },
+    ORIENTAL: { name: 'Orientale / Ambrata', color: '#f59e0b' },
+    CITRUS: { name: 'Agrumata / Esperidata', color: '#facc15' },
+    CHYPRE: { name: 'Chypre & Fougère', color: '#a855f7' },
+    FRESH: { name: 'Fresca / Acquatica', color: '#38bdf8' }
+};
+
+// --- DATASET SEED: I TOP 40 MAÎTRES PARFUMEURS ---
+const SEED_PERFUMERS = [
+    { name: "Edmond Roudnitska", country: "Francia", family: "CHYPRE", era: "Haute Parfumerie Classique", rank: 1, iconicWork: "Eau Sauvage (Dior, 1966) & Diorissimo", connections: ["Jean-Claude Ellena", "Michel Almairac", "Pierre Bourdon"] },
+    { name: "Jacques Polge", country: "Francia", family: "FLORAL", era: "Maison Chanel (1978-2015)", rank: 2, iconicWork: "Coco Chanel (1984), Égoïste & Bleu de Chanel", connections: ["Ernest Beaux", "Olivier Polge", "Christopher Sheldrake", "Francois Demachy"] },
+    { name: "Jean-Claude Ellena", country: "Francia", family: "CITRUS", era: "Hermès / Écriture Épurée", rank: 3, iconicWork: "Terre d'Hermès (2006) & Un Jardin sur le Nil", connections: ["Edmond Roudnitska", "Christine Nagel", "Olivia Giacobetti", "Bertrand Duchaufour"] },
+    { name: "Francis Kurkdjian", country: "Francia", family: "ORIENTAL", era: "Maison Francis Kurkdjian / Dior", rank: 4, iconicWork: "Le Male (Jean Paul Gaultier, 1995) & Baccarat Rouge 540", connections: ["Jacques Cavallier", "Dominique Ropion", "Olivier Cresp"] },
+    { name: "Alberto Morillas", country: "Spagna", family: "FRESH", era: "Master Parfumeur Firmenich", rank: 5, iconicWork: "Acqua di Giò (Armani, 1996) & CK One", connections: ["Jacques Cavallier", "Harry Fremont", "Thierry Wasser", "Olivier Cresp"] },
+    { name: "Ernest Beaux", country: "Francia / Russia", family: "FLORAL", era: "Pioniere delle Aldeidi", rank: 6, iconicWork: "Chanel N°5 (1921) & Soir de Paris", connections: ["Jacques Polge", "Henri Robert", "Germaine Cellier"] },
+    { name: "Jacques Guerlain", country: "Francia", family: "ORIENTAL", era: "Maison Guerlain Age d'Or", rank: 7, iconicWork: "Shalimar (1925), L'Heure Bleue & Mitsouko", connections: ["Jean-Paul Guerlain", "Thierry Wasser", "Edmond Roudnitska"] },
+    { name: "Dominique Ropion", country: "Francia", family: "FLORAL", era: "Master of Complexity / IFF", rank: 8, iconicWork: "Portrait of a Lady (Frederic Malle) & La Vie Est Belle", connections: ["Francis Kurkdjian", "Anne Flipo", "Carlos Benaïm", "Frederic Malle"] },
+    { name: "Germaine Cellier", country: "Francia", family: "CHYPRE", era: "Avant-Garde & Overdose", rank: 9, iconicWork: "Bandit (Robert Piguet, 1944) & Fracas", connections: ["Ernest Beaux", "Bernard Chant", "Jean-Kerléo"] },
+    { name: "Olivier Cresp", country: "Francia", family: "ORIENTAL", era: "Pioniere della Nota Gourmand", rank: 10, iconicWork: "Angel (Thierry Mugler, 1992) & Light Blue (D&G)", connections: ["Alberto Morillas", "Francis Kurkdjian", "Jacques Cavallier"] },
+    { name: "Jacques Cavallier-Belletrud", country: "Francia", family: "FRESH", era: "Maison Louis Vuitton / Master Parfumeur", rank: 11, iconicWork: "L'Eau d'Issey (Issey Miyake, 1992) & LV L'Immensité", connections: ["Alberto Morillas", "Francis Kurkdjian", "Olivier Cresp"] },
+    { name: "Sophia Grojsman", country: "Bielorussia / USA", family: "FLORAL", era: "Queen of Rose / IFF", rank: 12, iconicWork: "Trésor (Lancôme, 1990) & Paris (Yves Saint Laurent)", connections: ["Carlos Benaïm", "Dominique Ropion", "Annick Menardo"] },
+    { name: "Jean-Paul Guerlain", country: "Francia", family: "WOODY", era: "Maison Guerlain Classic", rank: 13, iconicWork: "Vétiver (1959), Samsara & Habit Rouge", connections: ["Jacques Guerlain", "Thierry Wasser", "Mathilde Laurent"] },
+    { name: "Pierre Bourdon", country: "Francia", family: "FRESH", era: "Pioniere delle Note Marine", rank: 14, iconicWork: "Cool Water (Davidoff, 1988) & Féminité du Bois", connections: ["Edmond Roudnitska", "Christopher Sheldrake", "Michel Almairac"] },
+    { name: "Thierry Wasser", country: "Svizzera", family: "ORIENTAL", era: "Maitre Parfumeur Guerlain", rank: 15, iconicWork: "Mon Guerlain & Shalimar Parfum Initial", connections: ["Jacques Guerlain", "Jean-Paul Guerlain", "Alberto Morillas"] },
+    { name: "Annick Menardo", country: "Francia", family: "WOODY", era: "Audacious & Dark Structuralist", rank: 16, iconicWork: "Bois d'Argent (Dior), Hypnotic Poison & Lolita Lempicka", connections: ["Sophia Grojsman", "Christine Nagel", "Olivier Polge"] },
+    { name: "Olivia Giacobetti", country: "Francia", family: "WOODY", era: "Minimalism & Fig Pioneer", rank: 17, iconicWork: "Philosykos (Diptyque, 1996) & Premier Figuier", connections: ["Jean-Claude Ellena", "Bertrand Duchaufour", "L'Artisan Parfumeur"] },
+    { name: "Bertrand Duchaufour", country: "Francia", family: "WOODY", era: "Niche Incense Master", rank: 18, iconicWork: "Timbuktu (L'Artisan) & Avignon (Comme des Garçons)", connections: ["Olivia Giacobetti", "Jean-Claude Ellena", "Mark Buxton"] },
+    { name: "Christine Nagel", country: "Svizzera", family: "CITRUS", era: "Maitre Parfumeur Hermès", rank: 19, iconicWork: "Terre d'Hermès Eau Givrée & Wood Sage & Sea Salt", connections: ["Jean-Claude Ellena", "Annick Menardo", "Francis Kurkdjian"] },
+    { name: "François Demachy", country: "Francia", family: "CITRUS", era: "Maison Christian Dior (2006-2021)", rank: 20, iconicWork: "Dior Sauvage (2015) & Dior Homme Intense", connections: ["Jacques Polge", "Olivier Polge", "Francis Kurkdjian"] }
+];
+
+const EXTENDED_PERFUMERS = [
+    { name: "Michel Almairac", country: "Francia", family: "WOODY", era: "Modern Classic & Robertet", iconicWork: "Fahrenheit (Dior, 1988) & Chloé Eau de Parfum" },
+    { name: "Bernard Chant", country: "Stati Uniti", family: "CHYPRE", era: "Golden Age Leather Chypre", iconicWork: "Aramis (1966) & Clinique Aromatics Elixir" },
+    { name: "Christopher Sheldrake", country: "Regno Unito", family: "ORIENTAL", era: "Serge Lutens Opulence", iconicWork: "Chergui (Serge Lutens) & Féminité du Bois" },
+    { name: "Olivier Polge", country: "Francia", family: "FLORAL", era: "Maison Chanel (2015-presente)", iconicWork: "La Vie Est Belle (Lancôme) & Chanel Gabrielle" },
+    { name: "Carlos Benaïm", country: "Marocco / USA", family: "FLORAL", era: "Master Perfumer IFF", iconicWork: "Polo Ralph Lauren (1978) & Frédéric Malle Music For a While" },
+    { name: "Mathilde Laurent", country: "Francia", family: "CITRUS", era: "Maison Cartier Parfums", iconicWork: "Cartier La Panthère & Déclaration d'Un Soir" },
+    { name: "Jean-Louis Sieuzac", country: "Francia", family: "ORIENTAL", era: "Dramatic Powerhouse Era", iconicWork: "Opium (Yves Saint Laurent, 1977) & Dior Fahrenheit" },
+    { name: "Maurice Roucel", country: "Francia", family: "ORIENTAL", era: "Sensual Amber & Musks", iconicWork: "Musc Ravageur (Frederic Malle) & Rochas Man" },
+    { name: "Anne Flipo", country: "Francia", family: "FLORAL", era: "Master Perfumer IFF", iconicWork: "Invictus (Paco Rabanne) & YSL Libre" },
+    { name: "Calice Becker", country: "Francia", family: "FLORAL", era: "Kilain Paris & Givaudan", iconicWork: "J'adore (Dior, 1999) & By Kilian Love Don't Be Shy" }
+];
+
+// GENERAZIONE DATASET 200 NODI COMPLETI
+function generatePerfumersDataset() {
+    const nodes = [];
+    const nodeMap = new Map();
+
+    SEED_PERFUMERS.forEach((d, idx) => {
+        const node = {
+            id: idx + 1,
+            name: d.name,
+            country: d.country,
+            family: d.family,
+            era: d.era,
+            rank: d.rank,
+            iconicWork: d.iconicWork,
+            radius: Math.max(16 - d.rank * 0.28, 7.5),
+            x: (Math.random() - 0.5) * 1000,
+            y: (Math.random() - 0.5) * 700,
+            targetX: 0, targetY: 0,
+            vx: 0, vy: 0,
+            connections: []
+        };
+        nodes.push(node);
+        nodeMap.set(d.name, node);
+    });
+
+    EXTENDED_PERFUMERS.forEach((d) => {
+        const rank = nodes.length + 1;
+        const node = {
+            id: rank,
+            name: d.name,
+            country: d.country,
+            family: d.family,
+            era: d.era,
+            rank: rank,
+            iconicWork: d.iconicWork,
+            radius: Math.max(10 - (rank * 0.02), 5),
+            x: (Math.random() - 0.5) * 1200,
+            y: (Math.random() - 0.5) * 800,
+            targetX: 0, targetY: 0,
+            vx: 0, vy: 0,
+            connections: []
+        };
+        nodes.push(node);
+        nodeMap.set(d.name, node);
+    });
+
+    const familyKeys = Object.keys(FAMILIES);
+    const countries = ["Francia", "Italia", "Svizzera", "Stati Uniti", "Spagna", "Regno Unito", "Germania", "Giappone", "Messico", "Paesi Bassi"];
+    const eras = ["Haute Parfumerie Classique", "Niche Contemporaine", "Pioniere della Sintesi", "Minimalismo Olfattivo", "Gourmand Moderno", "Chypre Reinterpretation"];
+
+    for (let i = nodes.length; i < 200; i++) {
+        const rank = i + 1;
+        const family = familyKeys[i % familyKeys.length];
+        const country = countries[i % countries.length];
+        const era = eras[i % eras.length];
+        const name = `Maître Parfumeur #${rank} [${country}]`;
+
+        const node = {
+            id: rank,
+            name: name,
+            country: country,
+            family: family,
+            era: era,
+            rank: rank,
+            iconicWork: `Accordo & Formula Iconica #${rank}`,
+            radius: Math.max(7 - (rank * 0.015), 3.5),
+            x: (Math.random() - 0.5) * 1600,
+            y: (Math.random() - 0.5) * 1100,
+            targetX: 0, targetY: 0,
+            vx: 0, vy: 0,
+            connections: []
+        };
+        nodes.push(node);
+        nodeMap.set(name, node);
+    }
+
+    const edges = [];
+    const edgeSet = new Set();
+
+    function addEdge(source, target, weight = 1) {
+        if (!source || !target || source.id === target.id) return;
+        const key = source.id < target.id ? `${source.id}-${target.id}` : `${target.id}-${source.id}`;
+        if (!edgeSet.has(key)) {
+            edgeSet.add(key);
+            const edge = { source, target, weight };
+            edges.push(edge);
+            source.connections.push(target);
+            target.connections.push(source);
+        }
+    }
+
+    SEED_PERFUMERS.forEach(d => {
+        const src = nodeMap.get(d.name);
+        if (d.connections) {
+            d.connections.forEach(targetName => {
+                const tgt = nodeMap.get(targetName);
+                if (tgt) addEdge(src, tgt, 2.5);
+            });
+        }
+    });
+
+    for (let i = 0; i < nodes.length; i++) {
+        const nodeA = nodes[i];
+        const count = Math.floor(Math.random() * 2) + 1;
+
+        for (let k = 0; k < count; k++) {
+            const targetIdx = Math.floor(Math.random() * nodes.length);
+            const nodeB = nodes[targetIdx];
+            if (nodeA.family === nodeB.family || nodeA.country === nodeB.country) {
+                addEdge(nodeA, nodeB, 0.7);
+            }
+        }
+    }
+
+    return { nodes, edges };
+}
+
+// --- ENGINE CANVAS, VISUALIZZAZIONI E FISICA ---
+const canvas = document.getElementById('networkCanvas');
+const ctx = canvas.getContext('2d');
+
+let width, height;
+let graphData = generatePerfumersDataset();
+let nodes = graphData.nodes;
+let edges = graphData.edges;
+
+let transform = { x: 0, y: 0, scale: 1 };
+let isDragging = false;
+let dragStart = { x: 0, y: 0 };
+let hoveredNode = null;
+let selectedNode = null;
+let draggedNode = null;
+
+let searchQuery = "";
+let selectedFamily = "ALL";
+let selectedCountry = "ALL";
+let currentLayout = "force";
+
+// SISTEMA DI STABILIZZAZIONE E PAUSA FISICA
+let isSimulating = true;
+let simFrames = 0;
+const MAX_SIM_FRAMES = 360; // Auto freeze dopo ~6 secondi senza interazione
+let totalKineticEnergy = 100;
+
+let repulsionStrength = 280;
+const damping = 0.85;
+const springLength = 90;
+const springStiffness = 0.035;
+
+function populateCountryDropdown() {
+    const select = document.getElementById('countrySelect');
+    const countries = [...new Set(nodes.map(n => n.country))].sort();
+    countries.forEach(country => {
+        const opt = document.createElement('option');
+        opt.value = country;
+        opt.textContent = country;
+        select.appendChild(opt);
+    });
+}
+populateCountryDropdown();
+
+document.getElementById('stat-nodes').innerText = nodes.length;
+document.getElementById('stat-edges').innerText = edges.length;
+
+function resizeCanvas() {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+    if (transform.x === 0 && transform.y === 0) {
+        transform.x = width / 2;
+        transform.y = height / 2;
+    }
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// --- CALCOLO MODALITÀ DI VISUALIZZAZIONE (LAYOUTS) ---
+function computeLayoutTargets(layout) {
+    if (layout === 'radial') {
+        nodes.forEach(n => {
+            const ring = Math.floor((n.rank - 1) / 20); // Anelli da 20 nodi
+            const angle = ((n.rank - 1) % 20) * (Math.PI * 2 / 20);
+            const radius = 120 + ring * 110;
+            n.targetX = Math.cos(angle) * radius;
+            n.targetY = Math.sin(angle) * radius;
+        });
+    } else if (layout === 'cluster') {
+        const familyKeys = Object.keys(FAMILIES);
+        const cols = 3;
+        const spacingX = 480;
+        const spacingY = 380;
+
+        familyKeys.forEach((fam, idx) => {
+            const cx = ((idx % cols) - 1) * spacingX;
+            const cy = (Math.floor(idx / cols) - 0.5) * spacingY;
+            const famNodes = nodes.filter(n => n.family === fam);
+
+            famNodes.forEach((n, i) => {
+                const angle = i * 0.5;
+                const r = 30 + Math.sqrt(i) * 22;
+                n.targetX = cx + Math.cos(angle) * r;
+                n.targetY = cy + Math.sin(angle) * r;
+            });
+        });
+    } else if (layout === 'circular') {
+        const total = nodes.length;
+        const radius = 620;
+        const sorted = nodes.slice().sort((a, b) => a.family.localeCompare(b.family));
+        
+        sorted.forEach((n, i) => {
+            const angle = (i / total) * Math.PI * 2;
+            n.targetX = Math.cos(angle) * radius;
+            n.targetY = Math.sin(angle) * radius;
+        });
+    }
+}
+
+function changeLayout(newLayout) {
+    currentLayout = newLayout;
+    computeLayoutTargets(newLayout);
+    
+    // Mostra/Nascondi slider repulsione solo per Force-directed
+    document.getElementById('repulsionControl').style.display = newLayout === 'force' ? 'block' : 'none';
+    wakeSimulation();
+}
+
+// --- GESTIONE PAUSA E STABILIZZAZIONE FISICA ---
+function wakeSimulation() {
+    isSimulating = true;
+    simFrames = 0;
+    updateSimUI(true);
+}
+
+function toggleSimulation() {
+    isSimulating = !isSimulating;
+    if (isSimulating) simFrames = 0;
+    updateSimUI(isSimulating);
+}
+
+function updateSimUI(active) {
+    const dot = document.getElementById('status-dot');
+    const text = document.getElementById('status-text');
+    const btn = document.getElementById('toggleSimBtn');
+
+    if (active) {
+        dot.classList.remove('paused');
+        text.innerText = "Simulazione Attiva";
+        btn.innerText = "Pausa";
+    } else {
+        dot.classList.add('paused');
+        text.innerText = "Rete Stabilizzata";
+        btn.innerText = "Riprendi";
+    }
+}
+
+function updatePhysics() {
+    if (!isSimulating) return;
+
+    if (currentLayout === 'force') {
+        totalKineticEnergy = 0;
+
+        for (let i = 0; i < nodes.length; i++) {
+            const n1 = nodes[i];
+            for (let j = i + 1; j < nodes.length; j++) {
+                const n2 = nodes[j];
+                let dx = n2.x - n1.x;
+                let dy = n2.y - n1.y;
+                let distSq = dx * dx + dy * dy + 0.1;
+                let dist = Math.sqrt(distSq);
+
+                if (dist < 450) {
+                    let force = (repulsionStrength * 10) / distSq;
+                    let fx = (dx / dist) * force;
+                    let fy = (dy / dist) * force;
+
+                    n1.vx -= fx;
+                    n1.vy -= fy;
+                    n2.vx += fx;
+                    n2.vy += fy;
+                }
+            }
+        }
+
+        for (let i = 0; i < edges.length; i++) {
+            const edge = edges[i];
+            let dx = edge.target.x - edge.source.x;
+            let dy = edge.target.y - edge.source.y;
+            let dist = Math.sqrt(dx * dx + dy * dy) + 0.1;
+            let force = (dist - springLength) * springStiffness * edge.weight;
+
+            let fx = (dx / dist) * force;
+            let fy = (dy / dist) * force;
+
+            edge.source.vx += fx;
+            edge.source.vy += fy;
+            edge.target.vx -= fx;
+            edge.target.vy -= fy;
+        }
+
+        for (let i = 0; i < nodes.length; i++) {
+            const n = nodes[i];
+            if (n === draggedNode) continue;
+
+            n.vx -= n.x * 0.0004;
+            n.vy -= n.y * 0.0004;
+
+            n.vx *= damping;
+            n.vy *= damping;
+
+            n.x += n.vx;
+            n.y += n.vy;
+
+            totalKineticEnergy += Math.abs(n.vx) + Math.abs(n.vy);
+        }
+
+        simFrames++;
+        // Auto-freeze quando la rete è in equilibrio o scade il tempo
+        if (totalKineticEnergy < 0.8 || simFrames > MAX_SIM_FRAMES) {
+            isSimulating = false;
+            updateSimUI(false);
+        }
+    } else {
+        // Transizione fluida verso i target per layout statici/strutturati
+        let maxMovement = 0;
+        nodes.forEach(n => {
+            if (n === draggedNode) return;
+            let dx = n.targetX - n.x;
+            let dy = n.targetY - n.y;
+            n.x += dx * 0.08;
+            n.y += dy * 0.08;
+
+            maxMovement += Math.abs(dx) + Math.abs(dy);
+        });
+
+        simFrames++;
+        if (maxMovement < 0.5 || simFrames > 180) {
+            isSimulating = false;
+            updateSimUI(false);
+        }
+    }
+}
+
+let lastTime = performance.now();
+let frameCount = 0;
+
+function render() {
+    const now = performance.now();
+    frameCount++;
+    if (now - lastTime >= 1000) {
+        document.getElementById('stat-fps').innerText = frameCount;
+        frameCount = 0;
+        lastTime = now;
+    }
+
+    updatePhysics();
+
+    ctx.save();
+    ctx.fillStyle = '#0a0d14';
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.translate(transform.x, transform.y);
+    ctx.scale(transform.scale, transform.scale);
+
+    const isFilterActive = selectedFamily !== "ALL" || selectedCountry !== "ALL" || searchQuery !== "";
+
+    // Disegno Archi
+    for (let i = 0; i < edges.length; i++) {
+        const edge = edges[i];
+        const isHighlight = (hoveredNode || selectedNode) && 
+            (edge.source === hoveredNode || edge.target === hoveredNode || edge.source === selectedNode || edge.target === selectedNode);
+        
+        ctx.beginPath();
+        ctx.moveTo(edge.source.x, edge.source.y);
+        ctx.lineTo(edge.target.x, edge.target.y);
+
+        if (isHighlight) {
+            ctx.strokeStyle = '#fbbf24';
+            ctx.lineWidth = 2.4;
+        } else {
+            ctx.strokeStyle = isFilterActive ? 'rgba(30, 41, 59, 0.15)' : 'rgba(51, 65, 85, 0.3)';
+            ctx.lineWidth = 0.6;
+        }
+        ctx.stroke();
+    }
+
+    // Disegno Nodi
+    for (let i = 0; i < nodes.length; i++) {
+        const n = nodes[i];
+        const familyColor = FAMILIES[n.family]?.color || '#94a3b8';
+        
+        const matchesFamily = (selectedFamily === "ALL" || n.family === selectedFamily);
+        const matchesCountry = (selectedCountry === "ALL" || n.country === selectedCountry);
+        const matchesSearch = searchQuery === "" || 
+            n.name.toLowerCase().includes(searchQuery) || 
+            n.era.toLowerCase().includes(searchQuery) || 
+            n.iconicWork.toLowerCase().includes(searchQuery) ||
+            n.country.toLowerCase().includes(searchQuery);
+
+        const isMatch = matchesFamily && matchesCountry && matchesSearch;
+        const isSelected = n === selectedNode;
+        const isHovered = n === hoveredNode;
+
+        ctx.save();
+        
+        if (isFilterActive && !isMatch && !isSelected && !isHovered) {
+            ctx.globalAlpha = 0.12;
+        }
+
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, isSelected || isHovered ? n.radius + 4 : n.radius, 0, Math.PI * 2);
+
+        ctx.fillStyle = isFilterActive && isMatch ? '#f8fafc' : familyColor;
+        ctx.fill();
+
+        if (isSelected || isHovered || (isFilterActive && isMatch)) {
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+        }
+
+        if (transform.scale > 0.75 || n.rank <= 25 || isHovered || isSelected || (isFilterActive && isMatch)) {
+            ctx.fillStyle = isSelected || isHovered ? '#ffffff' : '#e2e8f0';
+            ctx.font = `${Math.max(10 / transform.scale, 8)}px -apple-system, sans-serif`;
+            ctx.fillText(`${n.name}`, n.x + n.radius + 5, n.y + 3);
+        }
+
+        ctx.restore();
+    }
+
+    ctx.restore();
+    requestAnimationFrame(render);
+}
+
+function getCanvasCoords(e) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+        x: (e.clientX - rect.left - transform.x) / transform.scale,
+        y: (e.clientY - rect.top - transform.y) / transform.scale
+    };
+}
+
+function findNodeAt(coords) {
+    for (let i = nodes.length - 1; i >= 0; i--) {
+        const n = nodes[i];
+        const dx = n.x - coords.x;
+        const dy = n.y - coords.y;
+        if (dx * dx + dy * dy <= (n.radius + 6) * (n.radius + 6)) {
+            return n;
+        }
+    }
+    return null;
+}
+
+// EVENTI MOUSE
+canvas.addEventListener('mousedown', (e) => {
+    if (e.button === 2) return;
+    closeWorkModal();
+
+    const coords = getCanvasCoords(e);
+    const node = findNodeAt(coords);
+
+    if (node) {
+        draggedNode = node;
+        selectedNode = node;
+        updateInfoCard(node);
+        wakeSimulation();
+    } else {
+        isDragging = true;
+        dragStart = { x: e.clientX - transform.x, y: e.clientY - transform.y };
+    }
+});
+
+canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    const coords = getCanvasCoords(e);
+    const node = findNodeAt(coords);
+
+    if (node) {
+        selectedNode = node;
+        openWorkModal(node, e.clientX, e.clientY);
+    } else {
+        closeWorkModal();
+    }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+    const coords = getCanvasCoords(e);
+
+    if (draggedNode) {
+        draggedNode.x = coords.x;
+        draggedNode.y = coords.y;
+        draggedNode.vx = 0;
+        draggedNode.vy = 0;
+        wakeSimulation();
+    } else if (isDragging) {
+        transform.x = e.clientX - dragStart.x;
+        transform.y = e.clientY - dragStart.y;
+    } else {
+        hoveredNode = findNodeAt(coords);
+    }
+});
+
+window.addEventListener('mouseup', () => {
+    isDragging = false;
+    draggedNode = null;
+});
+
+canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const zoomFactor = 1.1;
+    const mouseX = e.clientX;
+    const mouseY = e.clientY;
+
+    let newScale = e.deltaY < 0 ? transform.scale * zoomFactor : transform.scale / zoomFactor;
+    newScale = Math.max(0.18, Math.min(newScale, 4.5));
+
+    transform.x = mouseX - (mouseX - transform.x) * (newScale / transform.scale);
+    transform.y = mouseY - (mouseY - transform.y) * (newScale / transform.scale);
+    transform.scale = newScale;
+}, { passive: false });
+
+// LISTENER FILTRI
+document.getElementById('familySelect').addEventListener('change', (e) => { selectedFamily = e.target.value; wakeSimulation(); });
+document.getElementById('countrySelect').addEventListener('change', (e) => { selectedCountry = e.target.value; wakeSimulation(); });
+document.getElementById('searchInput').addEventListener('input', (e) => { searchQuery = e.target.value.toLowerCase().trim(); wakeSimulation(); });
+document.getElementById('repulsionSlider').addEventListener('input', (e) => { repulsionStrength = parseFloat(e.target.value); wakeSimulation(); });
+
+function updateInfoCard(node) {
+    const card = document.getElementById('info-card');
+    if (!node) {
+        card.style.display = 'none';
+        return;
+    }
+    
+    const familyObj = FAMILIES[node.family] || { name: 'Parfumeur', color: '#fbbf24' };
+    
+    document.getElementById('card-title').innerText = node.name;
+    const badge = document.getElementById('card-badge');
+    badge.innerText = familyObj.name;
+    badge.style.backgroundColor = familyObj.color;
+    badge.style.color = '#0a0d14';
+
+    document.getElementById('card-meta').innerText = `🌍 ${node.country} • 🌿 ${node.era}`;
+    
+    const partnersList = node.connections.map(c => `• ${c.name} [${c.country}]`).slice(0, 6).join('<br>');
+    
+    document.getElementById('card-details').innerHTML = `
+        <strong>Ranking Olfattivo:</strong> #${node.rank}<br>
+        <strong>Capolavoro Iconico:</strong> ${node.iconicWork}
+    `;
+    
+    document.getElementById('card-partners').innerHTML = `
+        <strong>Maestri, Collaboratori & Pari:</strong><br>${partnersList || 'Nessuna connessione diretta registrata'}
+    `;
+    
+    card.style.display = 'block';
+}
+
+function openWorkModal(node, mouseX, mouseY) {
+    const modal = document.getElementById('work-modal');
+    
+    document.getElementById('modal-designer-name').innerText = node.name;
+    document.getElementById('modal-designer-meta').innerText = `${node.country} • ${node.era}`;
+    document.getElementById('modal-work-title').innerText = node.iconicWork;
+    
+    const searchQuery = encodeURIComponent(`${node.name} ${node.iconicWork} perfume fragrance iconic`);
+    const searchUrl = `https://www.google.com/search?tbm=isch&q=${searchQuery}`;
+    
+    const linkBtn = document.getElementById('modal-web-link');
+    linkBtn.href = searchUrl;
+
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    
+    let posX = mouseX + 10;
+    let posY = mouseY + 10;
+
+    if (posX + 330 > windowWidth) posX = mouseX - 330;
+    if (posY + 230 > windowHeight) posY = mouseY - 230;
+
+    modal.style.left = `${Math.max(10, posX)}px`;
+    modal.style.top = `${Math.max(10, posY)}px`;
+    modal.style.display = 'block';
+}
+
+function closeWorkModal() {
+    document.getElementById('work-modal').style.display = 'none';
+}
+
+// Avvio Loop
+requestAnimationFrame(render);
+</script>
+</body>
+</html>

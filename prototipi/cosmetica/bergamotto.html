@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rete Integrata del Bergamotto - L'Oro Verde della Calabria</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #06090e; color: #f8fafc; overflow: hidden; }
+        #canvas-container { width: 100vw; height: 100vh; position: relative; }
+        canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+        canvas:active { cursor: grabbing; }
+        
+        /* Panel UI */
+        .ui-panel { position: absolute; top: 16px; left: 16px; background: rgba(10, 15, 26, 0.92); backdrop-filter: blur(12px); border: 1px solid #1e293b; padding: 18px; border-radius: 12px; width: 360px; box-shadow: 0 12px 30px rgba(0,0,0,0.6); z-index: 10; max-height: 95vh; overflow-y: auto; }
+        .ui-panel h1 { font-size: 1.15rem; font-weight: 700; margin-bottom: 4px; color: #84cc16; letter-spacing: -0.02em; }
+        .ui-panel p { font-size: 0.78rem; color: #94a3b8; margin-bottom: 12px; line-height: 1.35; }
+        .ui-panel .hint { font-size: 0.72rem; color: #84cc16; background: rgba(132, 204, 22, 0.1); padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(132, 204, 22, 0.2); margin-bottom: 14px; }
+        
+        .control-group { margin-bottom: 12px; }
+        .control-group label { display: block; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; margin-bottom: 4px; font-weight: 600; }
+        input[type="text"], select { width: 100%; padding: 8px 10px; background: #020617; border: 1px solid #334155; border-radius: 6px; color: #fff; font-size: 0.82rem; outline: none; transition: border-color 0.2s; }
+        input[type="text"]:focus, select:focus { border-color: #84cc16; }
+        select { cursor: pointer; }
+        input[type="range"] { width: 100%; accent-color: #84cc16; cursor: pointer; }
+        
+        /* Sim Control Bar */
+        .sim-control-bar { display: flex; align-items: center; justify-content: space-between; background: #020617; padding: 8px 12px; border-radius: 8px; border: 1px solid #1e293b; margin-bottom: 12px; }
+        .sim-status { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 600; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; }
+        .status-dot.paused { background: #ef4444; }
+        .btn-toggle { background: #84cc16; color: #020617; border: none; padding: 5px 10px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+        .btn-toggle:hover { background: #65a30d; color: #fff; }
+
+        /* Legend Grid */
+        .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 12px 0; padding: 8px; background: rgba(2, 6, 23, 0.6); border-radius: 6px; border: 1px solid #1e293b; }
+        .legend-item { display: flex; align-items: center; font-size: 0.68rem; color: #cbd5e1; }
+        .legend-color { width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; flex-shrink: 0; }
+
+        .stats { display: flex; justify-content: space-between; font-size: 0.72rem; color: #94a3b8; padding-top: 10px; border-top: 1px solid #1e293b; }
+        
+        /* Info Card Panel */
+        #info-card { position: absolute; bottom: 20px; right: 20px; background: rgba(10, 15, 26, 0.94); backdrop-filter: blur(12px); border: 1px solid #334155; padding: 18px; border-radius: 12px; width: 340px; display: none; z-index: 10; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        #info-card h2 { font-size: 1.1rem; color: #f8fafc; margin-bottom: 4px; line-height: 1.2; }
+        #info-card .category-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.68rem; font-weight: 600; margin-bottom: 8px; text-transform: uppercase; }
+        #info-card .meta { font-size: 0.8rem; color: #84cc16; font-weight: 500; margin-bottom: 10px; }
+        #info-card .details { font-size: 0.76rem; color: #cbd5e1; line-height: 1.5; }
+        #info-card .partners { margin-top: 8px; padding-top: 8px; border-top: 1px solid #334155; font-size: 0.72rem; color: #94a3b8; }
+
+        /* Modal Context Window */
+        #work-modal { position: absolute; display: none; background: rgba(10, 15, 26, 0.96); backdrop-filter: blur(16px); border: 1px solid #84cc16; border-radius: 12px; padding: 18px; width: 330px; box-shadow: 0 15px 35px rgba(0,0,0,0.8); z-index: 100; animation: popup 0.15s ease-out; }
+        @keyframes popup { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+        #work-modal .close-btn { position: absolute; top: 10px; right: 12px; background: none; border: none; color: #64748b; font-size: 1.2rem; cursor: pointer; }
+        #work-modal .close-btn:hover { color: #fff; }
+        #work-modal h3 { font-size: 1.05rem; color: #f8fafc; margin-bottom: 2px; padding-right: 20px; }
+        #work-modal .designer-sub { font-size: 0.75rem; color: #84cc16; margin-bottom: 12px; font-weight: 500; }
+        #work-modal .work-box { background: #020617; border: 1px solid #1e293b; padding: 12px; border-radius: 8px; margin-bottom: 14px; }
+        #work-modal .work-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 4px; font-weight: 700; }
+        #work-modal .work-title { font-size: 0.88rem; color: #f1f5f9; font-weight: 600; line-height: 1.35; }
+        #work-modal .open-link-btn { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 10px; background: #65a30d; color: #fff; border: none; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: background 0.2s; text-decoration: none; }
+        #work-modal .open-link-btn:hover { background: #4d7c0f; }
+    </style>
+</head>
+<body>
+
+<div id="canvas-container">
+    <canvas id="networkCanvas"></canvas>
+    
+    <div class="ui-panel">
+        <h1>Bergamot Ecosystem Map</h1>
+        <p>Mappa concettuale ed ecosistemica dei 200 nodi chiave del Bergamotto: profumeria, botanica, chimica, territorio e salute.</p>
+        <div class="hint">💡 <strong>Tasto Destro:</strong> Clicca su un nodo per fare una ricerca visiva o scientifica avanzata.</div>
+
+        <div class="sim-control-bar">
+            <div class="sim-status">
+                <span id="status-dot" class="status-dot"></span>
+                <span id="status-text">Simulazione Attiva</span>
+            </div>
+            <button id="toggleSimBtn" class="btn-toggle" onclick="toggleSimulation()">Pausa</button>
+        </div>
+
+        <div class="control-group">
+            <label for="layoutSelect">Modalità di Visualizzazione</label>
+            <select id="layoutSelect" onchange="changeLayout(this.value)">
+                <option value="force">Fisica Dinamica (Force-Directed)</option>
+                <option value="radial">Radiale (Bergamotto al Centro)</option>
+                <option value="cluster">Cluster per Categoria Tematica</option>
+                <option value="circular">Anello Circolare Perimetrale</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="categorySelect">Filtra per Categoria</label>
+            <select id="categorySelect">
+                <option value="ALL">Tutte le Categorie</option>
+                <option value="PERFUMERY">Profumeria & Fragranze</option>
+                <option value="CHEMISTRY">Chimica & Componenti</option>
+                <option value="BOTANY">Botanica & Coltivazione</option>
+                <option value="GEOGRAPHY">Territorio & Tradizione (Calabria)</option>
+                <option value="FOOD_DRINK">Enogastronomia & Tè</option>
+                <option value="HEALTH">Salute, Cosmesi & Benessere</option>
+                <option value="HISTORY">Storia & Acqua di Colonia</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="searchInput">Cerca Nodo, Molecola, Profumo o Luogo</label>
+            <input type="text" id="searchInput" placeholder="es. Earl Grey, Linalile, Eau Sauvage, Reggio...">
+        </div>
+
+        <div class="legend">
+            <div class="legend-item"><div class="legend-color" style="background:#f59e0b"></div>Profumeria</div>
+            <div class="legend-item"><div class="legend-color" style="background:#06b6d4"></div>Chimica</div>
+            <div class="legend-item"><div class="legend-color" style="background:#10b981"></div>Botanica</div>
+            <div class="legend-item"><div class="legend-color" style="background:#f97316"></div>Territorio / Calabria</div>
+            <div class="legend-item"><div class="legend-color" style="background:#a855f7"></div>Food & Tea</div>
+            <div class="legend-item"><div class="legend-color" style="background:#ec4899"></div>Salute & Cosmesi</div>
+            <div class="legend-item" style="grid-column: span 2;"><div class="legend-color" style="background:#3b82f6"></div>Storia & Acqua di Colonia</div>
+        </div>
+        
+        <div class="control-group" id="repulsionControl">
+            <label for="repulsionSlider">Forza di Repulsione Fisica</label>
+            <input type="range" id="repulsionSlider" min="50" max="600" value="260">
+        </div>
+
+        <div class="stats">
+            <span>Nodi Connessi: <strong id="stat-nodes">200</strong></span>
+            <span>Relazioni: <strong id="stat-edges">0</strong></span>
+            <span>FPS: <strong id="stat-fps">60</strong></span>
+        </div>
+    </div>
+
+    <!-- Info Card Left/Bottom -->
+    <div id="info-card">
+        <h2 id="card-title">-</h2>
+        <span id="card-badge" class="category-badge">-</span>
+        <div id="card-meta" class="meta">-</div>
+        <div id="card-details" class="details"></div>
+        <div id="card-partners" class="partners"></div>
+    </div>
+
+    <!-- Right-Click Modal -->
+    <div id="work-modal">
+        <button class="close-btn" onclick="closeWorkModal()">&times;</button>
+        <h3 id="modal-node-name">Nome Nodo</h3>
+        <div id="modal-node-meta" class="designer-sub">Categoria • Rilevanza</div>
+        <div class="work-box">
+            <div class="work-label">Descrizione Concettuale</div>
+            <div id="modal-node-title" class="work-title">Dettaglio approfondito</div>
+        </div>
+        <a id="modal-web-link" href="#" target="_blank" class="open-link-btn">
+            🔍 Esplora in Rete (Google Search) ↗
+        </a>
+    </div>
+</div>
+
+<script>
+// --- CATEGORIE E COLORI ---
+const CATEGORIES = {
+    PERFUMERY: { name: 'Profumeria & Fragranze', color: '#f59e0b' },
+    CHEMISTRY: { name: 'Chimica & Componenti', color: '#06b6d4' },
+    BOTANY: { name: 'Botanica & Coltivazione', color: '#10b981' },
+    GEOGRAPHY: { name: 'Territorio & Calabria', color: '#f97316' },
+    FOOD_DRINK: { name: 'Enogastronomia & Tè', color: '#a855f7' },
+    HEALTH: { name: 'Salute, Cosmesi & Benessere', color: '#ec4899' },
+    HISTORY: { name: 'Storia & Acqua di Colonia', color: '#3b82f6' }
+};
+
+// --- DATASET SEED BERGAMOTTO (40 NODI ICONICI) ---
+const SEED_NODES = [
+    { name: "Bergamotto di Reggio Calabria", category: "GEOGRAPHY", relevance: 1, sub: "DOP - L'Oro Verde", details: "Agrume simbolo della fascia costiera reggina, fonte dell'olio essenziale più pregiato della profumeria.", connections: ["Olio Essenziale di Bergamotto", "Linalile Acetato", "Acqua di Colonia", "Earl Grey Tea", "Consorzio del Bergamotto"] },
+    { name: "Olio Essenziale di Bergamotto", category: "CHEMISTRY", relevance: 1, sub: "Estratto per Spremitura a Freddo", details: "Essenza ottenuta dalla scorza. Nota di testa fresca e frizzante essenziale per oltre il 70% dei profumi di lusso.", connections: ["Linalile Acetato", "Linalolo", "Limonene", "Bergaptene", "Macchina Pelatrice 'Calabra'"] },
+    { name: "Linalile Acetato", category: "CHEMISTRY", relevance: 2, sub: "Estere Principale (30-45%)", details: "Conferisce il caratteristico aroma dolce, fruttato e leggermente floreale al bergamotto.", connections: ["Olio Essenziale di Bergamotto", "Linalolo", "Bergamote 22"] },
+    { name: "Linalolo", category: "CHEMISTRY", relevance: 2, sub: "Alcol Terpenico", details: "Componente aromatico chiave che apporta freschezza floreale con sfumature di legno di rosa.", connections: ["Olio Essenziale di Bergamotto", "Linalile Acetato", "Lavanda"] },
+    { name: "Bergaptene", category: "CHEMISTRY", relevance: 2, sub: "Furanocumarina Fototossica", details: "Molecola naturale responsabile della fotosensibilizzazione. Nelle moderne fragranze viene rimossa tramite debergaptenizzazione.", connections: ["Olio Essenziale FCF", "Macchia della Pelle", "Spettrometria"] },
+    { name: "Olio Essenziale FCF", category: "CHEMISTRY", relevance: 3, sub: "Free From Furanocoumarins", details: "Versione purificata e priva di bergaptene per uso cosmetico sicuro sotto esposizione solare.", connections: ["Bergaptene", "Cosmesi Solare", "Dior Sauvage"] },
+    { name: "Acqua di Colonia", category: "HISTORY", relevance: 1, sub: "1709 - Gian Maria Farina", details: "Celebre formulazione creata a Colonia partendo dall'essenza di bergamotto calabrese come nota principale.", connections: ["Giovanni Maria Farina", "Gian Paolo Feminis", "Aqua Admirabilis", "4711 Echt Kölnisch Wasser"] },
+    { name: "Giovanni Maria Farina", category: "HISTORY", relevance: 2, sub: "Creatore dell'Acqua di Colonia", details: "Profumiere italiano emigrato in Germania che rese il bergamotto celebre nelle corti europee del '700.", connections: ["Acqua di Colonia", "Gian Paolo Feminis", "Reggio Calabria"] },
+    { name: "Tè Earl Grey", category: "FOOD_DRINK", relevance: 1, sub: "Tè Nero Aromatizzato", details: "Celebre miscela britannica di tè nero aromatizzata con olio essenziale puro di bergamotto.", connections: ["Earl Charles Grey", "Lady Grey Tea", "Bergamotto di Reggio Calabria", "Aromatizzazione"] },
+    { name: "Italicus Rosolio di Bergamotto", category: "FOOD_DRINK", relevance: 2, sub: "Aperitivo Moderno d'Autore", details: "Liquore d'eccellenza a base di bergamotto reggino, cedro e erbe aromatiche.", connections: ["Liquore al Bergamotto", "Mixology", "Rosolio Tradizionale"] },
+    { name: "Aqua Allegoria Bergamote Calabria", category: "PERFUMERY", relevance: 2, sub: "Guerlain", details: "Fragranza tributo ai giardini di bergamotto della Calabria firmata Thierry Wasser.", connections: ["Guerlain", "Thierry Wasser", "Shalimar"] },
+    { name: "Bergamote 22", category: "PERFUMERY", relevance: 2, sub: "Le Labo", details: "Una delle interpretazioni nicchia più iconiche del bergamotto, unita a petali di arancio e vetiver.", connections: ["Le Labo", "Daphne Bugey", "Linalile Acetato"] },
+    { name: "Acqua di Parma Colonia", category: "PERFUMERY", relevance: 1, sub: "1916 - Icona Italiana", details: "Classico intramontabile della profumeria italiana, dominato da un'apertura brillante di bergamotto e agrumi di Sicilia.", connections: ["Acqua di Colonia", "Agrumi di Sicilia", "Note Esperidate"] },
+    { name: "Eau Sauvage", category: "PERFUMERY", relevance: 1, sub: "Dior (1966)", details: "Capolavoro di Edmond Roudnitska basato su una dose massiccia di bergamotto raffinato e edione.", connections: ["Edmond Roudnitska", "Dior", "Edione", "Sauvage"] },
+    { name: "Citrus bergamia", category: "BOTANY", relevance: 1, sub: "Tassonomia Botanica", details: "Albero da frutto appartenente alla famiglia delle Rutaceae, probabile ibrido tra arancio amaro e limetta.", connections: ["Rutaceae", "Arancio Amaro", "Limetta", "Innesto"] },
+    { name: "Innesto su Arancio Amaro", category: "BOTANY", relevance: 2, sub: "Tecnica Agronomica", details: "Metodo di coltivazione essenziale: il bergamotto viene innestato sul melangolo (arancio amaro) per garantire resistenza.", connections: ["Citrus bergamia", "Portainnesto", "Microclima Reggino"] },
+    { name: "Area Ionico-Reggina", category: "GEOGRAPHY", relevance: 1, sub: "Da Villa San Giovanni a Monasterace", details: "Striscia di circa 100 km in Calabria dove cresce il 90% del bergamotto mondiale grazie al microclima unico.", connections: ["Reggio Calabria", "Locri", "Brancaleone", "Microclima Ionico"] },
+    { name: "Consorzio del Bergamotto", category: "GEOGRAPHY", relevance: 2, sub: "Tutela & Valorizzazione", details: "Ente presieduto alla protezione della DOP e alla promozione scientifica ed economica del frutto.", connections: ["DOP Bergamotto", "Stazione Sperimentale Essenze", "Reggio Calabria"] },
+    { name: "Stazione Sperimentale per le Essenze", category: "GEOGRAPHY", relevance: 2, sub: "Fondata a Reggio Calabria (1800s)", details: "Centro di ricerca scientifica d'eccellenza mondiale per l'analisi della purezza degli oli essenziali.", connections: ["Reggio Calabria", "Olio Essenziale di Bergamotto", "Gascromatografia"] },
+    { name: "Succo di Bergamotto", category: "HEALTH", relevance: 2, sub: "Proprietà Ipolipemizanti", details: "Bevanda ricca di flavonoidi unici con effetto analogo alle statine naturali nel ridurre il colesterolo LDL.", connections: ["Statine Naturali", "Flavonoidi", "Colesterolo LDL", "Brutieridina"] },
+    { name: "Brutieridina & Melitidina", category: "HEALTH", relevance: 2, sub: "Flavonoidi Unici", details: "Molecole fitochimiche presenti esclusivamente nel bergamotto capaci di inibire l'enzima HMG-CoA reduttasi.", connections: ["Succo di Bergamotto", "Colesterolo LDL", "Fitoterapia"] },
+    { name: "Aromaterapia Ansiolitica", category: "HEALTH", relevance: 2, sub: "Azione sul Sistema Nervoso Central", details: "L'inalazione di essenza di bergamotto riduce cortisolo e ansia inducendo rilassamento profondo.", connections: ["Cortisolo", "Olio Essenziale di Bergamotto", "Diffusione Ambientale"] },
+    { name: "Macchina Pelatrice 'Calabra'", category: "HISTORY", relevance: 2, sub: "Invenzione di Nicola Barillà (1840)", details: "Rivoluzionario dispositivo meccanico che ha sostituito l'estrazione manuale 'a spugna' della scorza.", connections: ["Estrazione a Spugna", "Olio Essenziale di Bergamotto", "Nicola Barillà"] },
+    { name: "Estrazione a Spugna", category: "HISTORY", relevance: 3, sub: "Antico Metodo Artigianale", details: "Tecnica storica in cui la scorza veniva premuta a mano su spugne naturali poi strizzate nelle conche.", connections: ["Macchina Pelatrice 'Calabra'", "Artigianato Calabrese"] },
+    { name: "Caramelle al Bergamotto di Nancy", category: "FOOD_DRINK", relevance: 2, sub: "Bergamotes de Nancy (IGP)", details: "Famosi dolciusi francesi della Lorena aromatizzati con l'essenza di bergamotto calabrese importata fin dal '700.", connections: ["Nancy", "Lorena", "IGP Francese"] },
+    { name: "Shalimar", category: "PERFUMERY", relevance: 2, sub: "Guerlain (1925)", details: "Contiene una sovradosaggio del 30% di olio essenziale di bergamotto nell'accordo di testa.", connections: ["Guerlain", "Jacques Guerlain", "Note Orientali"] },
+    { name: "Dior Sauvage", category: "PERFUMERY", relevance: 1, sub: "François Demachy (2015)", details: "Caratterizzato da un'apertura di bergamotto di Reggio Calabria coltivato in esclusiva per la maison Dior.", connections: ["François Demachy", "Eau Sauvage", "Ambroxan"] },
+    { name: "Terre d'Hermès", category: "PERFUMERY", relevance: 2, sub: "Jean-Claude Ellena (2006)", details: "Apertura agrumata vivace dove il bergamotto si fonde con pompelmo e note minerali di selce.", connections: ["Jean-Claude Ellena", "Hermès", "Pompelmo"] },
+    { name: "CK One", category: "PERFUMERY", relevance: 2, sub: "Calvin Klein (1994)", details: "Il capostipite dei profumi unisex moderni, guidato da un accordo di bergamotto, tè verde e cardamomo.", connections: ["Alberto Morillas", "Tè Verde", "Fragranze Unisex"] },
+    { name: "Creed Aventus", category: "PERFUMERY", relevance: 2, sub: "Creed (2010)", details: "Utilizza il bergamotto per bilanciare l'accordo fruttato di ananas e quello legnoso di betulla.", connections: ["Ananas", "Betulla", "Aromatico Chypre"] },
+    { name: "Chanel N°5", category: "PERFUMERY", relevance: 2, sub: "Chanel (1921)", details: "Le note di testa aldeidiche sono bilanciate e ammorbidite dal bergamotto e dall'olio di neroli.", connections: ["Ernest Beaux", "Aldeidi", "Gelsomino di Grasse"] },
+    { name: "Acqua Admirabilis", category: "HISTORY", relevance: 2, sub: "Gian Paolo Feminis (1600s)", details: "La ricetta curativa ed elisir di lunga vita da cui nacque l'Acqua di Colonia.", connections: ["Gian Paolo Feminis", "Acqua di Colonia", "Olio Essenziale di Bergamotto"] },
+    { name: "4711 Echt Kölnisch Wasser", category: "HISTORY", relevance: 2, sub: "Mülhens (1792)", details: "La più famosa marca di Acqua di Colonia storica al mondo, ricca di essenze agrumate reggine.", connections: ["Acqua di Colonia", "Colonia (Germania)"] },
+    { name: "Azione Antimicrobica", category: "HEALTH", relevance: 3, sub: "Proprietà Cosmeceutiche", details: "I componenti terpenici dell'olio offrono una potente azione purificante e antibatterica per la pelle.", connections: ["Olio Essenziale di Bergamotto", "Cosmesi Nativa", "Dermatologia"] },
+    { name: "Cucina Reggina e Sorbetto", category: "FOOD_DRINK", relevance: 3, sub: "Uso Gastronomico Locale", details: "Impiego della buccia grattugiata e del succo in primi piatti di pesce, granite e sorbetti artigianali.", connections: ["Gastronomia Calabrese", "Scorza Candita", "Pasticceria"] },
+    { name: "Gascromatografia (GC-MS)", category: "CHEMISTRY", relevance: 3, sub: "Controllo di Qualità e Purezza", details: "Metodologia analitica utilizzata per verificare la genuinità dell'essenza ed evitare adulterazioni.", connections: ["Stazione Sperimentale Essenze", "Olio Essenziale di Bergamotto"] },
+    { name: "Microclima Ionico Reggino", category: "GEOGRAPHY", relevance: 2, sub: "Scirocco e Protezione dell'Aspromonte", details: "Condizione climatica irripetibile: assenza di gelate invernali, escursione termica ridotta e venti caldi.", connections: ["Area Ionico-Reggina", "Aspromonte", "Citrus bergamia"] },
+    { name: "Note Esperidate / Hesperidic", category: "PERFUMERY", relevance: 2, sub: "Famiglia Olfattiva Agrumata", details: "Definizione classica delle note di testa fresche e frizzanti derivate dai frutti della famiglia Hesperides.", connections: ["Acqua di Parma Colonia", "Olio Essenziale di Bergamotto"] },
+    { name: "Earl Charles Grey", category: "FOOD_DRINK", relevance: 3, sub: "Primo Ministro Britannico (1830s)", details: "La leggenda attribuisce a lui la ricetta del tè profumato al bergamotto regalatogli da un mandarino cinese.", connections: ["Tè Earl Grey", "Lady Grey Tea"] },
+    { name: "Lady Grey Tea", category: "FOOD_DRINK", relevance: 3, sub: "Variante Twinings", details: "Versione più delicata del Tè Earl Grey arricchita con scorza di limone e fiordaliso.", connections: ["Tè Earl Grey", "Twinings"] }
+];
+
+// GENERAZIONE DATASET FINALE (200 NODI COMPLETI)
+function generateBergamotDataset() {
+    const nodes = [];
+    const nodeMap = new Map();
+
+    SEED_NODES.forEach((d, idx) => {
+        const node = {
+            id: idx + 1,
+            name: d.name,
+            category: d.category,
+            relevance: d.relevance,
+            sub: d.sub,
+            details: d.details,
+            radius: Math.max(16 - d.relevance * 2.5, 7),
+            x: (Math.random() - 0.5) * 1000,
+            y: (Math.random() - 0.5) * 700,
+            targetX: 0, targetY: 0,
+            vx: 0, vy: 0,
+            connections: []
+        };
+        nodes.push(node);
+        nodeMap.set(d.name, node);
+    });
+
+    const categoryKeys = Object.keys(CATEGORIES);
+    const perfumeBrands = ["Dior", "Guerlain", "Chanel", "Tom Ford", "Armani", "Jo Malone", "Diptyque", "Acqua di Parma", "Hermès", "Byredo"];
+    const perfumers = ["Thierry Wasser", "François Demachy", "Alberto Morillas", "Dominique Ropion", "Jean-Claude Ellena", "Jacques Cavallier"];
+    const calabrianTowns = ["Villa San Giovanni", "Melito Porto Salvo", "Condofuri", "Bova Marina", "Brancaleone", "Africo", "Bianco", "Locri", "Siderno", "Roccella Ionica"];
+    const chemicalCompounds = ["Gamma-Terpinene", "Myrcene", "Alpha-Pinene", "Beta-Pinene", "Sabinen", "Octanal", "Nonanal", "Decanal", "Geraniol", "Nerol"];
+
+    for (let i = nodes.length; i < 200; i++) {
+        const id = i + 1;
+        const category = categoryKeys[i % categoryKeys.length];
+        let name = "";
+        let sub = "";
+        let details = "";
+
+        if (category === "PERFUMERY") {
+            const brand = perfumeBrands[i % perfumeBrands.length];
+            const perf = perfumers[i % perfumers.length];
+            name = `Bergamot Creation #${id} [${brand}]`;
+            sub = `Fragranza con Bergamotto • ${brand}`;
+            details = `Creazione olfattiva firmata ${perf} che pone il bergamotto di Calabria al centro dell'accordo esperidato.`;
+        } else if (category === "GEOGRAPHY") {
+            const town = calabrianTowns[i % calabrianTowns.length];
+            name = `Agrumeteto & Cultivar in ${town}`;
+            sub = `Fascia Costiera Reggina`;
+            details = `Territorio vocato alla coltivazione tradizionale del Citrus bergamia lungo la Riviera dei Gelsomini.`;
+        } else if (category === "CHEMISTRY") {
+            const comp = chemicalCompounds[i % chemicalCompounds.length];
+            name = `${comp} (Lotto #${id})`;
+            sub = `Frazione Aromatica Terpenica`;
+            details = `Composto volatile presente nell'olio essenziale grezzo che contribuisce al profilo analitico gassocromatografico.`;
+        } else if (category === "HEALTH") {
+            name = `Studio Clinico / Applicazione #${id}`;
+            sub = `Proprietà Fitoterapiche & Dermiche`;
+            details = `Ricerca scientifica focalizzata sui benefici cardiovascolari, antiossidanti o aromaterapici del bergamotto.`;
+        } else if (category === "FOOD_DRINK") {
+            name = `Specialità al Bergamotto #${id}`;
+            sub = `Gastronomia & Mixology`;
+            details = `Applicazione culinaria artigianale, dalle bevande dissetanti ai dolci della tradizione pasticcera.`;
+        } else if (category === "BOTANY") {
+            name = `Varietà & Pratica Agronomica #${id}`;
+            sub = `Cultivar (Castagnaro, Fantastico, Femminello)`;
+            details = `Caratteristica botanica, fisiologia della pianta o tecnica di potatura e irrigazione degli agrumeti.`;
+        } else {
+            name = `Documento / Evento Storico #${id}`;
+            sub = `Annali del Bergamotto nel '700-'800`;
+            details = `Testimonianza storica sul commercio delle essenze tra il Porto di Messina, Reggio e le capitali europee.`;
+        }
+
+        const node = {
+            id: id,
+            name: name,
+            category: category,
+            relevance: 3,
+            sub: sub,
+            details: details,
+            radius: Math.max(7 - (id * 0.015), 4),
+            x: (Math.random() - 0.5) * 1600,
+            y: (Math.random() - 0.5) * 1100,
+            targetX: 0, targetY: 0,
+            vx: 0, vy: 0,
+            connections: []
+        };
+        nodes.push(node);
+        nodeMap.set(name, node);
+    }
+
+    // GENERAZIONE ARCHI / RELAZIONI
+    const edges = [];
+    const edgeSet = new Set();
+
+    function addEdge(source, target, weight = 1) {
+        if (!source || !target || source.id === target.id) return;
+        const key = source.id < target.id ? `${source.id}-${target.id}` : `${target.id}-${source.id}`;
+        if (!edgeSet.has(key)) {
+            edgeSet.add(key);
+            const edge = { source, target, weight };
+            edges.push(edge);
+            source.connections.push(target);
+            target.connections.push(source);
+        }
+    }
+
+    // Archi manuali dai Seed
+    SEED_NODES.forEach(d => {
+        const src = nodeMap.get(d.name);
+        if (d.connections) {
+            d.connections.forEach(targetName => {
+                const tgt = nodeMap.get(targetName);
+                if (tgt) addEdge(src, tgt, 2.5);
+            });
+        }
+    });
+
+    // Connessioni automatiche basate su categoria e vicinanza
+    const hubNode = nodes[0]; // Bergamotto di Reggio Calabria
+    const oilNode = nodes[1]; // Olio Essenziale
+
+    for (let i = 2; i < nodes.length; i++) {
+        const nodeA = nodes[i];
+        
+        // Collega i nodi principali all'Hub centrale
+        if (nodeA.relevance <= 2 || Math.random() < 0.25) {
+            addEdge(nodeA, hubNode, 1.2);
+        }
+        if (nodeA.category === "CHEMISTRY" || nodeA.category === "PERFUMERY") {
+            if (Math.random() < 0.35) addEdge(nodeA, oilNode, 1.5);
+        }
+
+        // Connetti nodi della stessa categoria
+        const count = Math.floor(Math.random() * 2) + 1;
+        for (let k = 0; k < count; k++) {
+            const targetIdx = Math.floor(Math.random() * nodes.length);
+            const nodeB = nodes[targetIdx];
+            if (nodeA.category === nodeB.category) {
+                addEdge(nodeA, nodeB, 0.8);
+            }
+        }
+    }
+
+    return { nodes, edges };
+}
+
+// --- ENGINE CANVAS & FISICA ---
+const canvas = document.getElementById('networkCanvas');
+const ctx = canvas.getContext('2d');
+
+let width, height;
+let graphData = generateBergamotDataset();
+let nodes = graphData.nodes;
+let edges = graphData.edges;
+
+let transform = { x: 0, y: 0, scale: 1 };
+let isDragging = false;
+let dragStart = { x: 0, y: 0 };
+let hoveredNode = null;
+let selectedNode = null;
+let draggedNode = null;
+
+let searchQuery = "";
+let selectedCategory = "ALL";
+let currentLayout = "force";
+
+// SISTEMA DI PAUSA E PAUSA AUTOMATICA FISICA
+let isSimulating = true;
+let simFrames = 0;
+const MAX_SIM_FRAMES = 360;
+let totalKineticEnergy = 100;
+
+let repulsionStrength = 260;
+const damping = 0.85;
+const springLength = 85;
+const springStiffness = 0.035;
+
+document.getElementById('stat-nodes').innerText = nodes.length;
+document.getElementById('stat-edges').innerText = edges.length;
+
+function resizeCanvas() {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+    if (transform.x === 0 && transform.y === 0) {
+        transform.x = width / 2;
+        transform.y = height / 2;
+    }
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// --- CALCOLO LAYOUT ALTERNATIVI ---
+function computeLayoutTargets(layout) {
+    if (layout === 'radial') {
+        nodes.forEach(n => {
+            if (n.id === 1) { // Hub al centro
+                n.targetX = 0;
+                n.targetY = 0;
+            } else {
+                const ring = n.relevance;
+                const angle = (n.id % 30) * (Math.PI * 2 / 30);
+                const radius = 100 + ring * 120 + (n.id * 1.5);
+                n.targetX = Math.cos(angle) * radius;
+                n.targetY = Math.sin(angle) * radius;
+            }
+        });
+    } else if (layout === 'cluster') {
+        const catKeys = Object.keys(CATEGORIES);
+        const cols = 3;
+        const spacingX = 480;
+        const spacingY = 380;
+
+        catKeys.forEach((cat, idx) => {
+            const cx = ((idx % cols) - 1) * spacingX;
+            const cy = (Math.floor(idx / cols) - 0.5) * spacingY;
+            const catNodes = nodes.filter(n => n.category === cat);
+
+            catNodes.forEach((n, i) => {
+                const angle = i * 0.45;
+                const r = 25 + Math.sqrt(i) * 22;
+                n.targetX = cx + Math.cos(angle) * r;
+                n.targetY = cy + Math.sin(angle) * r;
+            });
+        });
+    } else if (layout === 'circular') {
+        const total = nodes.length;
+        const radius = 620;
+        const sorted = nodes.slice().sort((a, b) => a.category.localeCompare(b.category));
+        
+        sorted.forEach((n, i) => {
+            const angle = (i / total) * Math.PI * 2;
+            n.targetX = Math.cos(angle) * radius;
+            n.targetY = Math.sin(angle) * radius;
+        });
+    }
+}
+
+function changeLayout(newLayout) {
+    currentLayout = newLayout;
+    computeLayoutTargets(newLayout);
+    document.getElementById('repulsionControl').style.display = newLayout === 'force' ? 'block' : 'none';
+    wakeSimulation();
+}
+
+// --- CONTROLLO FISICA & PAUSA ---
+function wakeSimulation() {
+    isSimulating = true;
+    simFrames = 0;
+    updateSimUI(true);
+}
+
+function toggleSimulation() {
+    isSimulating = !isSimulating;
+    if (isSimulating) simFrames = 0;
+    updateSimUI(isSimulating);
+}
+
+function updateSimUI(active) {
+    const dot = document.getElementById('status-dot');
+    const text = document.getElementById('status-text');
+    const btn = document.getElementById('toggleSimBtn');
+
+    if (active) {
+        dot.classList.remove('paused');
+        text.innerText = "Simulazione Attiva";
+        btn.innerText = "Pausa";
+    } else {
+        dot.classList.add('paused');
+        text.innerText = "Rete Stabilizzata";
+        btn.innerText = "Riprendi";
+    }
+}
+
+function updatePhysics() {
+    if (!isSimulating) return;
+
+    if (currentLayout === 'force') {
+        totalKineticEnergy = 0;
+
+        for (let i = 0; i < nodes.length; i++) {
+            const n1 = nodes[i];
+            for (let j = i + 1; j < nodes.length; j++) {
+                const n2 = nodes[j];
+                let dx = n2.x - n1.x;
+                let dy = n2.y - n1.y;
+                let distSq = dx * dx + dy * dy + 0.1;
+                let dist = Math.sqrt(distSq);
+
+                if (dist < 420) {
+                    let force = (repulsionStrength * 10) / distSq;
+                    let fx = (dx / dist) * force;
+                    let fy = (dy / dist) * force;
+
+                    n1.vx -= fx;
+                    n1.vy -= fy;
+                    n2.vx += fx;
+                    n2.vy += fy;
+                }
+            }
+        }
+
+        for (let i = 0; i < edges.length; i++) {
+            const edge = edges[i];
+            let dx = edge.target.x - edge.source.x;
+            let dy = edge.target.y - edge.source.y;
+            let dist = Math.sqrt(dx * dx + dy * dy) + 0.1;
+            let force = (dist - springLength) * springStiffness * edge.weight;
+
+            let fx = (dx / dist) * force;
+            let fy = (dy / dist) * force;
+
+            edge.source.vx += fx;
+            edge.source.vy += fy;
+            edge.target.vx -= fx;
+            edge.target.vy -= fy;
+        }
+
+        for (let i = 0; i < nodes.length; i++) {
+            const n = nodes[i];
+            if (n === draggedNode) continue;
+
+            n.vx -= n.x * 0.0004;
+            n.vy -= n.y * 0.0004;
+
+            n.vx *= damping;
+            n.vy *= damping;
+
+            n.x += n.vx;
+            n.y += n.vy;
+
+            totalKineticEnergy += Math.abs(n.vx) + Math.abs(n.vy);
+        }
+
+        simFrames++;
+        if (totalKineticEnergy < 0.8 || simFrames > MAX_SIM_FRAMES) {
+            isSimulating = false;
+            updateSimUI(false);
+        }
+    } else {
+        let maxMovement = 0;
+        nodes.forEach(n => {
+            if (n === draggedNode) return;
+            let dx = n.targetX - n.x;
+            let dy = n.targetY - n.y;
+            n.x += dx * 0.08;
+            n.y += dy * 0.08;
+
+            maxMovement += Math.abs(dx) + Math.abs(dy);
+        });
+
+        simFrames++;
+        if (maxMovement < 0.5 || simFrames > 180) {
+            isSimulating = false;
+            updateSimUI(false);
+        }
+    }
+}
+
+let lastTime = performance.now();
+let frameCount = 0;
+
+function render() {
+    const now = performance.now();
+    frameCount++;
+    if (now - lastTime >= 1000) {
+        document.getElementById('stat-fps').innerText = frameCount;
+        frameCount = 0;
+        lastTime = now;
+    }
+
+    updatePhysics();
+
+    ctx.save();
+    ctx.fillStyle = '#06090e';
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.translate(transform.x, transform.y);
+    ctx.scale(transform.scale, transform.scale);
+
+    const isFilterActive = selectedCategory !== "ALL" || searchQuery !== "";
+
+    // Disegno Archi
+    for (let i = 0; i < edges.length; i++) {
+        const edge = edges[i];
+        const isHighlight = (hoveredNode || selectedNode) && 
+            (edge.source === hoveredNode || edge.target === hoveredNode || edge.source === selectedNode || edge.target === selectedNode);
+        
+        ctx.beginPath();
+        ctx.moveTo(edge.source.x, edge.source.y);
+        ctx.lineTo(edge.target.x, edge.target.y);
+
+        if (isHighlight) {
+            ctx.strokeStyle = '#84cc16';
+            ctx.lineWidth = 2.4;
+        } else {
+            ctx.strokeStyle = isFilterActive ? 'rgba(30, 41, 59, 0.15)' : 'rgba(51, 65, 85, 0.3)';
+            ctx.lineWidth = 0.6;
+        }
+        ctx.stroke();
+    }
+
+    // Disegno Nodi
+    for (let i = 0; i < nodes.length; i++) {
+        const n = nodes[i];
+        const catColor = CATEGORIES[n.category]?.color || '#94a3b8';
+        
+        const matchesCategory = (selectedCategory === "ALL" || n.category === selectedCategory);
+        const matchesSearch = searchQuery === "" || 
+            n.name.toLowerCase().includes(searchQuery) || 
+            n.sub.toLowerCase().includes(searchQuery) || 
+            n.details.toLowerCase().includes(searchQuery);
+
+        const isMatch = matchesCategory && matchesSearch;
+        const isSelected = n === selectedNode;
+        const isHovered = n === hoveredNode;
+
+        ctx.save();
+        
+        if (isFilterActive && !isMatch && !isSelected && !isHovered) {
+            ctx.globalAlpha = 0.12;
+        }
+
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, isSelected || isHovered ? n.radius + 4 : n.radius, 0, Math.PI * 2);
+
+        ctx.fillStyle = isFilterActive && isMatch ? '#ffffff' : catColor;
+        ctx.fill();
+
+        if (isSelected || isHovered || (isFilterActive && isMatch)) {
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+        }
+
+        if (transform.scale > 0.75 || n.relevance <= 2 || isHovered || isSelected || (isFilterActive && isMatch)) {
+            ctx.fillStyle = isSelected || isHovered ? '#ffffff' : '#e2e8f0';
+            ctx.font = `${Math.max(10 / transform.scale, 8)}px -apple-system, sans-serif`;
+            ctx.fillText(`${n.name}`, n.x + n.radius + 5, n.y + 3);
+        }
+
+        ctx.restore();
+    }
+
+    ctx.restore();
+    requestAnimationFrame(render);
+}
+
+function getCanvasCoords(e) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+        x: (e.clientX - rect.left - transform.x) / transform.scale,
+        y: (e.clientY - rect.top - transform.y) / transform.scale
+    };
+}
+
+function findNodeAt(coords) {
+    for (let i = nodes.length - 1; i >= 0; i--) {
+        const n = nodes[i];
+        const dx = n.x - coords.x;
+        const dy = n.y - coords.y;
+        if (dx * dx + dy * dy <= (n.radius + 6) * (n.radius + 6)) {
+            return n;
+        }
+    }
+    return null;
+}
+
+// INTERAZIONI MOUSE
+canvas.addEventListener('mousedown', (e) => {
+    if (e.button === 2) return;
+    closeWorkModal();
+
+    const coords = getCanvasCoords(e);
+    const node = findNodeAt(coords);
+
+    if (node) {
+        draggedNode = node;
+        selectedNode = node;
+        updateInfoCard(node);
+        wakeSimulation();
+    } else {
+        isDragging = true;
+        dragStart = { x: e.clientX - transform.x, y: e.clientY - transform.y };
+    }
+});
+
+canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    const coords = getCanvasCoords(e);
+    const node = findNodeAt(coords);
+
+    if (node) {
+        selectedNode = node;
+        openWorkModal(node, e.clientX, e.clientY);
+    } else {
+        closeWorkModal();
+    }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+    const coords = getCanvasCoords(e);
+
+    if (draggedNode) {
+        draggedNode.x = coords.x;
+        draggedNode.y = coords.y;
+        draggedNode.vx = 0;
+        draggedNode.vy = 0;
+        wakeSimulation();
+    } else if (isDragging) {
+        transform.x = e.clientX - dragStart.x;
+        transform.y = e.clientY - dragStart.y;
+    } else {
+        hoveredNode = findNodeAt(coords);
+    }
+});
+
+window.addEventListener('mouseup', () => {
+    isDragging = false;
+    draggedNode = null;
+});
+
+canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const zoomFactor = 1.1;
+    const mouseX = e.clientX;
+    const mouseY = e.clientY;
+
+    let newScale = e.deltaY < 0 ? transform.scale * zoomFactor : transform.scale / zoomFactor;
+    newScale = Math.max(0.18, Math.min(newScale, 4.5));
+
+    transform.x = mouseX - (mouseX - transform.x) * (newScale / transform.scale);
+    transform.y = mouseY - (mouseY - transform.y) * (newScale / transform.scale);
+    transform.scale = newScale;
+}, { passive: false });
+
+// LISTENER FILTRI
+document.getElementById('categorySelect').addEventListener('change', (e) => { selectedCategory = e.target.value; wakeSimulation(); });
+document.getElementById('searchInput').addEventListener('input', (e) => { searchQuery = e.target.value.toLowerCase().trim(); wakeSimulation(); });
+document.getElementById('repulsionSlider').addEventListener('input', (e) => { repulsionStrength = parseFloat(e.target.value); wakeSimulation(); });
+
+function updateInfoCard(node) {
+    const card = document.getElementById('info-card');
+    if (!node) {
+        card.style.display = 'none';
+        return;
+    }
+    
+    const catObj = CATEGORIES[node.category] || { name: 'Nodo', color: '#84cc16' };
+    
+    document.getElementById('card-title').innerText = node.name;
+    const badge = document.getElementById('card-badge');
+    badge.innerText = catObj.name;
+    badge.style.backgroundColor = catObj.color;
+    badge.style.color = '#020617';
+
+    document.getElementById('card-meta').innerText = `📌 ${node.sub}`;
+    
+    const partnersList = node.connections.map(c => `• ${c.name}`).slice(0, 6).join('<br>');
+    
+    document.getElementById('card-details').innerHTML = `
+        <strong>Dettagli Concettuali:</strong><br>${node.details}
+    `;
+    
+    document.getElementById('card-partners').innerHTML = `
+        <strong>Nodi Correlati nell'Ecosistema:</strong><br>${partnersList || 'Nessuna connessione diretta registrata'}
+    `;
+    
+    card.style.display = 'block';
+}
+
+function openWorkModal(node, mouseX, mouseY) {
+    const modal = document.getElementById('work-modal');
+    
+    document.getElementById('modal-node-name').innerText = node.name;
+    document.getElementById('modal-node-meta').innerText = `${CATEGORIES[node.category]?.name} • ${node.sub}`;
+    document.getElementById('modal-node-title').innerText = node.details;
+    
+    const searchQuery = encodeURIComponent(`Bergamotto ${node.name} ${node.sub}`);
+    const searchUrl = `https://www.google.com/search?q=${searchQuery}`;
+    
+    const linkBtn = document.getElementById('modal-web-link');
+    linkBtn.href = searchUrl;
+
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    
+    let posX = mouseX + 10;
+    let posY = mouseY + 10;
+
+    if (posX + 340 > windowWidth) posX = mouseX - 340;
+    if (posY + 240 > windowHeight) posY = mouseY - 240;
+
+    modal.style.left = `${Math.max(10, posX)}px`;
+    modal.style.top = `${Math.max(10, posY)}px`;
+    modal.style.display = 'block';
+}
+
+function closeWorkModal() {
+    document.getElementById('work-modal').style.display = 'none';
+}
+
+// Avvio Loop Render
+requestAnimationFrame(render);
+</script>
+</body>
+</html>

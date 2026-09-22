@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Mappa 200 Maison, Terzisti & Poli Cosmetici</title>
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: #030712; color: #fff; height: 100vh; overflow: hidden; display: flex; }
+        #network { flex: 1; height: 100vh; background: #030712; }
+        .ui-panel { position: absolute; top: 16px; left: 16px; z-index: 10; background: rgba(15,23,42,0.95); padding: 14px 22px; border-radius: 12px; border: 2px solid #ec4899; display: flex; gap: 16px; align-items: center; }
+        a.btn-home { color: #ec4899; text-decoration: none; font-weight: 900; font-size: 0.9rem; text-transform: uppercase; }
+        .rank-legend { display: flex; gap: 12px; font-size: 0.8rem; color: #fff; font-weight: bold; }
+        .legend-item { display: flex; align-items: center; gap: 6px; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; border: 1.5px solid #fff; }
+        
+        .sidebar { width: 380px; height: 100vh; background: #0f172a; border-left: 2px solid #ec4899; padding: 28px; overflow-y: auto; display: flex; flex-direction: column; }
+        .badge { background: #ec4899; color: #fff; font-size: 0.75rem; font-weight: 900; padding: 4px 8px; border-radius: 4px; align-self: flex-start; margin-bottom: 12px; }
+        h2 { font-size: 1.5rem; margin-bottom: 6px; color: #ffffff; font-weight: 800; }
+        .rank-tag { font-size: 0.85rem; font-weight: 900; color: #fbbf24; margin-bottom: 16px; text-transform: uppercase; }
+        p { font-size: 0.9rem; color: #cbd5e1; line-height: 1.6; margin-bottom: 20px; }
+        .rel-box { background: #1e293b; border: 1px solid #475569; padding: 14px; border-radius: 8px; margin-bottom: 20px; }
+        .rel-title { font-size: 0.75rem; text-transform: uppercase; color: #ec4899; font-weight: 900; margin-bottom: 8px; }
+        
+        .btn-group { display: flex; flex-direction: column; gap: 10px; margin-top: auto; }
+        a.ext-btn { display: block; width: 100%; padding: 12px; text-align: center; font-weight: 900; font-size: 0.85rem; border-radius: 8px; text-decoration: none; text-transform: uppercase; }
+        .btn-img { background: #ec4899; color: #fff; }
+        .btn-web { background: #1e293b; color: #ec4899; border: 1px solid #ec4899; }
+    </style>
+</head>
+<body>
+    <div class="ui-panel">
+        <a href="index.html" class="btn-home">⬅ Hub Cosmetica</a>
+        <div class="rank-legend">
+            <span class="legend-item"><span class="dot" style="background:#ec4899;"></span> Rank 1 (Maison/Terzista/Polo)</span>
+            <span class="legend-item"><span class="dot" style="background:#db2777;"></span> Rank 2 (Stabilimento/Packaging)</span>
+            <span class="legend-item"><span class="dot" style="background:#be185d;"></span> Rank 3 (Lotto/Certificazione)</span>
+        </div>
+    </div>
+
+    <div id="network"></div>
+
+    <div class="sidebar">
+        <span class="badge">MAISON, TERZISTI & POLI</span>
+        <h2 id="s-title">Seleziona un'Azienda</h2>
+        <div class="rank-tag" id="s-rank">Rank: -</div>
+        <p id="s-desc">Clicca su un nodo per scoprire i grandi terzisti del Polo della Cosmesi, i marchi storici di profumeria e le maison dermocosmetiche.</p>
+        
+        <div class="rel-box">
+            <div class="rel-title">Filiera Produttiva:</div>
+            <div id="s-rel" style="font-size:0.85rem; color:#fff;">Nessun nodo selezionato.</div>
+        </div>
+
+        <div class="btn-group" id="s-link-container"></div>
+    </div>
+
+    <script>
+        const companies = [
+            { name: "Intercos", rank: 1, desc: "Leader mondiale della formulazione e produzione contoterzi di make-up per i principali marchi del lusso." },
+            { name: "Ancorotti Cosmetics", rank: 1, desc: "Colosso di Crema specializzato nella produzione contoterzi di mascara (circa il 20% del mercato mondiale)." },
+            { name: "Chromavis Fareva", rank: 1, desc: "Uno dei principali player mondiali nella produzione di cosmetici colati, polveri e smalti per unghie." },
+            { name: "Cosmint (Group Intercos)", rank: 1, desc: "Eccellenza contoterzi specializzata nelle formule di skincare, haircare e personal care ad alta tecnologia." },
+            { name: "Santa Maria Novella (1612)", rank: 1, desc: "L'officina profumo-farmaceutica più antica del mondo, simbolo della tradizione cosmetica fiorentina." },
+            { name: "Acqua di Parma", rank: 1, desc: "Maison di profumeria di lusso fondata nel 1916, icona dello stile e dell'eleganza olfattiva italiana." },
+            { name: "Kiko Milano", rank: 1, desc: "Brand globale di cosmetica e make-up nato a Milano nel 1997, celebre per la democratizzazione della bellezza." },
+            { name: "Davines", rank: 1, desc: "Azienda parmense di cosmetica per capelli e skincare (Comfort Zone) leader nella sostenibilità e certificata B-Corp." },
+            { name: "L'Erbolario", rank: 1, desc: "Storico marchio di fitocosmetica fondato a Lodi nel 1978 con cosmetici a base di estratti vegetali." },
+            { name: "Collistar", rank: 1, desc: "Brand di cosmetica n.1 nelle profumerie italiane, celebre per trattamenti corpo e innovazioni solari." },
+            { name: "Pupa Milano (Micys Company)", rank: 1, desc: "Brand milanese famoso per le trousse cosmetiche di design, rossetti e il celebre mascara Vamp!." },
+            { name: "Diego dalla Palma Milano", rank: 1, desc: "Storico marchio professionale di makeup e skincare noto per l'approccio non convenzionale al beauty." },
+            { name: "Bionike (ICIM International)", rank: 1, desc: "Azienda dermocosmetica leader in farmacia, pioniera nei prodotti formulati per pelli sensibili e intolleranti." },
+            { name: "Rilastil (Istituto Ganassini)", rank: 1, desc: "Marchio di riferimento nella dermocosmetica farmaceutica, inventore della celebre crema anti-smagliature." },
+            { name: "Bakel", rank: 1, desc: "Brand d'alta gamma d'avanguardia che utilizza esclusivamente ingredienti 100% principi attivi con zero sostanze inutili." },
+            { name: "Mulac Cosmetics", rank: 1, desc: "Primo marchio italiano di makeup nato sul web (fondato da LaBiotca) e poi diffusosi nel retail d'alta gamma." },
+            { name: "Nabla Cosmetics", rank: 1, desc: "Brand indipendente e vegano di makeup altamente performante e amato dalla community beauty internazionale." },
+            { name: "Wycon Cosmetics", rank: 1, desc: "Brand italiano di makeup e trattamenti beauty con rete retail proprietaria ad altissima frequenza di novita." },
+            { name: "Deborah Milano", rank: 1, desc: "Storico marchio industriale di makeup accessibile, famoso per il rossetto 'Rossetto Milano' e packaging di design." },
+            { name: "Bottega Verde", rank: 1, desc: "Azienda di cosmetica naturale pioniera nella vendita diretta e retail con tenuta propria a Pienza." },
+            { name: "Vagheggi Phytocosmetics", rank: 1, desc: "Pioniere della fitocosmetica professionale per centri estetici e spa in Italia e all'estero." },
+            { name: "GDM - Giotti Victoria", rank: 1, desc: "Azienda specializzata negli aromi, estratti ed essenze nobili per l'industria cosmetica e farmaceutica." },
+            { name: "Polo della Cosmesi di Crema", rank: 1, desc: "Distretto industriale dove viene prodotto oltre il 65% del make-up utilizzato dai marchi di lusso di tutto il mondo." },
+            { name: "Polaar / Mavive", rank: 1, desc: "Mavive, storica famiglia veneziana Vidal, leader nella creazione e distribuzione di profumeria alcolica." },
+            { name: "Gotha Cosmetics", rank: 1, desc: "Azienda contoterzi bergamasca ad altissima crescita specializzata in emulsioni e formulazioni labbra." },
+            { name: "Cosmetec", rank: 1, desc: "Realtà contoterzi specializzata nelle polveri cotte e compatte di altissimo livello tecnologico." },
+            { name: "EuroItalia", rank: 1, desc: "Leader mondiale nei profumi di licenza per maison di moda come Versace, Moschino e Missoni." },
+            { name: "Paglieri 1876", rank: 1, desc: "Storica casa d'essenza di Alessandria famosa per il marchio Felce Azzurra e linee di profumazione alta." },
+            { name: "Helan Cosmesi", rank: 1, desc: "Azienda genovese pioniera nella formulazione di cosmetici naturali, biologici e ipoallergenici." },
+            { name: "Nashi Argan (Landoll)", rank: 1, desc: "Brand milanese di cosmetica per capelli e corpo basato sull'olio di Argan biologico." },
+            { name: "Lombardia Cosmetics Cluster", rank: 1, desc: "Il cluster regionale che raggruppa le oltre 500 imprese della filiera cosmetica lombarda." },
+            { name: "Distretto Dermocosmetico Emiliano", rank: 1, desc: "Distretto della filiera della bellezza situato tra Parma e Bologna, specializzato in tracciabilità e biologico." },
+            { name: "Atelier Fragranze Milano", rank: 1, desc: "Casa essenziera italiana specializzata nella creazione e produzione di composizioni olfattive su misura." }
+        ];
+
+        let nodes = [], edges = [];
+        let idCounter = 1;
+
+        companies.forEach(c => {
+            let mId = idCounter++;
+            nodes.push({ 
+                id: mId, 
+                label: c.name, 
+                shape: 'box', 
+                size: 24, 
+                color: { background: '#ec4899', border: '#ffffff', highlight: { background: '#f472b6', border: '#ffffff' } },
+                borderWidth: 3,
+                font: { color: '#ffffff', size: 13, strokeWidth: 4, strokeColor: '#030712' },
+                rank: 1, 
+                desc: c.desc 
+            });
+
+            const subItems = ["Polo Produttivo / R&D", "Linea Contoterzi / Brand", "Packaging & Design", "Laboratorio di Sostenibilità", "Certificazione ISO Cosmetica"];
+            subItems.forEach(sub => {
+                let sId = idCounter++;
+                nodes.push({ 
+                    id: sId, 
+                    label: `${c.name} - ${sub}`, 
+                    shape: 'dot', 
+                    size: 14, 
+                    color: { background: '#db2777', border: '#ffffff' },
+                    borderWidth: 2,
+                    font: { color: '#fbcfe8', size: 11, strokeWidth: 3, strokeColor: '#030712' },
+                    rank: 2, 
+                    desc: `Unità di filiera Rank 2 di ${c.name}.` 
+                });
+                edges.push({ from: mId, to: sId, width: 2, color: { color: '#ec4899', opacity: 0.6 } });
+
+                let r3Id = idCounter++;
+                nodes.push({ 
+                    id: r3Id, 
+                    label: `Lotto Produzione (${sub.substring(0,6)})`, 
+                    shape: 'dot', 
+                    size: 8, 
+                    color: { background: '#be185d', border: '#f472b6' },
+                    borderWidth: 1,
+                    font: { color: '#f472b6', size: 9, strokeWidth: 2, strokeColor: '#030712' },
+                    rank: 3, 
+                    desc: `Specifiche e schede tecniche di Rank 3.` 
+                });
+                edges.push({ from: sId, to: r3Id, width: 1, color: { color: '#db2777', opacity: 0.4 } });
+            });
+        });
+
+        const container = document.getElementById('network');
+        const data = { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) };
+        const options = { physics: { barnesHut: { gravitationalConstant: -4000, springLength: 70 } } };
+
+        const network = new vis.Network(container, data, options);
+
+        network.on("click", function (params) {
+            if (params.nodes.length > 0) {
+                const node = nodes.find(n => n.id === params.nodes[0]);
+                document.getElementById('s-title').innerText = node.label;
+                document.getElementById('s-rank').innerText = `Gerarchia: Rank #${node.rank}`;
+                document.getElementById('s-desc').innerText = node.desc;
+                
+                const conn = edges.filter(e => e.from === node.id || e.to === node.id).length;
+                document.getElementById('s-rel').innerText = `Azienda collegata a ${conn} centri di produzione e filiera.`;
+
+                const cleanName = node.label.split(' - ')[0];
+                const query = encodeURIComponent(`${cleanName} cosmetica brand prodotti`);
+
+                document.getElementById('s-link-container').innerHTML = `
+                    <a class="ext-btn btn-img" href="https://www.google.com/search?q=${query}&tbm=isch" target="_blank">
+                        🖼️ Immagini & Prodotti Google ↗
+                    </a>
+                    <a class="ext-btn btn-web" href="https://www.google.com/search?q=${query}" target="_blank">
+                        🔍 Ricerca Web & Fonti ↗
+                    </a>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>

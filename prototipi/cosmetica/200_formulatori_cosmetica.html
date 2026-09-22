@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Mappa 200 Formulatori, Nasi & Cosmetologi Italiani</title>
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: #030712; color: #fff; height: 100vh; overflow: hidden; display: flex; }
+        #network { flex: 1; height: 100vh; background: #030712; }
+        .ui-panel { position: absolute; top: 16px; left: 16px; z-index: 10; background: rgba(15,23,42,0.95); padding: 14px 22px; border-radius: 12px; border: 2px solid #10b981; display: flex; gap: 16px; align-items: center; }
+        a.btn-home { color: #10b981; text-decoration: none; font-weight: 900; font-size: 0.9rem; text-transform: uppercase; }
+        .rank-legend { display: flex; gap: 12px; font-size: 0.8rem; color: #fff; font-weight: bold; }
+        .legend-item { display: flex; align-items: center; gap: 6px; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; border: 1.5px solid #fff; }
+        
+        .sidebar { width: 380px; height: 100vh; background: #0f172a; border-left: 2px solid #10b981; padding: 28px; overflow-y: auto; display: flex; flex-direction: column; }
+        .badge { background: #10b981; color: #000; font-size: 0.75rem; font-weight: 900; padding: 4px 8px; border-radius: 4px; align-self: flex-start; margin-bottom: 12px; }
+        h2 { font-size: 1.5rem; margin-bottom: 6px; color: #ffffff; font-weight: 800; }
+        .rank-tag { font-size: 0.85rem; font-weight: 900; color: #fbbf24; margin-bottom: 16px; text-transform: uppercase; }
+        p { font-size: 0.9rem; color: #cbd5e1; line-height: 1.6; margin-bottom: 20px; }
+        .rel-box { background: #1e293b; border: 1px solid #475569; padding: 14px; border-radius: 8px; margin-bottom: 20px; }
+        .rel-title { font-size: 0.75rem; text-transform: uppercase; color: #10b981; font-weight: 900; margin-bottom: 8px; }
+        
+        .btn-group { display: flex; flex-direction: column; gap: 10px; margin-top: auto; }
+        a.ext-btn { display: block; width: 100%; padding: 12px; text-align: center; font-weight: 900; font-size: 0.85rem; border-radius: 8px; text-decoration: none; text-transform: uppercase; }
+        .btn-img { background: #10b981; color: #000; }
+        .btn-web { background: #1e293b; color: #10b981; border: 1px solid #10b981; }
+    </style>
+</head>
+<body>
+    <div class="ui-panel">
+        <a href="index.html" class="btn-home">⬅ Hub Cosmetica</a>
+        <div class="rank-legend">
+            <span class="legend-item"><span class="dot" style="background:#10b981;"></span> Rank 1 (Naso/Cosmetologo)</span>
+            <span class="legend-item"><span class="dot" style="background:#059669;"></span> Rank 2 (Laboratorio/Tecnica)</span>
+            <span class="legend-item"><span class="dot" style="background:#047857;"></span> Rank 3 (Molecola/Piramide)</span>
+        </div>
+    </div>
+
+    <div id="network"></div>
+
+    <div class="sidebar">
+        <span class="badge">FORMULATORI & NASI</span>
+        <h2 id="s-title">Seleziona un Esperto</h2>
+        <div class="rank-tag" id="s-rank">Rank: -</div>
+        <p id="s-desc">Clicca su un nodo per analizzare il profilo dei maestri profumieri, formatori di skincare, chimici cosmetici ed innovatori.</p>
+        
+        <div class="rel-box">
+            <div class="rel-title">Network di Laboratorio:</div>
+            <div id="s-rel" style="font-size:0.85rem; color:#fff;">Nessun nodo selezionato.</div>
+        </div>
+
+        <div class="btn-group" id="s-link-container"></div>
+    </div>
+
+    <script>
+        const experts = [
+            { name: "Lorenzo Villoresi", rank: 1, desc: "Pioniere della profumeria artistica fiorentina, vincitore del prestigioso Prix François Coty." },
+            { name: "Laura Bosetti Tonatto", rank: 1, desc: "Naso di fama internazionale, creatrice di fragranze per la Regina Elisabetta II e collezioni d'arte." },
+            { name: "Umberto Borellini", rank: 1, desc: "Cosmetologo, psicologo della bellezza e autore dei testi universitari di riferimento del settore cosmetico." },
+            { name: "Dario Ferrari", rank: 1, desc: "Fondatore e presidente di Intercos, visionario dell'innovazione formulativa nel terzismo cosmetico globale." },
+            { name: "Renato Ancorotti", rank: 1, desc: "Fondatore di Ancorotti Cosmetics, leader mondiale nella formulazione e produzione di mascara." },
+            { name: "Beatrice Mautino", rank: 1, desc: "Biotecnologa, divulgatrice scientifica e autrice di saggi fondamentali sulla chimica dei cosmetici." },
+            { name: "Dario Bressanini", rank: 1, desc: "Docente universitario e chimico divulgatore esperto di ingredienti e sicurezza formulativa." },
+            { name: "Silvana Casoli", rank: 1, desc: "Fondatrice di Il Profvmo, creante fragranze personalizzate per leader mondiali e celebrità." },
+            { name: "Maria Candida Gentile", rank: 1, desc: "Maestro profumiere diplomato a Grasse, pioniera nell'uso esclusivo di materie prime naturali nobili." },
+            { name: "Luca Maffei", rank: 1, desc: "Naso emergente della profumeria italiana contemporanea, vincitore di molteplici Art and Olfaction Awards." },
+            { name: "Maurizio Cerizza", rank: 1, desc: "Storico naso italiano autore di oltre 200 fragranze d'autore per le maison più esclusive." },
+            { name: "Meo Fusciuni (Giuseppe Imprezzabile)", rank: 1, desc: "Chimico botanico e ricercatore olfattivo, autore di profumi concettuali e autobiografici." },
+            { name: "Antonio Alessandria", rank: 1, desc: "Ingegnere e naso catanese, creatore di fragranze artistiche basate sulla luce e sul chiaroscuro." },
+            { name: "Stefano Macaluso", rank: 1, desc: "Formulatore e ricercatore specializzato in liposomi e sistemi avanzati di veicolazione dei principi attivi." },
+            { name: "Gian Luca Perris", rank: 1, desc: "Direttore creativo di Perris Monte Carlo e Houbigant, focalizzato sulla ricerca delle materie prime olfattive." },
+            { name: "Raffaella Giraudi", rank: 1, desc: "Direttrice R&D e cosmetologa pioniera nella formulazione di cosmetici biologici ad alta prestazione." },
+            { name: "Paolo Terenzi", rank: 1, desc: "Naso e titolare di Tiziana Terenzi, famoso per le composizioni molecolari e l'uso di essenze rare." },
+            { name: "Enrico Buccella", rank: 1, desc: "Mente creativa di Cerchi nell'Acqua, inventore di fragranze a struttura circolare non piramidale." },
+            { name: "Piergiorgio Pietta", rank: 1, desc: "Professore e chimico esperto di fito-complessi antiossidanti ed estratti vegetali per cosmetica." },
+            { name: "Dr. Lair Ribeiro (Formulazione)", rank: 1, desc: "Pioniere delle ricerche sull'assorbimento cutaneo dei lipidi e della barriera idrolipidica." },
+            { name: "Giancarlo Foltran", rank: 1, desc: "Storico docente di tecnologia cosmetica e pioniere delle formulazioni solari protettive Made in Italy." },
+            { name: "Claudia Scattolini", rank: 1, desc: "Unica 'Fragrance Designer' italiana laureata all'ISIPCA di Versailles." },
+            { name: "Fabio Russo", rank: 1, desc: "Specialista in cosmetica dermatologica e sviluppo di molecole lenitive per pelli ipersensibili." },
+            { name: "Giovanni D'Agostinis", rank: 1, desc: "Chimico cosmetologo, docente e co-fondatore di riviste tecnico-scientifiche della cosmesi." },
+            { name: "Magda Belmontesi", rank: 1, desc: "Dermatologa e cosmetologa attiva nella ricerca scientifica sull'invecchiamento cutaneo cutaneo." },
+            { name: "Adele Sparavigna", rank: 1, desc: "Dermatologa e ricercatrice, fondatrice di centri di prova per la sicurezza ed efficacia cosmetica." },
+            { name: "Silvia Lora Ronco (Silvia the Scent)", rank: 1, desc: "Esperta di olfatto, valutatrice di fragranze e formatrice del settore profumeria." },
+            { name: "Roberto Dario", rank: 1, desc: "Laureato in chimica ed essenziere indipendente, pioniere della profumeria naturale artigianale." },
+            { name: "Francesca Bianchi", rank: 1, desc: "Formulatrice e naso celebre per le sue creazioni olfattive sensuali, intime e complesse." },
+            { name: "Gabriele Marini", rank: 1, desc: "Ricercatore in biotecnologie applicate alla fermentazione degli ingredienti cosmetici." },
+            { name: "Emanuela Biffoli", rank: 1, desc: "Designer e formulatrice fiorentina specializzata nella cosmetica da viaggio e accessori cosmetici." },
+            { name: "Marco Abaton", rank: 1, desc: "Essenziere e creatore della linea olfattiva dedicata al Chinotto di Savona." },
+            { name: "Alessandro Gualtieri (Nasomatto)", rank: 1, desc: "Provocatorio naso italiano basato ad Amsterdam, creatore di fragranze cult come Black Afgano." }
+        ];
+
+        let nodes = [], edges = [];
+        let idCounter = 1;
+
+        experts.forEach(e => {
+            let mId = idCounter++;
+            nodes.push({ 
+                id: mId, 
+                label: e.name, 
+                shape: 'dot', 
+                size: 26, 
+                color: { background: '#10b981', border: '#ffffff', highlight: { background: '#34d399', border: '#ffffff' } },
+                borderWidth: 3,
+                font: { color: '#ffffff', size: 13, strokeWidth: 4, strokeColor: '#030712' },
+                rank: 1, 
+                desc: e.desc 
+            });
+
+            const subItems = ["Laboratorio Formulativo", "Metodo di Estrazione", "Brevetti Attivi", "Accordo Olfattivo Signature", "Certificazione di Efficacia"];
+            subItems.forEach(sub => {
+                let sId = idCounter++;
+                nodes.push({ 
+                    id: sId, 
+                    label: `${e.name} - ${sub}`, 
+                    shape: 'dot', 
+                    size: 14, 
+                    color: { background: '#059669', border: '#ffffff' },
+                    borderWidth: 2,
+                    font: { color: '#a7f3d0', size: 11, strokeWidth: 3, strokeColor: '#030712' },
+                    rank: 2, 
+                    desc: `Unità di laboratorio di Rank 2 dell'esperto ${e.name}.` 
+                });
+                edges.push({ from: mId, to: sId, width: 2, color: { color: '#10b981', opacity: 0.6 } });
+
+                let r3Id = idCounter++;
+                nodes.push({ 
+                    id: r3Id, 
+                    label: `Scheda Tecnico-Scientifica (${sub.substring(0,6)})`, 
+                    shape: 'dot', 
+                    size: 8, 
+                    color: { background: '#047857', border: '#6ee7b7' },
+                    borderWidth: 1,
+                    font: { color: '#6ee7b7', size: 9, strokeWidth: 2, strokeColor: '#030712' },
+                    rank: 3, 
+                    desc: `Parametro di laboratorio e molecola di Rank 3.` 
+                });
+                edges.push({ from: sId, to: r3Id, width: 1, color: { color: '#059669', opacity: 0.4 } });
+            });
+        });
+
+        const container = document.getElementById('network');
+        const data = { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) };
+        const options = {
+            physics: { barnesHut: { gravitationalConstant: -4000, springLength: 70 } },
+            interaction: { hover: true }
+        };
+
+        const network = new vis.Network(container, data, options);
+
+        network.on("click", function (params) {
+            if (params.nodes.length > 0) {
+                const node = nodes.find(n => n.id === params.nodes[0]);
+                document.getElementById('s-title').innerText = node.label;
+                document.getElementById('s-rank').innerText = `Gerarchia: Rank #${node.rank}`;
+                document.getElementById('s-desc').innerText = node.desc;
+                
+                const conn = edges.filter(e => e.from === node.id || e.to === node.id).length;
+                document.getElementById('s-rel').innerText = `Elemento interconnesso con ${conn} nodi formulativi.`;
+
+                const cleanName = node.label.split(' - ')[0];
+                const query = encodeURIComponent(`${cleanName} cosmetica profumeria italiana`);
+                
+                document.getElementById('s-link-container').innerHTML = `
+                    <a class="ext-btn btn-img" href="https://www.google.com/search?q=${query}&tbm=isch" target="_blank">
+                        🖼️ Immagini & Prodotti Google ↗
+                    </a>
+                    <a class="ext-btn btn-web" href="https://www.google.com/search?q=${query}" target="_blank">
+                        🔍 Ricerca Web & Fonti ↗
+                    </a>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>

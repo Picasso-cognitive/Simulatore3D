@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rete del Packaging dei Profumi - Haute Parfumerie & Luxury Packaging Ecosystem</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #06080d; color: #f8fafc; overflow: hidden; }
+        #canvas-container { width: 100vw; height: 100vh; position: relative; }
+        canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+        canvas:active { cursor: grabbing; }
+        
+        /* Control Panel UI */
+        .ui-panel { position: absolute; top: 16px; left: 16px; background: rgba(10, 14, 23, 0.93); backdrop-filter: blur(14px); border: 1px solid #1e293b; padding: 18px; border-radius: 12px; width: 360px; box-shadow: 0 12px 32px rgba(0,0,0,0.8); z-index: 10; max-height: 95vh; overflow-y: auto; }
+        .ui-panel h1 { font-size: 1.15rem; font-weight: 700; margin-bottom: 4px; color: #eab308; letter-spacing: -0.02em; }
+        .ui-panel p { font-size: 0.78rem; color: #94a3b8; margin-bottom: 12px; line-height: 1.35; }
+        .ui-panel .hint { font-size: 0.72rem; color: #eab308; background: rgba(234, 179, 8, 0.1); padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(234, 179, 8, 0.25); margin-bottom: 14px; }
+        
+        .control-group { margin-bottom: 12px; }
+        .control-group label { display: block; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; margin-bottom: 4px; font-weight: 600; }
+        input[type="text"], select { width: 100%; padding: 8px 10px; background: #020617; border: 1px solid #334155; border-radius: 6px; color: #fff; font-size: 0.82rem; outline: none; transition: border-color 0.2s; }
+        input[type="text"]:focus, select:focus { border-color: #eab308; }
+        select { cursor: pointer; }
+        input[type="range"] { width: 100%; accent-color: #eab308; cursor: pointer; }
+        
+        /* Sim Control Bar */
+        .sim-control-bar { display: flex; align-items: center; justify-content: space-between; background: #020617; padding: 8px 12px; border-radius: 8px; border: 1px solid #1e293b; margin-bottom: 12px; }
+        .sim-status { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 600; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #eab308; }
+        .status-dot.paused { background: #ef4444; }
+        .btn-toggle { background: #eab308; color: #020617; border: none; padding: 5px 10px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+        .btn-toggle:hover { background: #ca8a04; color: #fff; }
+
+        /* Legend Grid */
+        .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 12px 0; padding: 8px; background: rgba(2, 6, 23, 0.6); border-radius: 6px; border: 1px solid #1e293b; }
+        .legend-item { display: flex; align-items: center; font-size: 0.68rem; color: #cbd5e1; }
+        .legend-color { width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; flex-shrink: 0; }
+
+        .stats { display: flex; justify-content: space-between; font-size: 0.72rem; color: #94a3b8; padding-top: 10px; border-top: 1px solid #1e293b; }
+        
+        /* Info Card Panel */
+        #info-card { position: absolute; bottom: 20px; right: 20px; background: rgba(10, 14, 23, 0.94); backdrop-filter: blur(14px); border: 1px solid #334155; padding: 18px; border-radius: 12px; width: 350px; display: none; z-index: 10; box-shadow: 0 10px 25px rgba(0,0,0,0.7); }
+        #info-card h2 { font-size: 1.15rem; color: #f8fafc; margin-bottom: 4px; line-height: 1.2; }
+        #info-card .category-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.68rem; font-weight: 600; margin-bottom: 8px; text-transform: uppercase; }
+        #info-card .meta { font-size: 0.8rem; color: #eab308; font-weight: 500; margin-bottom: 10px; }
+        #info-card .details { font-size: 0.76rem; color: #cbd5e1; line-height: 1.5; }
+        #info-card .partners { margin-top: 8px; padding-top: 8px; border-top: 1px solid #334155; font-size: 0.72rem; color: #94a3b8; }
+
+        /* Context Menu Modal */
+        #work-modal { position: absolute; display: none; background: rgba(10, 14, 23, 0.96); backdrop-filter: blur(16px); border: 1px solid #eab308; border-radius: 12px; padding: 18px; width: 340px; box-shadow: 0 15px 35px rgba(0,0,0,0.9); z-index: 100; animation: popup 0.15s ease-out; }
+        @keyframes popup { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+        #work-modal .close-btn { position: absolute; top: 10px; right: 12px; background: none; border: none; color: #64748b; font-size: 1.2rem; cursor: pointer; }
+        #work-modal .close-btn:hover { color: #fff; }
+        #work-modal h3 { font-size: 1.05rem; color: #f8fafc; margin-bottom: 2px; padding-right: 20px; }
+        #work-modal .designer-sub { font-size: 0.75rem; color: #eab308; margin-bottom: 12px; font-weight: 500; }
+        #work-modal .work-box { background: #020617; border: 1px solid #1e293b; padding: 12px; border-radius: 8px; margin-bottom: 14px; }
+        #work-modal .work-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 4px; font-weight: 700; }
+        #work-modal .work-title { font-size: 0.88rem; color: #f1f5f9; font-weight: 600; line-height: 1.35; }
+        #work-modal .open-link-btn { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 10px; background: #ca8a04; color: #020617; border: none; border-radius: 8px; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: background 0.2s; text-decoration: none; }
+        #work-modal .open-link-btn:hover { background: #eab308; color: #000; }
+    </style>
+</head>
+<body>
+
+<div id="canvas-container">
+    <canvas id="networkCanvas"></canvas>
+    
+    <div class="ui-panel">
+        <h1>Perfume Packaging Ecosystem</h1>
+        <p>Mappa concettuale di 200 nodi focalizzata sul Packaging dei Profumi e Haute Parfumerie: maieutiche del vetro, erogatori invisibili, capsule in zama/legno, coffret di lusso, decorazioni galvaniche e ricaricabilità.</p>
+        <div class="hint">💡 <strong>Tasto Destro:</strong> Clicca su un nodo per avviare una ricerca sul fornitore, materiale o finitura.</div>
+
+        <div class="sim-control-bar">
+            <div class="sim-status">
+                <span id="status-dot" class="status-dot"></span>
+                <span id="status-text">Simulazione Attiva</span>
+            </div>
+            <button id="toggleSimBtn" class="btn-toggle" onclick="toggleSimulation()">Pausa</button>
+        </div>
+
+        <div class="control-group">
+            <label for="layoutSelect">Modalità di Visualizzazione</label>
+            <select id="layoutSelect" onchange="changeLayout(this.value)">
+                <option value="radial">Radiale (Epicentro della Profumeria al Centro)</option>
+                <option value="force">Fisica Dinamica (Force-Directed)</option>
+                <option value="cluster">Cluster per Specializzazione della Filiera</option>
+                <option value="circular">Anello Circolare Perimetrale</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="categorySelect">Filtra per Categoria</label>
+            <select id="categorySelect">
+                <option value="ALL">Tutte le Categorie</option>
+                <option value="LUXURY_MAISONS">Maison & Gruppi del Lusso</option>
+                <option value="GLASS_MASTERS">Vetreria d'Arte & Flaconi</option>
+                <option value="DISPENSING_CAPS">Pompe, Spray, Valvole & Capsule</option>
+                <option value="BOXES_COFFRET">Astucci, Carte & Coffret di Lusso</option>
+                <option value="DECOR_FINISHING">Decorazioni, Lacche & Galvanica</option>
+                <option value="ECO_REFILL">Sostenibilità & Ricaricabile (Refill)</option>
+                <option value="MACHINERY_TECH">Automazione, Riempimento & Tech</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="searchInput">Cerca Vetreria, Pompa, Finitura o Maison</label>
+            <input type="text" id="searchInput" placeholder="es. Pochet, Bormioli, Aptar, Zama, Refill, Fedrigoni...">
+        </div>
+
+        <div class="legend">
+            <div class="legend-item"><div class="legend-color" style="background:#3b82f6"></div>Maison del Lusso</div>
+            <div class="legend-item"><div class="legend-color" style="background:#f59e0b"></div>Vetreria d'Arte</div>
+            <div class="legend-item"><div class="legend-color" style="background:#8b5cf6"></div>Pompe & Capsule</div>
+            <div class="legend-item"><div class="legend-color" style="background:#10b981"></div>Astucci & Coffret</div>
+            <div class="legend-item"><div class="legend-color" style="background:#ec4899"></div>Decorazioni & Lacche</div>
+            <div class="legend-item"><div class="legend-color" style="background:#06b6d4"></div>Refill & Sostenibilità</div>
+            <div class="legend-item" style="grid-column: span 2;"><div class="legend-color" style="background:#ef4444"></div>Automazione & Riempimento</div>
+        </div>
+        
+        <div class="control-group" id="repulsionControl" style="display:none;">
+            <label for="repulsionSlider">Forza di Repulsione Fisica</label>
+            <input type="range" id="repulsionSlider" min="50" max="600" value="260">
+        </div>
+
+        <div class="stats">
+            <span>Nodi Connessi: <strong id="stat-nodes">200</strong></span>
+            <span>Relazioni: <strong id="stat-edges">0</strong></span>
+            <span>FPS: <strong id="stat-fps">60</strong></span>
+        </div>
+    </div>
+
+    <!-- Info Card Panel -->
+    <div id="info-card">
+        <h2 id="card-title">-</h2>
+        <span id="card-badge" class="category-badge">-</span>
+        <div id="card-meta" class="meta">-</div>
+        <div id="card-details" class="details"></div>
+        <div id="card-partners" class="partners"></div>
+    </div>
+
+    <!-- Right-Click Modal -->
+    <div id="work-modal">
+        <button class="close-btn" onclick="closeWorkModal()">&times;</button>
+        <h3 id="modal-node-name">Nome Nodo</h3>
+        <div id="modal-node-meta" class="designer-sub">Categoria • Rilevanza</div>
+        <div class="work-box">
+            <div class="work-label">Scheda Tecnica & Filiera Perfume Packaging</div>
+            <div id="modal-node-title" class="work-title">Dettaglio approfondito sull'alta profumeria</div>
+        </div>
+        <a id="modal-web-link" href="#" target="_blank" class="open-link-btn">
+            🔍 Ricerca su Perfume Packaging ↗
+        </a>
+    </div>
+</div>
+
+<script>
+// --- CATEGORIE SPECIFICHE PER IL PACKAGING DEI PROFUMI ---
+const CATEGORIES = {
+    LUXURY_MAISONS: { name: 'Maison del Lusso', color: '#3b82f6' },
+    GLASS_MASTERS: { name: 'Vetreria d\'Arte', color: '#f59e0b' },
+    DISPENSING_CAPS: { name: 'Pompe & Capsule', color: '#8b5cf6' },
+    BOXES_COFFRET: { name: 'Astucci & Coffret', color: '#10b981' },
+    DECOR_FINISHING: { name: 'Decorazioni & Lacche', color: '#ec4899' },
+    ECO_REFILL: { name: 'Refill & Sostenibilità', color: '#06b6d4' },
+    MACHINERY_TECH: { name: 'Automazione & Tech', color: '#ef4444' }
+};
+
+// --- DATASET SEED SPECIFICO PER PERFUME PACKAGING (40 NODI REALI & ICONICI) ---
+const SEED_NODES = [
+    { name: "Haute Parfumerie Packaging Ecosystem", category: "LUXURY_MAISONS", relevance: 1, sub: "Epicentro Industriale del Profumo", details: "L'intersezione tra alta vetreria, micro-ingegneria dei sistemi spray, artigianalità dei materiali di pregio e transizione ecologica del packaging olfattivo.", connections: ["Pochet du Courval", "Bormioli Luigi", "Aptar Beauty", "Fedrigoni Paper", "LVMH Beauty", "Flacone Ricaricabile (Refillable)", "Laccatura & Verniciatura UV"] },
+    
+    // MAISON DEL LUSSO
+    { name: "LVMH Beauty", category: "LUXURY_MAISONS", relevance: 1, sub: "Conglomerato del Lusso (Dior, Guerlain, Givenchy)", details: "Gruppo leader che detta gli standard estetici e sostenibili nel packaging dei profumi d'alta gamma.", connections: ["Haute Parfumerie Packaging Ecosystem", "Pochet du Courval", "Bormioli Luigi", "Flacone Ricaricabile (Refillable)"] },
+    { name: "Chanel Parfums", category: "LUXURY_MAISONS", relevance: 1, sub: "Icona di Design & Minimalismo Olfattivo", details: "Pioniere della geometria classica nel flacone del N°5 e promotore di capsule in materiale bio-basato integrato con gusci di camelia.", connections: ["Haute Parfumerie Packaging Ecosystem", "Pochet du Courval", "Capsula in Sulapac Bio-Based"] },
+    { name: "Coty Inc.", category: "LUXURY_MAISONS", relevance: 1, sub: "Colosso Licenze Prestige (Gucci, Burberry, Boss)", details: "Uno dei maggiori player mondiali nella produzione e confezionamento su vasta scala di profumi da collezione e prêt-à-porter.", connections: ["Verescence", "Aptar Beauty", "Silgan Dispensing"] },
+    { name: "L'Oréal Luxe", category: "LUXURY_MAISONS", relevance: 1, sub: "Divisione Profumi (Lancôme, YSL, Armani)", details: "Pioniere nell'introduzione di fontane di ricarica in profumeria e nell'alleggerimento sistematico del vetro dei flaconi.", connections: ["Stoelzle Glass Group", "Svitabilità della Pompa (Screw Pump)", "Aptar Beauty"] },
+    { name: "Puig", category: "LUXURY_MAISONS", relevance: 2, sub: "Maison & Brand di Nicchia (Penhaligon's, JPG, Carolina Herrera)", details: "Gruppo spagnolo celebre per il packaging scultoreo e stravagante (tappi metallici complessi, flaconi a forma di tacco o busto).", connections: ["TNT Global Manufacturing", "Bormioli Luigi"] },
+
+    // VETRERIA D'ARTE & FLACONI
+    { name: "Pochet du Courval", category: "GLASS_MASTERS", relevance: 1, sub: "Vetreria Francese Storica (Dal 1623)", details: "Eccellenza mondiale della 'Glass Valley' in Normandia, rinomata per la purezza straordinaria del vetro extra-chiaro e la distribuzione perfetta del metallo fuso.", connections: ["Haute Parfumerie Packaging Ecosystem", "LVMH Beauty", "Chanel Parfums", "Distribuzione del Vetro (Poinçon)"] },
+    { name: "Bormioli Luigi", category: "GLASS_MASTERS", relevance: 1, sub: "Maestria Vetraia Italiana (Parma)", details: "Leader mondiale nel vetro per profumeria d'alta gamma, celebre per il riciclo del vetro PCR in camera pulita e la tecnologia di distribuzione omogenea.", connections: ["Haute Parfumerie Packaging Ecosystem", "LVMH Beauty", "Vetro PCR Extra-Chiaro", "Pujolasos Wood & Pack"] },
+    { name: "Verescence", category: "GLASS_MASTERS", relevance: 1, sub: "Leader Mondiale del Flacone in Vetro", details: "Produttore globale con stabilimenti in Francia, Spagna e USA, pioniere nella tecnologia 'Verre Infini' (vetro riciclato post-consumo al 20%).", connections: ["Coty Inc.", "Vetro PCR Extra-Chiaro", "Laccatura & Verniciatura UV"] },
+    { name: "Stoelzle Glass Group", category: "GLASS_MASTERS", relevance: 1, sub: "Specialista Austriaco Vetro di Lusso", details: "Vetreria di riferimento per flaconi con fondi di vetro spessi (Feeder Coloration) e decorazioni complesse in-house.", connections: ["L'Oréal Luxe", "Serigrafia ad Alta Definizione"] },
+    { name: "Heinz-Glas", category: "GLASS_MASTERS", relevance: 2, sub: "Vetreria Bavarese da 400 Anni", details: "Azienda familiare tedesca leader nei flaconi in vetro opaco, satinatura acida e tecnologie eco-friendly per fornaci elettriche.", connections: ["Satinatura Acida & Sabbiatura"] },
+    { name: "Saverglass", category: "GLASS_MASTERS", relevance: 2, sub: "Profumeria d'Artigianato & Nicchia", details: "Specializzata in piccoli lotti di flaconi scultorei ad altissimo peso di vetro eforme personalizzate per la profumeria artistica.", connections: ["Haute Parfumerie Packaging Ecosystem"] },
+
+    // POMPE, SPRAY & CAPSULE
+    { name: "Aptar Beauty", category: "DISPENSING_CAPS", relevance: 1, sub: "Leader Mondiale Pompe Micro-Spray", details: "Multinazionale inventrice delle pompe spray con cannula invisibile (Micro-Nebulizzazione VP4) e sistemi d'erogazione senza metallo a contatto.", connections: ["Haute Parfumerie Packaging Ecosystem", "Coty Inc.", "Cannula Invisibile (InvisiDip)", "Svitabilità della Pompa (Screw Pump)"] },
+    { name: "Silgan Dispensing", category: "DISPENSING_CAPS", relevance: 1, sub: "Sistemi Spray & Nebulizzazione di Precisione", details: "Creatore di pompe iconiche come 'Melodie' dotate di uno spray ultra-delicato per un'esperienza olfattiva avvolgente e lussuosa.", connections: ["Coty Inc.", "Aptar Beauty"] },
+    { name: "Coverpla", category: "DISPENSING_CAPS", relevance: 2, sub: "Selezionatore & Creatore Standard di Lusso", details: "Azienda francese che fornisce componenti standard componibili (flacone + pompa + capsula) ad altissima qualità per la profumeria di nicchia.", connections: ["Quadpack"] },
+    { name: "TNT Global Manufacturing", category: "DISPENSING_CAPS", relevance: 2, sub: "Capsule in Zama & Componenti Metallici", details: "Leader nell'ingegnerizzazione e produzione di capsule pesanti in lega di Zama placcata in oro, palladio o canna di fucile.", connections: ["Puig", "Capsule in Zama Pesante (Zinc-Alloy)"] },
+    { name: "Quadpack", category: "DISPENSING_CAPS", relevance: 2, sub: "Soluzioni di Confezionamento e Legno", details: "Fornitore internazionale specializzato nella produzione di capsule in legno massello lavorato a tornio per profumi biologici e naturali.", connections: ["Coverpla", "Pujolasos Wood & Pack"] },
+    { name: "Coster Group", category: "DISPENSING_CAPS", relevance: 2, sub: "Tecnologia Erogatori e Riempimento", details: "Gruppo italiano produttore di pompe spray, valvole per aerosol ed equipaggiamento da laboratorio per il test dei campioni olfattivi.", connections: ["Marchesini Group Beauty"] },
+
+    // ASTUCCI & COFFRET DI LUSSO
+    { name: "Fedrigoni Paper", category: "BOXES_COFFRET", relevance: 1, sub: "Carte Pregiate & Materiali di Rivestimento", details: "Produttore italiano di riferimento per carte goffrate, perlate, colorate in massa e cartoncini strutturali per astucci di profumo.", connections: ["Haute Parfumerie Packaging Ecosystem", "Stampa a Caldo (Hot Stamping)", "Carta Goffrata & Soft-Touch"] },
+    { name: "Knoll Packaging", category: "BOXES_COFFRET", relevance: 1, sub: "Coffret Rigidi d'Alta Gamma", details: "Leader mondiale nello sviluppo di cofanetti di lusso rivestiti a mano, interni in polpa di carta termoformata e chiusure magnetiche.", connections: ["LVMH Beauty", "Interni in Polpa di Cellulosa (Thermoformed Pulp)"] },
+    { name: "James Cropper", category: "BOXES_COFFRET", relevance: 2, sub: "Carte Sostenibili & Fibre Riciclate", details: "Cartiera britannica pioniera nel riciclo delle tazzine da caffè esauste per creare carte di lusso colorate ad uso profumeria.", connections: ["Fedrigoni Paper"] },
+    { name: "GPA Global", category: "BOXES_COFFRET", relevance: 2, sub: "Produzione Cofanetti & Display", details: "Specialista nella produzione ingegnerizzata di packaging secondario rigido per cofanetti regalo stagionali ed edizioni limitate.", connections: ["Knoll Packaging"] },
+
+    // DECORAZIONI & LACCHE
+    { name: "Laccatura & Verniciatura UV", category: "DECOR_FINISHING", relevance: 1, sub: "Colorazione Esterna & Interna del Flacone", details: "Applicazione di smalti e vernici ad asciugatura rapida per creare gradazioni di colore sfumate, finiture opache o specchiate.", connections: ["Verescence", "Bormioli Luigi", "Metallizzazione Sottovuoto"] },
+    { name: "Metallizzazione Sottovuoto", category: "DECOR_FINISHING", relevance: 1, sub: "Deposizione di Vapori Metallici (PVD)", details: "Processo che deposita uno strato microscopico di alluminio o titanio sul flacone in vetro per donare un effetto specchio metallico lucido.", connections: ["Laccatura & Verniciatura UV", "Galvanica e Placcatura"] },
+    { name: "Stampa a Caldo (Hot Stamping)", category: "DECOR_FINISHING", relevance: 1, sub: "Foil Metallici Trasferiti a Calore", details: "Tecnica che imprime scritte e loghi in oro, argento o platino con effetto rilievo sia su cartoncino che direttamente sul vetro.", connections: ["Fedrigoni Paper", "Serigrafia ad Alta Definizione"] },
+    { name: "Galvanica e Placcatura", category: "DECOR_FINISHING", relevance: 2, sub: "Trattamento Superficiale dei Metalli", details: "Bagno galvanico per rivestire le capsule in Zama o ottone con veri strati di oro, argento, rodio o nichel nero.", connections: ["Capsule in Zama Pesante (Zinc-Alloy)"] },
+    { name: "Serigrafia ad Alta Definizione", category: "DECOR_FINISHING", relevance: 2, sub: "Inchiostri Vitrificabili & UV", details: "Stampa diretta del nome del profumo sul corpo del flacone tramite inchiostri polimerizzati o cuocendo smalti ad alta temperatura.", connections: ["Stoelzle Glass Group"] },
+
+    // REFILL & SOSTENIBILITÀ
+    { name: "Flacone Ricaricabile (Refillable)", category: "ECO_REFILL", relevance: 1, sub: "Paradigma della Profumeria Circolare", details: "Design di flaconi pensati per durare decenni, ricaricabili a casa tramite canister in alluminio/plastica o in profumeria tramite 'Fontane'.", connections: ["Haute Parfumerie Packaging Ecosystem", "LVMH Beauty", "Svitabilità della Pompa (Screw Pump)", "Ricarica in Alluminio (Aluminum Canister)"] },
+    { name: "Svitabilità della Pompa (Screw Pump)", category: "ECO_REFILL", relevance: 1, sub: "Inno alla Disassemblabilità (SNI15 / FEA15)", details: "Filettatura standardizzata che permette di svitare facilmente la pompa spray dal vetro per permettere la ricarica o la separazione differenziata dei materiali.", connections: ["AptarBeauty", "Flacone Ricaricabile (Refillable)", "L'Oréal Luxe"] },
+    { name: "Vetro PCR Extra-Chiaro", category: "ECO_REFILL", relevance: 1, sub: "Vetro Riciclato Post-Consumo", details: "Lavorazione del vetro proveniente dalla raccolta differenziata purificato da impurità per mantenere la trasparenza richiesta dalla profumeria di lusso.", connections: ["Bormioli Luigi", "Verescence"] },
+    { name: "Capsula in Sulapac Bio-Based", category: "ECO_REFILL", relevance: 2, sub: "Alternativa Bioplastica al Petrolio", details: "Materiale biodegradabile creato con trucioli di legno e leganti naturali, privo di microplastiche e completamente compostabile industriale.", connections: ["Chanel Parfums"] },
+    { name: "Pujolasos Wood & Pack", category: "ECO_REFILL", relevance: 2, sub: "Capsule in Legno FSC 100% Naturale", details: "Produttore spagnolo pioniere di chiusure in legno privo di inserti in plastica interna, utilizzante filettature incise direttamente nel legno.", connections: ["Bormioli Luigi", "Quadpack"] },
+
+    // AUTOMAZIONE & TECH
+    { name: "Marchesini Group Beauty", category: "MACHINERY_TECH", relevance: 1, sub: "Polo Bolognese Macchine Profumeria", details: "Divisione dedicata all'assemblaggio robotizzato, dosaggio di precisione dei liquidi alcolici e aggraffatura invisibile della pompa sul vetro.", connections: ["Coster Group", "Dosaggio & Riempimento Alcolico", "Aggraffatura & Clinch della Pompa"] },
+    { name: "Dosaggio & Riempimento Alcolico", category: "MACHINERY_TECH", relevance: 1, sub: "Ambiente ATEX ad Alta Precisione", details: "Sistemi automatizzati in grado di riempire centinaia di flaconi al minuto calibrando al milligrammo la quantità di fragranza e alcol.", connections: ["Marchesini Group Beauty"] },
+    { name: "Aggraffatura & Clinch della Pompa", category: "MACHINERY_TECH", relevance: 2, sub: "Chiusura Ermetica del Flacone", details: "Operazione meccanica che fissa la pompa al collo del flacone garantendo la tenuta stagno contro l'evaporazione dell'alcol olfattivo.", connections: ["Marchesini Group Beauty"] }
+];
+
+// GENERAZIONE DATASET ESPANSO SPECIFICO (200 NODI DEDICATI ALLA PROFUMERIA)
+function generatePerfumeDataset() {
+    const nodes = [];
+    const nodeMap = new Map();
+
+    // Inserisci i nodi Seed
+    SEED_NODES.forEach((d, idx) => {
+        const node = {
+            id: idx + 1,
+            name: d.name,
+            category: d.category,
+            relevance: d.relevance,
+            sub: d.sub,
+            details: d.details,
+            radius: Math.max(17 - d.relevance * 2.8, 7),
+            x: (Math.random() - 0.5) * 1000,
+            y: (Math.random() - 0.5) * 700,
+            targetX: 0, targetY: 0,
+            vx: 0, vy: 0,
+            connections: []
+        };
+        nodes.push(node);
+        nodeMap.set(d.name, node);
+    });
+
+    const categoryKeys = Object.keys(CATEGORIES);
+    const perfumeHubs = ["Grasse", "Normandia (Glass Valley)", "Parma", "Baviera", "Ginevra", "New York", "Barcellona", "Milano", "Londra"];
+    const perfumeTerms = ["Essenza", "Olio Essenziale", "Alcol Bio", "Vetro Pesante", "Capsula Magnetica", "Poinçon d'Or", "Ricarica Auto-Stop", "Pompa Purity", "Finitura Velour", "Rilievo Sbalzato"];
+
+    // Genera nodi procedurali coerenti fino a 200
+    for (let i = nodes.length; i < 200; i++) {
+        const id = i + 1;
+        const category = categoryKeys[i % categoryKeys.length];
+        const hub = perfumeHubs[i % perfumeHubs.length];
+        const term = perfumeTerms[i % perfumeTerms.length];
+
+        let name = "";
+        let sub = "";
+        let details = "";
+
+        if (category === "LUXURY_MAISONS") {
+            name = `Atelier Olfattivo ${hub} #${id}`;
+            sub = `Maison d'Haute Parfumerie`;
+            details = `Casa da profumo specializzata in collezioni di nicchia con packaging artistico personalizzato e vetro lavorato su misura.`;
+        } else if (category === "GLASS_MASTERS") {
+            name = `Studio Vetrario ${term} #${id}`;
+            sub = `Flaconi in Vetro Stampato`;
+            details = `Specializzato nell'ingegnerizzazione di stampi complessi per flaconi con spigoli vivi, pareti sottili e fondo con spessore uniforme.`;
+        } else if (category === "DISPENSING_CAPS") {
+            name = `Capsula Magnetica ${term} #${id}`;
+            sub = `Sistemi di Chiusura Premium`;
+            details = `Chiusura ermetica dotata di magneti al neodimio integrati per garantire un 'click' sonoro morbido e soddisfacente al consumatore.`;
+        } else if (category === "BOXES_COFFRET") {
+            name = `Cartotecnica di Lusso ${hub} #${id}`;
+            sub = `Cofanetti Rigidi & Sleeves`;
+            details = `Realizzazione di astucci foderati a mano con goffrature personalizzate ed interni sagomati per sostenere il flacone durante il trasporto.`;
+        } else if (category === "DECOR_FINISHING") {
+            name = `Finitura ${term} #${id}`;
+            sub = `Lavorazione Superficiale Vetro`;
+            details = `Trattamento estetico avanzato per creare effetti di rifrazione della luce, sfumature bicolore o texture tattili sul corpo del flacone.`;
+        } else if (category === "ECO_REFILL") {
+            name = `Modulo di Ricarica Sostenibile #${id}`;
+            sub = `Eco-Design & Circular Fragrance`;
+            details = `Soluzione di ricarica domestica auto-stop che blocca il flusso di liquido non appena il flacone principale ha raggiunto la capienza massima.`;
+        } else {
+            name = `Isola di Confezionamento Robotizzata #${id}`;
+            sub = `Automazione & Controllo Qualità`;
+            details = `Linea di inscatolamento ad alta velocità dotata di telecamere per il controllo della centratura delle etichette e dell'integrità del tappo.`;
+        }
+
+        const node = {
+            id: id,
+            name: name,
+            category: category,
+            relevance: 3,
+            sub: sub,
+            details: details,
+            radius: Math.max(7 - (id * 0.015), 4),
+            x: (Math.random() - 0.5) * 1600,
+            y: (Math.random() - 0.5) * 1100,
+            targetX: 0, targetY: 0,
+            vx: 0, vy: 0,
+            connections: []
+        };
+        nodes.push(node);
+        nodeMap.set(name, node);
+    }
+
+    // GENERAZIONE ARCHI E CONNESSI
+    const edges = [];
+    const edgeSet = new Set();
+
+    function addEdge(source, target, weight = 1) {
+        if (!source || !target || source.id === target.id) return;
+        const key = source.id < target.id ? `${source.id}-${target.id}` : `${target.id}-${source.id}`;
+        if (!edgeSet.has(key)) {
+            edgeSet.add(key);
+            const edge = { source, target, weight };
+            edges.push(edge);
+            source.connections.push(target);
+            target.connections.push(source);
+        }
+    }
+
+    // Connetti archi definiti nei seed
+    SEED_NODES.forEach(d => {
+        const src = nodeMap.get(d.name);
+        if (d.connections) {
+            d.connections.forEach(targetName => {
+                const tgt = nodeMap.get(targetName);
+                if (tgt) addEdge(src, tgt, 2.2);
+            });
+        }
+    });
+
+    // Connessioni dinamiche per il grafo generale
+    const centerHub = nodes[0]; // Haute Parfumerie Packaging Ecosystem
+    const pochetNode = nodeMap.get("Pochet du Courval");
+    const bormioliNode = nodeMap.get("Bormioli Luigi");
+    const aptarNode = nodeMap.get("Aptar Beauty");
+    const fedrigoniNode = nodeMap.get("Fedrigoni Paper");
+    const refillNode = nodeMap.get("Flacone Ricaricabile (Refillable)");
+
+    for (let i = 1; i < nodes.length; i++) {
+        const nodeA = nodes[i];
+        
+        // Link all'hub centrale
+        if (Math.random() < 0.45) {
+            addEdge(nodeA, centerHub, 1.5);
+        }
+
+        // Link ai sotto-hub di categoria
+        if (nodeA.category === "GLASS_MASTERS" && pochetNode && Math.random() < 0.5) {
+            addEdge(nodeA, pochetNode, 1.3);
+        }
+        if (nodeA.category === "GLASS_MASTERS" && bormioliNode && Math.random() < 0.5) {
+            addEdge(nodeA, bormioliNode, 1.3);
+        }
+        if (nodeA.category === "DISPENSING_CAPS" && aptarNode && Math.random() < 0.5) {
+            addEdge(nodeA, aptarNode, 1.3);
+        }
+        if (nodeA.category === "BOXES_COFFRET" && fedrigoniNode && Math.random() < 0.5) {
+            addEdge(nodeA, fedrigoniNode, 1.3);
+        }
+        if (nodeA.category === "ECO_REFILL" && refillNode && Math.random() < 0.5) {
+            addEdge(nodeA, refillNode, 1.3);
+        }
+
+        // Connetti nodi della stessa categoria
+        const extraConnections = Math.floor(Math.random() * 2) + 1;
+        for (let k = 0; k < extraConnections; k++) {
+            const targetIdx = Math.floor(Math.random() * nodes.length);
+            const nodeB = nodes[targetIdx];
+            if (nodeA.category === nodeB.category && nodeA.id !== nodeB.id) {
+                addEdge(nodeA, nodeB, 0.75);
+            }
+        }
+    }
+
+    return { nodes, edges };
+}
+
+// --- ENGINE CANVAS & FISICA DINAMICA ---
+const canvas = document.getElementById('networkCanvas');
+const ctx = canvas.getContext('2d');
+
+let width, height;
+let graphData = generatePerfumeDataset();
+let nodes = graphData.nodes;
+let edges = graphData.edges;
+
+let transform = { x: 0, y: 0, scale: 1 };
+let isDragging = false;
+let dragStart = { x: 0, y: 0 };
+let hoveredNode = null;
+let selectedNode = null;
+let draggedNode = null;
+
+let searchQuery = "";
+let selectedCategory = "ALL";
+let currentLayout = "radial";
+
+// CONTROLLO SIMULAZIONE E FISICA
+let isSimulating = true;
+let simFrames = 0;
+const MAX_SIM_FRAMES = 360;
+let totalKineticEnergy = 100;
+
+let repulsionStrength = 260;
+const damping = 0.85;
+const springLength = 85;
+const springStiffness = 0.035;
+
+document.getElementById('stat-nodes').innerText = nodes.length;
+document.getElementById('stat-edges').innerText = edges.length;
+
+function resizeCanvas() {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+    if (transform.x === 0 && transform.y === 0) {
+        transform.x = width / 2;
+        transform.y = height / 2;
+    }
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// --- LAYOUTS ALTERNATIVI ---
+function computeLayoutTargets(layout) {
+    if (layout === 'radial') {
+        nodes.forEach(n => {
+            if (n.id === 1) { // Center Hub
+                n.targetX = 0;
+                n.targetY = 0;
+            } else {
+                const ring = n.relevance;
+                const angle = (n.id % 32) * (Math.PI * 2 / 32) + (n.relevance * 0.2);
+                const radius = 120 + ring * 130 + ((n.id % 8) * 18);
+                n.targetX = Math.cos(angle) * radius;
+                n.targetY = Math.sin(angle) * radius;
+            }
+        });
+    } else if (layout === 'cluster') {
+        const catKeys = Object.keys(CATEGORIES);
+        const cols = 3;
+        const spacingX = 490;
+        const spacingY = 390;
+
+        catKeys.forEach((cat, idx) => {
+            const cx = ((idx % cols) - 1) * spacingX;
+            const cy = (Math.floor(idx / cols) - 0.5) * spacingY;
+            const catNodes = nodes.filter(n => n.category === cat);
+
+            catNodes.forEach((n, i) => {
+                const angle = i * 0.45;
+                const r = 25 + Math.sqrt(i) * 22;
+                n.targetX = cx + Math.cos(angle) * r;
+                n.targetY = cy + Math.sin(angle) * r;
+            });
+        });
+    } else if (layout === 'circular') {
+        const total = nodes.length;
+        const radius = 640;
+        const sorted = nodes.slice().sort((a, b) => a.category.localeCompare(b.category));
+        
+        sorted.forEach((n, i) => {
+            const angle = (i / total) * Math.PI * 2;
+            n.targetX = Math.cos(angle) * radius;
+            n.targetY = Math.sin(angle) * radius;
+        });
+    }
+}
+
+// Inizializza layout radiale
+computeLayoutTargets('radial');
+
+function changeLayout(newLayout) {
+    currentLayout = newLayout;
+    computeLayoutTargets(newLayout);
+    document.getElementById('repulsionControl').style.display = newLayout === 'force' ? 'block' : 'none';
+    wakeSimulation();
+}
+
+// --- FISICA ---
+function wakeSimulation() {
+    isSimulating = true;
+    simFrames = 0;
+    updateSimUI(true);
+}
+
+function toggleSimulation() {
+    isSimulating = !isSimulating;
+    if (isSimulating) simFrames = 0;
+    updateSimUI(isSimulating);
+}
+
+function updateSimUI(active) {
+    const dot = document.getElementById('status-dot');
+    const text = document.getElementById('status-text');
+    const btn = document.getElementById('toggleSimBtn');
+
+    if (active) {
+        dot.classList.remove('paused');
+        text.innerText = "Simulazione Attiva";
+        btn.innerText = "Pausa";
+    } else {
+        dot.classList.add('paused');
+        text.innerText = "Rete Stabilizzata";
+        btn.innerText = "Riprendi";
+    }
+}
+
+function updatePhysics() {
+    if (!isSimulating) return;
+
+    if (currentLayout === 'force') {
+        totalKineticEnergy = 0;
+
+        for (let i = 0; i < nodes.length; i++) {
+            const n1 = nodes[i];
+            for (let j = i + 1; j < nodes.length; j++) {
+                const n2 = nodes[j];
+                let dx = n2.x - n1.x;
+                let dy = n2.y - n1.y;
+                let distSq = dx * dx + dy * dy + 0.1;
+                let dist = Math.sqrt(distSq);
+
+                if (dist < 420) {
+                    let force = (repulsionStrength * 10) / distSq;
+                    let fx = (dx / dist) * force;
+                    let fy = (dy / dist) * force;
+
+                    n1.vx -= fx;
+                    n1.vy -= fy;
+                    n2.vx += fx;
+                    n2.vy += fy;
+                }
+            }
+        }
+
+        for (let i = 0; i < edges.length; i++) {
+            const edge = edges[i];
+            let dx = edge.target.x - edge.source.x;
+            let dy = edge.target.y - edge.source.y;
+            let dist = Math.sqrt(dx * dx + dy * dy) + 0.1;
+            let force = (dist - springLength) * springStiffness * edge.weight;
+
+            let fx = (dx / dist) * force;
+            let fy = (dy / dist) * force;
+
+            edge.source.vx += fx;
+            edge.source.vy += fy;
+            edge.target.vx -= fx;
+            edge.target.vy -= fy;
+        }
+
+        for (let i = 0; i < nodes.length; i++) {
+            const n = nodes[i];
+            if (n === draggedNode) continue;
+
+            n.vx -= n.x * 0.0004;
+            n.vy -= n.y * 0.0004;
+
+            n.vx *= damping;
+            n.vy *= damping;
+
+            n.x += n.vx;
+            n.y += n.vy;
+
+            totalKineticEnergy += Math.abs(n.vx) + Math.abs(n.vy);
+        }
+
+        simFrames++;
+        if (totalKineticEnergy < 0.8 || simFrames > MAX_SIM_FRAMES) {
+            isSimulating = false;
+            updateSimUI(false);
+        }
+    } else {
+        let maxMovement = 0;
+        nodes.forEach(n => {
+            if (n === draggedNode) return;
+            let dx = n.targetX - n.x;
+            let dy = n.targetY - n.y;
+            n.x += dx * 0.08;
+            n.y += dy * 0.08;
+
+            maxMovement += Math.abs(dx) + Math.abs(dy);
+        });
+
+        simFrames++;
+        if (maxMovement < 0.5 || simFrames > 180) {
+            isSimulating = false;
+            updateSimUI(false);
+        }
+    }
+}
+
+let lastTime = performance.now();
+let frameCount = 0;
+
+function render() {
+    const now = performance.now();
+    frameCount++;
+    if (now - lastTime >= 1000) {
+        document.getElementById('stat-fps').innerText = frameCount;
+        frameCount = 0;
+        lastTime = now;
+    }
+
+    updatePhysics();
+
+    ctx.save();
+    ctx.fillStyle = '#06080d';
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.translate(transform.x, transform.y);
+    ctx.scale(transform.scale, transform.scale);
+
+    const isFilterActive = selectedCategory !== "ALL" || searchQuery !== "";
+
+    // Archi
+    for (let i = 0; i < edges.length; i++) {
+        const edge = edges[i];
+        const isHighlight = (hoveredNode || selectedNode) && 
+            (edge.source === hoveredNode || edge.target === hoveredNode || edge.source === selectedNode || edge.target === selectedNode);
+        
+        ctx.beginPath();
+        ctx.moveTo(edge.source.x, edge.source.y);
+        ctx.lineTo(edge.target.x, edge.target.y);
+
+        if (isHighlight) {
+            ctx.strokeStyle = '#eab308';
+            ctx.lineWidth = 2.4;
+        } else {
+            ctx.strokeStyle = isFilterActive ? 'rgba(30, 41, 59, 0.15)' : 'rgba(51, 65, 85, 0.28)';
+            ctx.lineWidth = 0.6;
+        }
+        ctx.stroke();
+    }
+
+    // Nodi
+    for (let i = 0; i < nodes.length; i++) {
+        const n = nodes[i];
+        const catColor = CATEGORIES[n.category]?.color || '#94a3b8';
+        
+        const matchesCategory = (selectedCategory === "ALL" || n.category === selectedCategory);
+        const matchesSearch = searchQuery === "" || 
+            n.name.toLowerCase().includes(searchQuery) || 
+            n.sub.toLowerCase().includes(searchQuery) || 
+            n.details.toLowerCase().includes(searchQuery);
+
+        const isMatch = matchesCategory && matchesSearch;
+        const isSelected = n === selectedNode;
+        const isHovered = n === hoveredNode;
+
+        ctx.save();
+        
+        if (isFilterActive && !isMatch && !isSelected && !isHovered) {
+            ctx.globalAlpha = 0.12;
+        }
+
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, isSelected || isHovered ? n.radius + 4 : n.radius, 0, Math.PI * 2);
+
+        ctx.fillStyle = isFilterActive && isMatch ? '#ffffff' : catColor;
+        ctx.fill();
+
+        if (isSelected || isHovered || (isFilterActive && isMatch)) {
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+        }
+
+        if (transform.scale > 0.75 || n.relevance <= 2 || isHovered || isSelected || (isFilterActive && isMatch)) {
+            ctx.fillStyle = isSelected || isHovered ? '#ffffff' : '#e2e8f0';
+            ctx.font = `${Math.max(10 / transform.scale, 8)}px -apple-system, sans-serif`;
+            ctx.fillText(`${n.name}`, n.x + n.radius + 5, n.y + 3);
+        }
+
+        ctx.restore();
+    }
+
+    ctx.restore();
+    requestAnimationFrame(render);
+}
+
+function getCanvasCoords(e) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+        x: (e.clientX - rect.left - transform.x) / transform.scale,
+        y: (e.clientY - rect.top - transform.y) / transform.scale
+    };
+}
+
+function findNodeAt(coords) {
+    for (let i = nodes.length - 1; i >= 0; i--) {
+        const n = nodes[i];
+        const dx = n.x - coords.x;
+        const dy = n.y - coords.y;
+        if (dx * dx + dy * dy <= (n.radius + 6) * (n.radius + 6)) {
+            return n;
+        }
+    }
+    return null;
+}
+
+// EVENTI MOUSE
+canvas.addEventListener('mousedown', (e) => {
+    if (e.button === 2) return;
+    closeWorkModal();
+
+    const coords = getCanvasCoords(e);
+    const node = findNodeAt(coords);
+
+    if (node) {
+        draggedNode = node;
+        selectedNode = node;
+        updateInfoCard(node);
+        wakeSimulation();
+    } else {
+        isDragging = true;
+        dragStart = { x: e.clientX - transform.x, y: e.clientY - transform.y };
+    }
+});
+
+canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    const coords = getCanvasCoords(e);
+    const node = findNodeAt(coords);
+
+    if (node) {
+        selectedNode = node;
+        openWorkModal(node, e.clientX, e.clientY);
+    } else {
+        closeWorkModal();
+    }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+    const coords = getCanvasCoords(e);
+
+    if (draggedNode) {
+        draggedNode.x = coords.x;
+        draggedNode.y = coords.y;
+        draggedNode.vx = 0;
+        draggedNode.vy = 0;
+        wakeSimulation();
+    } else if (isDragging) {
+        transform.x = e.clientX - dragStart.x;
+        transform.y = e.clientY - dragStart.y;
+    } else {
+        hoveredNode = findNodeAt(coords);
+    }
+});
+
+window.addEventListener('mouseup', () => {
+    isDragging = false;
+    draggedNode = null;
+});
+
+canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const zoomFactor = 1.1;
+    const mouseX = e.clientX;
+    const mouseY = e.clientY;
+
+    let newScale = e.deltaY < 0 ? transform.scale * zoomFactor : transform.scale / zoomFactor;
+    newScale = Math.max(0.18, Math.min(newScale, 4.5));
+
+    transform.x = mouseX - (mouseX - transform.x) * (newScale / transform.scale);
+    transform.y = mouseY - (mouseY - transform.y) * (newScale / transform.scale);
+    transform.scale = newScale;
+}, { passive: false });
+
+// CONTROLLI UI
+document.getElementById('categorySelect').addEventListener('change', (e) => { selectedCategory = e.target.value; wakeSimulation(); });
+document.getElementById('searchInput').addEventListener('input', (e) => { searchQuery = e.target.value.toLowerCase().trim(); wakeSimulation(); });
+document.getElementById('repulsionSlider').addEventListener('input', (e) => { repulsionStrength = parseFloat(e.target.value); wakeSimulation(); });
+
+function updateInfoCard(node) {
+    const card = document.getElementById('info-card');
+    if (!node) {
+        card.style.display = 'none';
+        return;
+    }
+    
+    const catObj = CATEGORIES[node.category] || { name: 'Nodo', color: '#eab308' };
+    
+    document.getElementById('card-title').innerText = node.name;
+    const badge = document.getElementById('card-badge');
+    badge.innerText = catObj.name;
+    badge.style.backgroundColor = catObj.color;
+    badge.style.color = '#020617';
+
+    document.getElementById('card-meta').innerText = `✨ ${node.sub}`;
+    
+    const partnersList = node.connections.map(c => `• ${c.name}`).slice(0, 6).join('<br>');
+    
+    document.getElementById('card-details').innerHTML = `
+        <strong>Ruolo nel Perfume Packaging:</strong><br>${node.details}
+    `;
+    
+    document.getElementById('card-partners').innerHTML = `
+        <strong>Connessioni & Sinergie di Filiera:</strong><br>${partnersList || 'Nessun collegamento diretto'}
+    `;
+    
+    card.style.display = 'block';
+}
+
+function openWorkModal(node, mouseX, mouseY) {
+    const modal = document.getElementById('work-modal');
+    
+    document.getElementById('modal-node-name').innerText = node.name;
+    document.getElementById('modal-node-meta').innerText = `${CATEGORIES[node.category]?.name} • ${node.sub}`;
+    document.getElementById('modal-node-title').innerText = node.details;
+    
+    const searchQuery = encodeURIComponent(`Perfume Fragrance Packaging ${node.name} ${node.sub}`);
+    const searchUrl = `https://www.google.com/search?q=${searchQuery}`;
+    
+    const linkBtn = document.getElementById('modal-web-link');
+    linkBtn.href = searchUrl;
+
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    
+    let posX = mouseX + 10;
+    let posY = mouseY + 10;
+
+    if (posX + 340 > windowWidth) posX = mouseX - 340;
+    if (posY + 240 > windowHeight) posY = mouseY - 240;
+
+    modal.style.left = `${Math.max(10, posX)}px`;
+    modal.style.top = `${Math.max(10, posY)}px`;
+    modal.style.display = 'block';
+}
+
+function closeWorkModal() {
+    document.getElementById('work-modal').style.display = 'none';
+}
+
+// Start
+requestAnimationFrame(render);
+</script>
+</body>
+</html>

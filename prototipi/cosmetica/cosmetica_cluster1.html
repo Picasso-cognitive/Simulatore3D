@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulatore Made in Italy: Parma x Modena x Cosmetica Lombarda</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Vis.js Network CDN -->
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        #network-canvas {
+            width: 100%;
+            height: calc(100vh - 70px);
+            background: radial-gradient(circle at center, #0f172a 0%, #090d16 50%, #020617 100%);
+        }
+        .glass-card {
+            background: rgba(15, 23, 42, 0.92);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(234, 88, 12, 0.25);
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.88);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.72rem;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans h-screen w-screen overflow-hidden flex flex-col">
+
+    <!-- Top Navigation & Dashboard Bar -->
+    <header class="h-[70px] glass-panel px-6 flex items-center justify-between z-20 shrink-0 border-b border-orange-900/40">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500/30 via-purple-500/20 to-pink-500/20 border border-amber-500/50 flex items-center justify-center text-amber-400 font-bold text-xl shadow-lg shadow-orange-950/50">
+                <i class="fa-solid fa-industry"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg leading-tight tracking-wide text-white flex items-center space-x-2">
+                    <span>Ecosistema Made in Italy</span>
+                    <i class="fa-solid fa-link text-xs text-amber-400"></i>
+                    <span class="text-xs bg-amber-950/90 text-amber-300 border border-amber-700/80 px-2.5 py-0.5 rounded-full font-semibold">Parma • Modena • Cosmesi Lombarda • Cluster MII</span>
+                </h1>
+                <p class="text-xs text-slate-400">Simulatore di Filiera Integrata: Packaging Valley, Profumeria d'Eccellenza, Bio-Upcycling e Terzismo Cosmetico</p>
+            </div>
+        </div>
+
+        <!-- Ecosystem Pillars -->
+        <div class="hidden xl:flex items-center space-x-3 text-xs">
+            <div class="bg-slate-900/80 px-3 py-1.5 rounded-lg border border-purple-900/50 flex items-center space-x-2">
+                <i class="fa-solid fa-spray-can-sparkles text-purple-400"></i>
+                <div>
+                    <span class="block font-bold text-slate-200">Parma Profumi</span>
+                    <span class="text-[10px] text-slate-400">Essenze & Vetro Design</span>
+                </div>
+            </div>
+            <div class="bg-slate-900/80 px-3 py-1.5 rounded-lg border border-orange-900/50 flex items-center space-x-2">
+                <i class="fa-solid fa-gears text-orange-400"></i>
+                <div>
+                    <span class="block font-bold text-slate-200">Modena Valley</span>
+                    <span class="text-[10px] text-slate-400">Packaging & Upcycling</span>
+                </div>
+            </div>
+            <div class="bg-slate-900/80 px-3 py-1.5 rounded-lg border border-pink-900/50 flex items-center space-x-2">
+                <i class="fa-solid fa-pump-soap text-pink-400"></i>
+                <div>
+                    <span class="block font-bold text-slate-200">Cosmetica Lombarda</span>
+                    <span class="text-[10px] text-slate-400">Formulazione & Skincare</span>
+                </div>
+            </div>
+            <div class="bg-slate-900/80 px-3 py-1.5 rounded-lg border border-cyan-900/50 flex items-center space-x-2">
+                <i class="fa-solid fa-cubes text-cyan-400"></i>
+                <div>
+                    <span class="block font-bold text-slate-200">Cluster MII</span>
+                    <span class="text-[10px] text-slate-400">Trasferimento Tecnologico</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center space-x-3">
+            <button onclick="toggleSimModal()" class="bg-gradient-to-r from-purple-600 via-orange-500 to-pink-600 hover:brightness-110 text-white font-bold text-xs px-4 py-2 rounded-lg shadow-lg shadow-orange-950/60 flex items-center space-x-2 transition-all">
+                <i class="fa-solid fa-sliders"></i>
+                <span>Simulatore Inter-Polo</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace Area -->
+    <div class="relative flex-1 flex overflow-hidden">
+
+        <!-- Left Controls & Filter Sidebar -->
+        <div class="absolute top-4 left-4 z-10 w-80 glass-card rounded-xl p-4 shadow-2xl border border-slate-800 flex flex-col space-y-3.5">
+            <div>
+                <label class="text-xs font-semibold text-slate-300 block mb-1.5">Cerca nei Nodi Specialistici</label>
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-xs text-slate-400"></i>
+                    <input type="text" id="search-input" onkeyup="filterNetwork()" placeholder="Es. Dosatrici, Polifenoli, Flaconi, Crema, Essenziere..." class="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-orange-500">
+                </div>
+            </div>
+
+            <!-- Domain Filter Selector -->
+            <div>
+                <label class="text-xs font-semibold text-slate-300 block mb-1.5">Filtra per Polo Industriale</label>
+                <div class="grid grid-cols-1 gap-1.5 text-[11px]">
+                    <button onclick="setCategoryFilter('all')" class="cat-btn bg-slate-800 hover:bg-slate-700 text-slate-200 py-1.5 px-2 rounded-md font-medium text-left border border-slate-700 active-cat" data-cat="all">
+                        <i class="fa-solid fa-layer-group text-slate-400 mr-1.5"></i>Tutti i Nodi Specializzati (16)
+                    </button>
+                    <button onclick="setCategoryFilter('parma')" class="cat-btn bg-slate-900 hover:bg-slate-800 text-slate-300 py-1.5 px-2 rounded-md font-medium text-left border border-slate-800" data-cat="parma">
+                        <span class="w-2 h-2 rounded-full bg-purple-400 inline-block mr-1.5"></span>Parma (Profumi, Vetro, Essenziere)
+                    </button>
+                    <button onclick="setCategoryFilter('modena')" class="cat-btn bg-slate-900 hover:bg-slate-800 text-slate-300 py-1.5 px-2 rounded-md font-medium text-left border border-slate-800" data-cat="modena">
+                        <span class="w-2 h-2 rounded-full bg-orange-400 inline-block mr-1.5"></span>Modena (Packaging & Bio-Upcycling)
+                    </button>
+                    <button onclick="setCategoryFilter('lombardia')" class="cat-btn bg-slate-900 hover:bg-slate-800 text-slate-300 py-1.5 px-2 rounded-md font-medium text-left border border-slate-800" data-cat="lombardia">
+                        <span class="w-2 h-2 rounded-full bg-pink-400 inline-block mr-1.5"></span>Polo Cosmetico Lombardo
+                    </button>
+                    <button onclick="setCategoryFilter('mii')" class="cat-btn bg-slate-900 hover:bg-slate-800 text-slate-300 py-1.5 px-2 rounded-md font-medium text-left border border-slate-800" data-cat="mii">
+                        <span class="w-2 h-2 rounded-full bg-cyan-400 inline-block mr-1.5"></span>Cluster Made in Italy (Rete MII)
+                    </button>
+                    <button onclick="setCategoryFilter('bridge')" class="cat-btn bg-slate-900 hover:bg-slate-800 text-slate-300 py-1.5 px-2 rounded-md font-medium text-left border border-slate-800" data-cat="bridge">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block mr-1.5"></span>Sinergie & Ponti di Filiera
+                    </button>
+                </div>
+            </div>
+
+            <!-- Focus Shortcuts -->
+            <div>
+                <label class="text-xs font-semibold text-amber-400 block mb-1.5"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Sinergie Cross-Cluster Proposte</label>
+                <div class="space-y-1 text-[11px]">
+                    <button onclick="focusOnNode('b_pack_perfume')" class="w-full text-left bg-slate-900/80 hover:bg-orange-950/40 text-slate-300 hover:text-orange-300 p-1.5 rounded border border-slate-800 hover:border-orange-700/50 truncate">
+                        • Dosatrici Modena ➔ Flaconi Vetro Parma
+                    </button>
+                    <button onclick="focusOnNode('b_modena_skincare')" class="w-full text-left bg-slate-900/80 hover:bg-orange-950/40 text-slate-300 hover:text-orange-300 p-1.5 rounded border border-slate-800 hover:border-orange-700/50 truncate">
+                        • Upcycling Mosti Modena ➔ Skincare Lombardo
+                    </button>
+                    <button onclick="focusOnNode('b_fragrance_formula')" class="w-full text-left bg-slate-900/80 hover:bg-orange-950/40 text-slate-300 hover:text-orange-300 p-1.5 rounded border border-slate-800 hover:border-orange-700/50 truncate">
+                        • Fito-Essenze Parma ➔ Formulazioni Lombardia
+                    </button>
+                    <button onclick="focusOnNode('b_green_machinery')" class="w-full text-left bg-slate-900/80 hover:bg-orange-950/40 text-slate-300 hover:text-orange-300 p-1.5 rounded border border-slate-800 hover:border-orange-700/50 truncate">
+                        • Meccatronica Modena ➔ Linee Cosmetiche Crema
+                    </button>
+                    <button onclick="focusOnNode('b_cert_mii')" class="w-full text-left bg-slate-900/80 hover:bg-orange-950/40 text-slate-300 hover:text-orange-300 p-1.5 rounded border border-slate-800 hover:border-orange-700/50 truncate">
+                        • Certificazione & Tracciabilità Made in Italy
+                    </button>
+                </div>
+            </div>
+
+            <!-- View Canvas Controls -->
+            <div class="pt-2 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                <button onclick="resetGraphView()" class="hover:text-amber-400 flex items-center space-x-1">
+                    <i class="fa-solid fa-arrows-to-dot"></i>
+                    <span>Ricentra Grafico</span>
+                </button>
+                <button onclick="togglePhysics()" id="physics-btn" class="hover:text-emerald-400 flex items-center space-x-1">
+                    <i class="fa-solid fa-pause"></i>
+                    <span>Blocca Fisica</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Vis.js Graph Canvas -->
+        <div id="network-canvas" class="flex-1"></div>
+
+        <!-- Detail Drawer Panel -->
+        <div id="detail-drawer" class="absolute top-4 right-4 bottom-4 w-96 glass-card rounded-xl shadow-2xl border border-slate-800 flex flex-col transition-all transform translate-x-[420px] duration-300 z-20">
+            <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <span id="detail-icon" class="text-xl text-amber-400"></span>
+                    <h2 id="detail-title" class="font-bold text-base text-white truncate max-w-[240px]">Dettaglio Nodo</h2>
+                </div>
+                <button onclick="closeDrawer()" class="text-slate-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            
+            <div class="p-5 overflow-y-auto flex-1 custom-scroll space-y-4 text-xs text-slate-300" id="detail-body">
+                <!-- Populated via JS -->
+            </div>
+        </div>
+
+        <!-- Strategy Generator Engine Modal -->
+        <div id="sim-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+            <div class="bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+                <div class="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/90">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-9 h-9 rounded-lg bg-orange-500/20 border border-orange-500/40 flex items-center justify-center text-orange-400">
+                            <i class="fa-solid fa-diagram-project"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-base text-white">Engine Strategico di Filiera Parma-Modena-Lombardia</h3>
+                            <p class="text-xs text-slate-400">Configura l'innovazione combinando le eccellenze dei distretti industriali</p>
+                        </div>
+                    </div>
+                    <button onclick="toggleSimModal()" class="text-slate-400 hover:text-white text-lg p-1">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <div class="p-6 space-y-4 text-xs">
+                    <!-- Step 1: Modena Competence -->
+                    <div>
+                        <label class="font-semibold text-slate-200 block mb-1.5"><span class="text-orange-400">1.</span> Tecnologia o Materia da Modena (Packaging Valley & Bio-Refinery)</label>
+                        <select id="sim-modena" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-orange-500">
+                            <option value="modena_pack">Dosatrici Meccaniche di Precisione & Linee Automatica</option>
+                            <option value="modena_upcycle">Estratti Polifenolici da Mosti/Uve (Bio-Upcycling Agroalimentare)</option>
+                            <option value="modena_materials">Meccatronica Avanzata & Materiali Leggeri Reciclabili</option>
+                        </select>
+                    </div>
+
+                    <!-- Step 2: Parma Competence -->
+                    <div>
+                        <label class="font-semibold text-slate-200 block mb-1.5"><span class="text-purple-400">2.</span> Specializzazione da Parma (Profumeria & Packaging)</label>
+                        <select id="sim-parma" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-purple-500">
+                            <option value="parma_glass">Flaconaggio Vetrario di Lusso & Design Eco-Progettato</option>
+                            <option value="parma_extract">Arte Essenziere, Distillati Botanici & Fito-Aromi</option>
+                        </select>
+                    </div>
+
+                    <!-- Step 3: Polo Cosmetico Lombardo -->
+                    <div>
+                        <label class="font-semibold text-slate-200 block mb-1.5"><span class="text-pink-400">3.</span> Destinazione Industriale (Polo Cosmetico Lombardo)</label>
+                        <select id="sim-lombardia" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-pink-500">
+                            <option value="polo_cosmesi">Terzismo Skincare & Creazioni Cosmetiche ad Alta Efficacia</option>
+                            <option value="lombardia_rd">Formulazione Green Chemistry & Test Clinici di Stabilità</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="p-4 border-t border-slate-800 bg-slate-950/50 flex items-center justify-end space-x-3">
+                    <button onclick="toggleSimModal()" class="px-4 py-2 text-slate-400 hover:text-white font-medium">Annulla</button>
+                    <button onclick="executeCrossClusterSimulation()" class="bg-gradient-to-r from-purple-600 via-orange-500 to-pink-600 text-white font-bold px-5 py-2 rounded-lg shadow-lg shadow-orange-950/60 flex items-center space-x-2 hover:brightness-110">
+                        <i class="fa-solid fa-gears text-xs"></i>
+                        <span>Genera Progetto Integrato</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Vis.js Implementation & Network Logic -->
+    <script>
+        let network = null;
+        let nodesDataset = null;
+        let edgesDataset = null;
+
+        // Structured Specialized Nodes for Parma, Modena, Polo Cosmetico Lombardo, Cluster MII & Bridges
+        const rawNodes = [
+            // --- PARMA CITTÀ DEI PROFUMI & VETRO (Group: parma) ---
+            { id: 'parma_profumi', label: 'Parma Città dei Profumi\n(Hub Fragranze Storiche)', group: 'parma', shape: 'diamond', size: 38, desc: 'Polo d\'eccellenza della profumeria storica, della cultura olfattiva, del design sensoriale e delle fragranze d\'alta gamma.' },
+            { id: 'parma_extract', label: 'Laboratori Essenzieri\n& Fito-Botanica Parma', group: 'parma', size: 28, desc: 'Centro d\'eccellenza per la distillazione di estratti botanici tipici, oli essenziali puri e macerati per profumeria artistica e cosmesi.' },
+            { id: 'parma_glass', label: 'Distretto Vetrario Parma\n(Flaconaggio Design)', group: 'parma', size: 30, desc: 'Filiera specializzata nella lavorazione del vetro cavo per profumeria, boccette ad altissima trasparenza e soluzioni di chiusura di lusso.' },
+
+            // --- MODENA PACKAGING VALLEY & BIO-UPCYCLING (Group: modena) ---
+            { id: 'modena_pack', label: 'Modena Packaging Valley\n(Meccanica & Dosatrici)', group: 'modena', shape: 'diamond', size: 38, desc: 'Distretto globale leader per le macchine automatiche, riempitrici volumetriche sterile, astucciatrici e sistemi di dosaggio di precisione.' },
+            { id: 'modena_upcycle', label: 'Bio-Refinery Modena\n(Polifenoli da Mosti & Uve)', group: 'modena', size: 30, desc: 'Polo tecnologico per il recupero di principi attivi e potenti antiossidanti (resveratrolo, acidi della frutta) dagli scarti della filiera vitivinicola e dell\'Aceto Balsamico Tradizionale.' },
+            { id: 'modena_materials', label: 'Meccatronica Avanzata\n& Materiali Leggeri', group: 'modena', size: 26, desc: 'Sviluppo di componenti meccanici in lega leggera e polimeri sostenibili per la riduzione dei consumi energetici nelle linee d\'imballaggio.' },
+
+            // --- POLO COSMETICO LOMBARDO (Group: lombardia) ---
+            { id: 'polo_cosmesi', label: 'Polo Cosmetico Lombardo\n(Crema/Milano/Lodi)', group: 'lombardia', shape: 'diamond', size: 38, desc: 'Polo mondiale del terzismo cosmetico. Produce oltre il 60% del make-up e dello skincare di alta gamma distribuito dai principali brand internazionali.' },
+            { id: 'lombardia_rd', label: 'Laboratori R&D Formulazione\n& Green Chemistry', group: 'lombardia', size: 30, desc: 'Sviluppo di formule cosmetiche ecocompatibili, emulsioni senza siliconi, texture sensoriali e utilizzo di ingredienti di origine naturale.' },
+            { id: 'lombardia_safety', label: 'Hub Safety Cosmetica\n& Test Clinici', group: 'lombardia', size: 26, desc: 'Infrastruttura per la valutazione di efficacia dermatologica, stabilità chimico-fisica, microbiologia e conformità al regolamento cosmetico europeo (PIF).' },
+
+            // --- CLUSTER TECNOLOGICO NAZIONALE MADE IN ITALY (Group: mii) ---
+            { id: 'ctn_mii', label: 'Cluster Tecnologico\nNazionale Made in Italy', group: 'mii', shape: 'hexagon', size: 32, desc: 'Organismo nazionale di coordinamento che promuove l\'integrazione tra le filiere italiane del design, della meccanica, della cosmesi e del packaging.' },
+            { id: 'mii_dih', label: 'Digital Innovation Hub\n& Trasferimento MII', group: 'mii', size: 26, desc: 'Rete di sportelli tecnologici per agevolare l\'accesso delle PMI a finanziamenti di R&S, digitalizzazione delle linee e certificazioni di sostenibilità.' },
+
+            // --- STRATEGIC BRIDGES / CROSS-CLUSTER SYNERGIES (Group: bridge) ---
+            { id: 'b_pack_perfume', label: 'SINERGIA 1:\nDosaggio di Precisione Modena\n➔ Flaconi in Vetro Parma', group: 'bridge', shape: 'box', size: 30, desc: 'Accoppiamento tra le dosatrici ad alta velocità di Modena e il flaconaggio artistico in vetro di Parma per la profumeria e cosmesi liquida.' },
+            { id: 'b_modena_skincare', label: 'SINERGIA 2:\nUpcycling Mosti Modena\n➔ Skincare Polo Lombardo', group: 'bridge', shape: 'box', size: 32, desc: 'Trasformazione dei polifenoli derivati dalle vinacce di Lambrusco/Trebbiano di Modena in ingredienti attivi anti-age formulati nel Polo Lombardo.' },
+            { id: 'b_fragrance_formula', label: 'SINERGIA 3:\nFito-Essenze Parma\n➔ Formule Cosmetiche Lombardia', group: 'bridge', shape: 'box', size: 30, desc: 'Integrazione delle essenze botaniche di Parma nei trattamenti corpo e visoprodotti nei laboratori formulativi di Crema e Milano.' },
+            { id: 'b_green_machinery', label: 'SINERGIA 4:\nMeccatronica Modena\n➔ Linee Produttive Cosmetiche', group: 'bridge', shape: 'box', size: 28, desc: 'Automazione ed efficientamento energetico degli impianti di confezionamento e condizionamento del Polo Cosmetico Lombardo tramite tecnologie modenesi.' },
+            { id: 'b_cert_mii', label: 'SINERGIA 5:\nTracciabilità & Quality Brand\nMade in Italy', group: 'bridge', shape: 'box', size: 30, desc: 'Disciplinare integrato di filiera gestito dal Cluster MII per certificare la tracciabilità e la sostenibilità dal campo al flacone finito.' }
+        ];
+
+        const rawEdges = [
+            // Parma Internal Links
+            { from: 'parma_profumi', to: 'parma_extract', width: 3 },
+            { from: 'parma_profumi', to: 'parma_glass', width: 3 },
+
+            // Modena Internal Links
+            { from: 'modena_pack', to: 'modena_upcycle', width: 3 },
+            { from: 'modena_pack', to: 'modena_materials', width: 2 },
+
+            // Polo Cosmetico Lombardo Internal Links
+            { from: 'polo_cosmesi', to: 'lombardia_rd', width: 4 },
+            { from: 'polo_cosmesi', to: 'lombardia_safety', width: 3 },
+
+            // Cluster MII Links
+            { from: 'ctn_mii', to: 'mii_dih', width: 3 },
+            { from: 'ctn_mii', to: 'modena_pack', width: 2 },
+            { from: 'ctn_mii', to: 'polo_cosmesi', width: 2 },
+            { from: 'ctn_mii', to: 'parma_profumi', width: 2 },
+
+            // --- CROSS-CLUSTER BRIDGES ---
+            // Bridge 1: Dosatrici Modena -> Vetro Parma
+            { from: 'modena_pack', to: 'b_pack_perfume', width: 4, color: { color: '#ea580c' } },
+            { from: 'parma_glass', to: 'b_pack_perfume', width: 4, color: { color: '#c084fc' } },
+
+            // Bridge 2: Upcycling Modena -> Skincare Lombardo
+            { from: 'modena_upcycle', to: 'b_modena_skincare', width: 4, color: { color: '#ea580c' } },
+            { from: 'polo_cosmesi', to: 'b_modena_skincare', width: 4, color: { color: '#ec4899' } },
+            { from: 'lombardia_rd', to: 'b_modena_skincare', width: 2 },
+
+            // Bridge 3: Essenze Parma -> Cosmesi Lombardia
+            { from: 'parma_extract', to: 'b_fragrance_formula', width: 3 },
+            { from: 'lombardia_rd', to: 'b_fragrance_formula', width: 3 },
+
+            // Bridge 4: Meccatronica Modena -> Impianti Lombardia
+            { from: 'modena_materials', to: 'b_green_machinery', width: 3 },
+            { from: 'polo_cosmesi', to: 'b_green_machinery', width: 3 },
+
+            // Bridge 5: Tracciabilità MII (All Hubs)
+            { from: 'ctn_mii', to: 'b_cert_mii', width: 3 },
+            { from: 'parma_profumi', to: 'b_cert_mii', width: 2 },
+            { from: 'modena_pack', to: 'b_cert_mii', width: 2 },
+            { from: 'polo_cosmesi', to: 'b_cert_mii', width: 2 }
+        ];
+
+        // Group Color Themes
+        const categoryColors = {
+            parma: { background: '#9333ea', border: '#c084fc', highlight: '#e9d5ff' },      // Purple (Parma)
+            modena: { background: '#ea580c', border: '#fb923c', highlight: '#ffedd5' },     // Orange (Modena)
+            lombardia: { background: '#db2777', border: '#f472b6', highlight: '#fbcfe8' },  // Pink (Polo Cosmesi)
+            mii: { background: '#0284c7', border: '#38bdf8', highlight: '#bae6fd' },        // Cyan (Cluster MII)
+            bridge: { background: '#059669', border: '#34d399', highlight: '#a7f3d0' }     // Emerald (Bridges)
+        };
+
+        function initNetwork() {
+            const container = document.getElementById('network-canvas');
+
+            const styledNodes = rawNodes.map(node => {
+                const colors = categoryColors[node.group] || { background: '#64748b', border: '#94a3b8' };
+                return {
+                    ...node,
+                    color: {
+                        background: colors.background,
+                        border: colors.border,
+                        highlight: { background: colors.highlight, border: '#ffffff' },
+                        hover: { background: colors.highlight, border: '#ffffff' }
+                    },
+                    font: { color: '#ffffff', face: 'ui-sans-serif, system-ui', size: 12, multi: true },
+                    borderWidth: 2,
+                    shadow: true
+                };
+            });
+
+            nodesDataset = new vis.DataSet(styledNodes);
+            edgesDataset = new vis.DataSet(rawEdges.map(edge => ({
+                ...edge,
+                color: edge.color || { color: '#334155', highlight: '#fbbf24', hover: '#94a3b8' },
+                smooth: { type: 'continuous' }
+            })));
+
+            const data = { nodes: nodesDataset, edges: edgesDataset };
+
+            const options = {
+                physics: {
+                    solver: 'forceAtlas2Based',
+                    forceAtlas2Based: {
+                        gravitationalConstant: -70,
+                        centralGravity: 0.015,
+                        springLength: 120,
+                        springConstant: 0.04
+                    },
+                    stabilization: { iterations: 250 }
+                },
+                interaction: {
+                    hover: true,
+                    tooltipDelay: 150,
+                    zoomView: true,
+                    dragView: true
+                }
+            };
+
+            network = new vis.Network(container, data, options);
+
+            network.on("click", function (params) {
+                if (params.nodes.length > 0) {
+                    showNodeDetail(params.nodes[0]);
+                } else {
+                    closeDrawer();
+                }
+            });
+        }
+
+        function showNodeDetail(nodeId) {
+            const node = rawNodes.find(n => n.id === nodeId);
+            if (!node) return;
+
+            const drawer = document.getElementById('detail-drawer');
+            const titleEl = document.getElementById('detail-title');
+            const bodyEl = document.getElementById('detail-body');
+            const iconEl = document.getElementById('detail-icon');
+
+            titleEl.innerText = node.label.replace('\n', ' ');
+
+            let categoryBadge = '';
+            let iconClass = 'fa-circle-info';
+
+            switch(node.group) {
+                case 'parma':
+                    categoryBadge = '<span class="badge bg-purple-950 text-purple-300 border border-purple-700">Parma (Profumi & Vetro)</span>';
+                    iconClass = 'fa-spray-can-sparkles';
+                    break;
+                case 'modena':
+                    categoryBadge = '<span class="badge bg-orange-950 text-orange-300 border border-orange-700">Modena (Packaging & Upcycling)</span>';
+                    iconClass = 'fa-gears';
+                    break;
+                case 'lombardia':
+                    categoryBadge = '<span class="badge bg-pink-950 text-pink-300 border border-pink-700">Polo Cosmetico Lombardo</span>';
+                    iconClass = 'fa-pump-soap';
+                    break;
+                case 'mii':
+                    categoryBadge = '<span class="badge bg-cyan-950 text-cyan-300 border border-cyan-700">Cluster Made in Italy</span>';
+                    iconClass = 'fa-cubes';
+                    break;
+                case 'bridge':
+                    categoryBadge = '<span class="badge bg-emerald-950 text-emerald-300 border border-emerald-700">Sinergia di Filiera Integrata</span>';
+                    iconClass = 'fa-diagram-project';
+                    break;
+            }
+
+            iconEl.innerHTML = `<i class="fa-solid ${iconClass}"></i>`;
+
+            const connectedEdges = rawEdges.filter(e => e.from === nodeId || e.to === nodeId);
+            const connectedNodeIds = connectedEdges.map(e => e.from === nodeId ? e.to : e.from);
+            const connectedNodes = rawNodes.filter(n => connectedNodeIds.includes(n.id));
+
+            bodyEl.innerHTML = `
+                <div class="flex items-center space-x-2">
+                    ${categoryBadge}
+                </div>
+
+                <div>
+                    <h4 class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Descrizione & Specializzazione</h4>
+                    <p class="text-slate-200 leading-relaxed bg-slate-900/90 p-3 rounded-lg border border-slate-800">${node.desc}</p>
+                </div>
+
+                ${node.group === 'bridge' ? `
+                <div class="bg-emerald-950/40 border border-emerald-500/30 p-3 rounded-lg space-y-2">
+                    <h4 class="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider"><i class="fa-solid fa-leaf mr-1"></i>Valore di Filiera</h4>
+                    <ul class="list-disc list-inside text-[11px] text-slate-300 space-y-1">
+                        <li>Integrazione diretta tra la meccanica modenese, il design parmense e la formulazione lombarda.</li>
+                        <li>Sostenibilità circolare tramite valorizzazione dei sottoprodotti alimentari.</li>
+                        <li>Garante della qualità e del Made in Italy ad altissimo valore aggiunto.</li>
+                    </ul>
+                </div>
+                ` : ''}
+
+                <div>
+                    <h4 class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Connessioni Dirette (${connectedNodes.length})</h4>
+                    <div class="space-y-1.5 max-h-48 overflow-y-auto custom-scroll pr-1">
+                        ${connectedNodes.map(cn => `
+                            <div onclick="focusOnNode('${cn.id}')" class="flex items-center justify-between p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800/80 cursor-pointer transition-all">
+                                <span class="font-medium text-slate-200 truncate pr-2">${cn.label.replace('\n', ' ')}</span>
+                                <i class="fa-solid fa-chevron-right text-[10px] text-slate-500 shrink-0"></i>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+
+            drawer.classList.remove('translate-x-[420px]');
+        }
+
+        function closeDrawer() {
+            document.getElementById('detail-drawer').classList.add('translate-x-[420px]');
+        }
+
+        function focusOnNode(nodeId) {
+            network.focus(nodeId, { scale: 1.25, animation: { duration: 600, easingFunction: 'easeInOutQuad' } });
+            showNodeDetail(nodeId);
+        }
+
+        function filterNetwork() {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            const updates = rawNodes.map(node => {
+                const matches = node.label.toLowerCase().includes(query) || 
+                                (node.desc && node.desc.toLowerCase().includes(query));
+                return {
+                    id: node.id,
+                    hidden: query.length > 0 && !matches
+                };
+            });
+            nodesDataset.update(updates);
+        }
+
+        function setCategoryFilter(category) {
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                if (btn.dataset.cat === category) {
+                    btn.classList.add('bg-slate-800', 'border-amber-500/50', 'text-white');
+                    btn.classList.remove('bg-slate-900', 'border-slate-800');
+                } else {
+                    btn.classList.remove('bg-slate-800', 'border-amber-500/50', 'text-white');
+                    btn.classList.add('bg-slate-900', 'border-slate-800');
+                }
+            });
+
+            const updates = rawNodes.map(node => ({
+                id: node.id,
+                hidden: category !== 'all' && node.group !== category
+            }));
+            nodesDataset.update(updates);
+        }
+
+        let physicsEnabled = true;
+        function togglePhysics() {
+            physicsEnabled = !physicsEnabled;
+            network.setOptions({ physics: { enabled: physicsEnabled } });
+            const btn = document.getElementById('physics-btn');
+            btn.innerHTML = physicsEnabled ? `<i class="fa-solid fa-pause"></i><span>Blocca Fisica</span>` : `<i class="fa-solid fa-play"></i><span>Attiva Fisica</span>`;
+        }
+
+        function resetGraphView() {
+            document.getElementById('search-input').value = '';
+            setCategoryFilter('all');
+            network.fit({ animation: { duration: 800 } });
+        }
+
+        function toggleSimModal() {
+            document.getElementById('sim-modal').classList.toggle('hidden');
+        }
+
+        // Cross-Cluster Strategy Execution Logic
+        function executeCrossClusterSimulation() {
+            const modena = document.getElementById('sim-modena').value;
+            const parma = document.getElementById('sim-parma').value;
+            const lombardia = document.getElementById('sim-lombardia').value;
+
+            toggleSimModal();
+
+            // Match optimal bridge
+            let bridgeId = 'b_modena_skincare';
+            if (modena === 'modena_pack' && parma === 'parma_glass') bridgeId = 'b_pack_perfume';
+            if (parma === 'parma_extract') bridgeId = 'b_fragrance_formula';
+            if (modena === 'modena_materials') bridgeId = 'b_green_machinery';
+
+            const activeSet = new Set([modena, parma, lombardia, bridgeId, 'ctn_mii', 'parma_profumi', 'modena_pack', 'polo_cosmesi']);
+
+            const updates = rawNodes.map(node => ({
+                id: node.id,
+                opacity: activeSet.has(node.id) ? 1.0 : 0.15,
+                hidden: false
+            }));
+
+            nodesDataset.update(updates);
+            network.focus(bridgeId, { scale: 1.3, animation: { duration: 800 } });
+
+            // Display Action Plan in Drawer
+            const drawer = document.getElementById('detail-drawer');
+            document.getElementById('detail-title').innerText = "Roadmap Industriale Integrata";
+            document.getElementById('detail-icon').innerHTML = `<i class="fa-solid fa-route text-amber-400"></i>`;
+
+            const modenaObj = rawNodes.find(n => n.id === modena);
+            const parmaObj = rawNodes.find(n => n.id === parma);
+            const lombardiaObj = rawNodes.find(n => n.id === lombardia);
+
+            const bodyEl = document.getElementById('detail-body');
+            bodyEl.innerHTML = `
+                <div class="bg-gradient-to-r from-orange-950/80 via-purple-950/80 to-pink-950/80 border border-amber-500/40 p-3 rounded-lg">
+                    <span class="font-bold text-amber-300 block text-xs mb-1"><i class="fa-solid fa-lightbulb mr-1"></i>Progetto Inter-Distrettuale Generato</span>
+                    <span class="text-orange-300 font-semibold block text-xs">${modenaObj.label.replace('\n', ' ')}</span>
+                    <span class="text-purple-300 text-xs block mt-0.5">+ ${parmaObj.label.replace('\n', ' ')}</span>
+                    <span class="text-pink-300 text-xs block mt-0.5">➔ ${lombardiaObj.label.replace('\n', ' ')}</span>
+                </div>
+
+                <div class="space-y-2">
+                    <h4 class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Fasi Esecutive del Progetto</h4>
+                    <ol class="space-y-2 text-xs">
+                        <li class="p-2.5 bg-slate-900 border border-slate-800 rounded-lg">
+                            <strong class="text-orange-400 block mb-0.5">Fase 1: Ingegnerizzazione / Estrazione (Modena)</strong>
+                            Lavorazione della componente meccanica o estrazione dei bio-attivi dagli scarti di filiera locale (mosto/uve) nei laboratori modenesi.
+                        </li>
+                        <li class="p-2.5 bg-slate-900 border border-slate-800 rounded-lg">
+                            <strong class="text-purple-400 block mb-0.5">Fase 2: Design Vetrario & Olfattivo (Parma)</strong>
+                            Creazione del flaconaggio d'alta gamma o caratterizzazione delle componenti aromatiche nei centri essenzieri parmensi.
+                        </li>
+                        <li class="p-2.5 bg-slate-900 border border-slate-800 rounded-lg">
+                            <strong class="text-pink-400 block mb-0.5">Fase 3: Formulazione & Confezionamento (Lombardia)</strong>
+                            Integrazione delle formule nel Polo Cosmetico Lombardo e dosaggio finale su linee automatizzate ad alta velocità.
+                        </li>
+                    </ol>
+                </div>
+
+                <button onclick="resetGraphView(); closeDrawer();" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 py-2 rounded-lg font-medium text-center transition-all mt-2 text-xs">
+                    Ripristina Vista Grafico
+                </button>
+            `;
+
+            drawer.classList.remove('translate-x-[420px]');
+        }
+
+        window.addEventListener('load', () => {
+            initNetwork();
+        });
+    </script>
+</body>
+</html>

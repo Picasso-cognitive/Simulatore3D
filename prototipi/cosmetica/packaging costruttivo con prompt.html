@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Haute Parfumerie - 3D Packaging Studio & Configurator</title>
+    <style>
+        :root {
+            --bg-dark: #06080d;
+            --panel-bg: rgba(10, 14, 23, 0.85);
+            --border-color: rgba(234, 179, 8, 0.25);
+            --gold: #eab308;
+            --gold-hover: #ca8a04;
+            --text-light: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-light); overflow: hidden; height: 100vh; width: 100vw; }
+
+        #webgl-container { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
+
+        /* UI Overlay */
+        .header-title {
+            position: absolute; top: 20px; left: 24px; z-index: 10;
+            pointer-events: none;
+        }
+        .header-title h1 { font-size: 1.3rem; font-weight: 700; color: var(--gold); letter-spacing: 0.05em; text-transform: uppercase; }
+        .header-title p { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
+
+        /* Control Panel */
+        .control-panel {
+            position: absolute; top: 20px; right: 24px; z-index: 10;
+            width: 340px; max-height: calc(100vh - 40px); overflow-y: auto;
+            background: var(--panel-bg); backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color); border-radius: 14px;
+            padding: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+        }
+
+        .panel-section { margin-bottom: 20px; }
+        .panel-section:last-child { margin-bottom: 0; }
+        .section-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gold); margin-bottom: 12px; font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
+
+        .control-group { margin-bottom: 12px; }
+        .control-group label { display: block; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 6px; }
+
+        /* Custom Inputs */
+        select, input[type="range"] { width: 100%; }
+        select {
+            background: #020617; border: 1px solid #334155; color: #fff;
+            padding: 8px 10px; border-radius: 6px; font-size: 0.8rem; outline: none; cursor: pointer;
+        }
+        select:focus { border-color: var(--gold); }
+
+        .range-container { display: flex; align-items: center; gap: 10px; }
+        input[type="range"] { accent-color: var(--gold); cursor: pointer; }
+        .range-value { font-size: 0.75rem; color: var(--gold); font-weight: 600; min-width: 35px; text-align: right; }
+
+        /* Color Swatches Grid */
+        .color-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+        .color-btn {
+            width: 100%; aspect-ratio: 1; border-radius: 50%; border: 2px solid #334155;
+            cursor: pointer; transition: transform 0.2s, border-color 0.2s; position: relative;
+        }
+        .color-btn:hover { transform: scale(1.1); }
+        .color-btn.active { border-color: var(--gold); transform: scale(1.15); box-shadow: 0 0 10px rgba(234, 179, 8, 0.4); }
+
+        /* Action Buttons */
+        .btn-group { display: flex; gap: 8px; margin-top: 10px; }
+        .btn {
+            flex: 1; padding: 10px; background: #1e293b; border: 1px solid #334155;
+            color: #fff; font-size: 0.75rem; font-weight: 600; border-radius: 6px;
+            cursor: pointer; transition: all 0.2s; text-align: center;
+        }
+        .btn:hover { background: #334155; border-color: var(--gold); color: var(--gold); }
+        .btn.active { background: var(--gold); color: #020617; border-color: var(--gold); font-weight: 700; }
+
+        /* Live Tech Specs Drawer */
+        .tech-card {
+            position: absolute; bottom: 24px; left: 24px; z-index: 10;
+            width: 320px; background: var(--panel-bg); backdrop-filter: blur(16px);
+            border: 1px solid #1e293b; border-radius: 12px; padding: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+        }
+        .tech-card h3 { font-size: 0.85rem; color: #fff; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+        .tech-list { list-style: none; font-size: 0.72rem; color: var(--text-muted); line-height: 1.6; }
+        .tech-list strong { color: var(--text-light); }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .control-panel { width: calc(100% - 32px); top: auto; bottom: 16px; right: 16px; left: 16px; max-height: 50vh; }
+            .tech-card { display: none; }
+        }
+    </style>
+
+    <!-- Three.js & OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+    <div class="header-title">
+        <h1>Haute Parfumerie 3D</h1>
+        <p>Studio di Configurazione &amp; Vista Esplosa Packaging</p>
+    </div>
+
+    <div id="webgl-container"></div>
+
+    <!-- Live Spec Card -->
+    <div class="tech-card">
+        <h3>📐 Specifiche Tecniche Attive</h3>
+        <ul class="tech-list">
+            <li><strong>Flacone:</strong> Vetro PCR Extra-Chiaro 100ml ($55 \times 55 \times 90\text{ mm}$)</li>
+            <li><strong>Fondo Vetro:</strong> $18\text{ mm}$ Poinçon Spinto Pesante</li>
+            <li><strong>Pompa / Collo:</strong> FEA 15 con Cannula Invisibile</li>
+            <li><strong>Capsula:</strong> Zama Magnetica / Bio-Materiale ($\varnothing 32\text{ mm}$)</li>
+            <li><strong>Astuccio:</strong> Carte Goffrate FSC $350\text{ g/m}^2$ ($61.5 \times 144\text{ mm}$)</li>
+        </ul>
+    </div>
+
+    <!-- Control UI Panel -->
+    <div class="control-panel">
+        
+        <!-- Vista & Esploso -->
+        <div class="panel-section">
+            <div class="section-title">
+                <span>💥 Vista Esplosa Structura</span>
+                <span id="explodeVal" class="range-value">0%</span>
+            </div>
+            <div class="control-group">
+                <input type="range" id="explodeRange" min="0" max="100" value="0">
+            </div>
+            <div class="btn-group">
+                <button class="btn" id="btnRotate">🔄 Auto Rotazione</button>
+                <button class="btn" id="btnResetView">🎯 Reset Camera</button>
+            </div>
+        </div>
+
+        <!-- Materiale & Finitura Capsula -->
+        <div class="panel-section">
+            <div class="section-title">👑 Finitura Capsula in Zama</div>
+            <div class="color-grid" id="capColors">
+                <button class="color-btn active" style="background: linear-gradient(135deg, #d4af37, #fef08a);" data-finish="gold" title="Oro Lucido 24K"></button>
+                <button class="color-btn" style="background: linear-gradient(135deg, #0f172a, #334155);" data-finish="black" title="Nero Magnetico Opaco"></button>
+                <button class="color-btn" style="background: linear-gradient(135deg, #e2e8f0, #94a3b8);" data-finish="chrome" title="Cromo Specchio"></button>
+                <button class="color-btn" style="background: linear-gradient(135deg, #b45309, #f97316);" data-finish="copper" title="Rame / Oro Rosa"></button>
+            </div>
+        </div>
+
+        <!-- Fragranza / Liquido -->
+        <div class="panel-section">
+            <div class="section-title">🧪 Tonalità Fragranza Olfattiva</div>
+            <div class="color-grid" id="liquidColors">
+                <button class="color-btn active" style="background: #eab308;" data-color="0xeab308" title="Oro Ambrato"></button>
+                <button class="color-btn" style="background: #f43f5e;" data-color="0xf43f5e" title="Rosa Champagne"></button>
+                <button class="color-btn" style="background: #10b981;" data-color="0x10b981" title="Verde Smeraldo"></button>
+                <button class="color-btn" style="background: #38bdf8;" data-color="0x38bdf8" title="Blu Acqua Profonda"></button>
+                <button class="color-btn" style="background: #e2e8f0;" data-color="0xf8fafc" title="Cristallo Trasparente"></button>
+            </div>
+        </div>
+
+        <!-- Astuccio Secondario -->
+        <div class="panel-section">
+            <div class="section-title">📦 Astuccio Esterno &amp; Stampa</div>
+            <div class="control-group">
+                <label>Colore Cartoncino Fedrigoni</label>
+                <select id="boxColorSelect">
+                    <option value="0x0f172a">Nero Haute Parfumerie (Dark Slate)</option>
+                    <option value="0xf8fafc">Bianco Algro Design Pure</option>
+                    <option value="0x064e3b">Verde Smeraldo Lusso</option>
+                    <option value="0x1e1b4b">Blu Notte Reale</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label>Foil Stampa a Caldo (Hot Stamping)</label>
+                <select id="foilSelect">
+                    <option value="0xd4af37">Foil Oro Lucido 24K</option>
+                    <option value="0xe2e8f0">Foil Argento Lucido</option>
+                    <option value="0xf43f5e">Foil Oro Rosa Metallic</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Set Illuminazione -->
+        <div class="panel-section">
+            <div class="section-title">💡 Set di Luce Studio</div>
+            <div class="btn-group" id="lightPresetGroup">
+                <button class="btn active" data-preset="studio">Studio Neutral</button>
+                <button class="btn" data-preset="warm">Warm Luxury</button>
+                <button class="btn" data-preset="dramatic">Dramatic Contrast</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- INIZIALIZZAZIONE SCENA THREE.JS ---
+        const container = document.getElementById('webgl-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x06080d);
+        scene.fog = new THREE.FogExp2(0x06080d, 0.015);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 15, 35);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 + 0.05; // Non andare sotto il pavimento
+        controls.minDistance = 10;
+        controls.maxDistance = 70;
+        controls.target.set(0, 6, 0);
+
+        // --- ILLUMINAZIONE STUDIO ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+        scene.add(ambientLight);
+
+        const keyLight = new THREE.DirectionalLight(0xfffaed, 2.5);
+        keyLight.position.set(15, 25, 15);
+        keyLight.castShadow = true;
+        keyLight.shadow.mapSize.width = 2048;
+        keyLight.shadow.mapSize.height = 2048;
+        keyLight.shadow.bias = -0.0001;
+        scene.add(keyLight);
+
+        const fillLight = new THREE.DirectionalLight(0x93c5fd, 1.2);
+        fillLight.position.set(-15, 15, -10);
+        scene.add(fillLight);
+
+        const rimLight = new THREE.DirectionalLight(0xffeedd, 2.0);
+        rimLight.position.set(0, 20, -20);
+        scene.add(rimLight);
+
+        // Pedestallo / Piastra Riflettente
+        const floorGeo = new THREE.PlaneGeometry(100, 100);
+        const floorMat = new THREE.MeshStandardMaterial({
+            color: 0x0a0e17,
+            roughness: 0.25,
+            metalness: 0.5
+        });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        floor.position.y = 0;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        // --- MATERIALI DINAMICI ---
+        const glassMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 1,
+            transmission: 0.95,
+            roughness: 0.04,
+            ior: 1.52,
+            thickness: 1.8,
+            reflectivity: 0.9,
+            clearcoat: 1.0,
+            clearcoatRoughness: 0.03
+        });
+
+        const liquidMaterial = new THREE.MeshPhysicalMaterial({
+            color: new THREE.Color(0xeab308),
+            transparent: true,
+            opacity: 0.85,
+            transmission: 0.5,
+            roughness: 0.1,
+            ior: 1.33
+        });
+
+        const capMaterial = new THREE.MeshStandardMaterial({
+            color: 0xd4af37,
+            metalness: 0.95,
+            roughness: 0.18
+        });
+
+        const collarMaterial = new THREE.MeshStandardMaterial({
+            color: 0xd4af37,
+            metalness: 0.95,
+            roughness: 0.15
+        });
+
+        const boxMaterial = new THREE.MeshStandardMaterial({
+            color: 0x0f172a,
+            roughness: 0.75,
+            metalness: 0.05
+        });
+
+        const foilMaterial = new THREE.MeshStandardMaterial({
+            color: 0xd4af37,
+            metalness: 0.95,
+            roughness: 0.2
+        });
+
+        // --- CREAZIONE MODELLO 3D (PACKAGING HAUTE PARFUMERIE) ---
+        const rootGroup = new THREE.Group();
+        scene.add(rootGroup);
+
+        // Gruppi per Esploso
+        const bottleGroup = new THREE.Group();
+        const liquidGroup = new THREE.Group();
+        const collarGroup = new THREE.Group();
+        const capGroup = new THREE.Group();
+        const boxGroup = new THREE.Group();
+
+        rootGroup.add(bottleGroup);
+        rootGroup.add(liquidGroup);
+        rootGroup.add(collarGroup);
+        rootGroup.add(capGroup);
+        rootGroup.add(boxGroup);
+
+        // 1. VETRO FLACONE (Base 5.5 x 5.5, H 9.0 - Scala 1 unit = 10mm)
+        // Creazione prisma a base quadra con spessore fondo vetro
+        const outerGlassGeo = new THREE.BoxGeometry(5.5, 9.0, 5.5);
+        const outerGlassMesh = new THREE.Mesh(outerGlassGeo, glassMaterial);
+        outerGlassMesh.position.y = 4.5;
+        outerGlassMesh.castShadow = true;
+        bottleGroup.add(outerGlassMesh);
+
+        // Collo Vetro
+        const neckGeo = new THREE.CylinderGeometry(0.8, 0.9, 1.2, 32);
+        const neckMesh = new THREE.Mesh(neckGeo, glassMaterial);
+        neckMesh.position.y = 9.6;
+        bottleGroup.add(neckMesh);
+
+        // 2. LIQUIDO FRAGRANZA (Interno al flacone, sopra il fondo da 1.8cm)
+        const liquidGeo = new THREE.BoxGeometry(4.5, 5.8, 4.5);
+        const liquidMesh = new THREE.Mesh(liquidGeo, liquidMaterial);
+        liquidMesh.position.y = 4.7; // Sollevato dal fondo vetro pesante
+        liquidGroup.add(liquidMesh);
+
+        // 3. COLLARINO & EROGATORE SPRAY
+        const collarGeo = new THREE.CylinderGeometry(0.85, 0.85, 1.0, 32);
+        const collarMesh = new THREE.Mesh(collarGeo, collarMaterial);
+        collarMesh.position.y = 9.8;
+        collarMesh.castShadow = true;
+        collarGroup.add(collarMesh);
+
+        const sprayHeadGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.6, 24);
+        const sprayHeadMesh = new THREE.Mesh(sprayHeadGeo, collarMaterial);
+        sprayHeadMesh.position.y = 10.4;
+        collarGroup.add(sprayHeadMesh);
+
+        // 4. CAPSULA MAGNETICA (ZAMA) - (Diametro 3.2cm, H 3.8cm)
+        const capGeo = new THREE.CylinderGeometry(1.6, 1.6, 3.8, 48);
+        const capMesh = new THREE.Mesh(capGeo, capMaterial);
+        capMesh.position.y = 12.3;
+        capMesh.castShadow = true;
+        capGroup.add(capMesh);
+
+        // Incisione / Top Logo Capsula
+        const capTopGeo = new THREE.CylinderGeometry(1.4, 1.4, 0.05, 32);
+        const capTopMesh = new THREE.Mesh(capTopGeo, foilMaterial);
+        capTopMesh.position.y = 14.21;
+        capGroup.add(capTopMesh);
+
+        // 5. ASTUCCIO SECONDARIO (BOX COFFRET)
+        const boxGeo = new THREE.BoxGeometry(6.15, 14.4, 6.15);
+        const boxMesh = new THREE.Mesh(boxGeo, boxMaterial);
+        boxMesh.position.set(10, 7.2, 0); // Posizionato a fianco
+        boxMesh.castShadow = true;
+        boxMesh.receiveShadow = true;
+        boxGroup.add(boxMesh);
+
+        // Stampa a Caldo Frontale Astuccio (Emblem / Logo)
+        const logoPlateGeo = new THREE.PlaneGeometry(3.5, 6.0);
+        const logoPlateMesh = new THREE.Mesh(logoPlateGeo, foilMaterial);
+        logoPlateMesh.position.set(10, 8.5, 3.09); // Applicato sulla faccia frontale del box
+        boxGroup.add(logoPlateMesh);
+
+        // Positions di Base per Animazione Esplosa
+        const basePos = {
+            bottleY: 0,
+            liquidY: 0,
+            collarY: 0,
+            capY: 0,
+            boxX: 10,
+            boxY: 0
+        };
+
+        // --- GESTIONE INTERAZIONI UI ---
+        
+        // Vista Esplosa Slider
+        const explodeRange = document.getElementById('explodeRange');
+        const explodeVal = document.getElementById('explodeVal');
+
+        explodeRange.addEventListener('input', (e) => {
+            const factor = parseFloat(e.target.value) / 100;
+            explodeVal.innerText = `${Math.round(factor * 100)}%`;
+
+            // Spostamenti verticali progressivi
+            liquidGroup.position.y = -factor * 1.5;
+            collarGroup.position.y = factor * 3.0;
+            capGroup.position.y = factor * 7.0;
+            boxGroup.position.x = basePos.boxX + (factor * 6.0);
+            boxGroup.position.z = -factor * 2.0;
+        });
+
+        // Auto Rotazione
+        let isAutoRotating = false;
+        const btnRotate = document.getElementById('btnRotate');
+        btnRotate.addEventListener('click', () => {
+            isAutoRotating = !isAutoRotating;
+            btnRotate.classList.toggle('active', isAutoRotating);
+        });
+
+        // Reset Camera
+        document.getElementById('btnResetView').addEventListener('click', () => {
+            controls.reset();
+            camera.position.set(0, 15, 35);
+            controls.target.set(0, 6, 0);
+        });
+
+        // Cambia Finitura Capsula
+        document.querySelectorAll('#capColors .color-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('#capColors .color-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                const finish = e.target.getAttribute('data-finish');
+                if (finish === 'gold') {
+                    capMaterial.color.setHex(0xd4af37); capMaterial.metalness = 0.95; capMaterial.roughness = 0.18;
+                } else if (finish === 'black') {
+                    capMaterial.color.setHex(0x0f172a); capMaterial.metalness = 0.2; capMaterial.roughness = 0.8;
+                } else if (finish === 'chrome') {
+                    capMaterial.color.setHex(0xf8fafc); capMaterial.metalness = 1.0; capMaterial.roughness = 0.05;
+                } else if (finish === 'copper') {
+                    capMaterial.color.setHex(0xc2410c); capMaterial.metalness = 0.9; capMaterial.roughness = 0.25;
+                }
+            });
+        });
+
+        // Cambia Colore Fragranza
+        document.querySelectorAll('#liquidColors .color-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('#liquidColors .color-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                const hex = parseInt(e.target.getAttribute('data-color'));
+                liquidMaterial.color.setHex(hex);
+            });
+        });
+
+        // Cambia Colore Box Astuccio
+        document.getElementById('boxColorSelect').addEventListener('change', (e) => {
+            boxMaterial.color.setHex(parseInt(e.target.value));
+        });
+
+        // Cambia Foil Stampa
+        document.getElementById('foilSelect').addEventListener('change', (e) => {
+            const hex = parseInt(e.target.value);
+            foilMaterial.color.setHex(hex);
+            collarMaterial.color.setHex(hex);
+        });
+
+        // Preset Luci Studio
+        document.querySelectorAll('#lightPresetGroup .btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('#lightPresetGroup .btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+
+                const preset = e.target.getAttribute('data-preset');
+                if (preset === 'studio') {
+                    keyLight.color.setHex(0xfffaed); keyLight.intensity = 2.5;
+                    fillLight.color.setHex(0x93c5fd); fillLight.intensity = 1.2;
+                } else if (preset === 'warm') {
+                    keyLight.color.setHex(0xfde047); keyLight.intensity = 3.0;
+                    fillLight.color.setHex(0xf97316); fillLight.intensity = 0.8;
+                } else if (preset === 'dramatic') {
+                    keyLight.color.setHex(0xffffff); keyLight.intensity = 4.0;
+                    fillLight.color.setHex(0x1e1b4b); fillLight.intensity = 0.3;
+                }
+            });
+        });
+
+        // Window Resize Listener
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // --- ANIMATION LOOP ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (isAutoRotating) {
+                rootGroup.rotation.y += 0.008;
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
