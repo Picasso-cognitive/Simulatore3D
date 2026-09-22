@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Progetti - Packaging, Editoria e Giochi</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-sub: #94a3b8;
+            --accent-cosmetica: #ec4899;
+            --accent-corso: #3b82f6;
+            --accent-packaging: #10b981;
+            --border-color: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        header {
+            max-width: 1400px;
+            margin: 0 auto 2rem auto;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+
+        p.subtitle {
+            color: var(--text-sub);
+            margin-bottom: 1.5rem;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 0.8rem 1.2rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: #182234;
+            color: var(--text-main);
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .search-box:focus {
+            border-color: #60a5fa;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 1.5rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .section-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .badge {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .cosmetica .badge { background-color: var(--accent-cosmetica); }
+        .corso .badge { background-color: var(--accent-corso); }
+        .packaging .badge { background-color: var(--accent-packaging); }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+
+        .file-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            overflow-y: auto;
+            max-height: 600px;
+            padding-right: 0.25rem;
+        }
+
+        .file-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .file-list::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        .file-item a {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6rem 0.8rem;
+            background: #0f172a66;
+            color: var(--text-main);
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            border: 1px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .file-item a:hover {
+            border-color: #475569;
+            background: #1e293b;
+            transform: translateX(3px);
+        }
+
+        .file-ext {
+            font-size: 0.75rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            background: #334155;
+            color: #cbd5e1;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .ext-pdf { background: #991b1b; color: #fecaca; }
+        .ext-json { background: #854d0e; color: #fef08a; }
+        .ext-html { background: #1e40af; color: #bfdbfe; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Hub Progetti & Risorse</h1>
+        <p class="subtitle">Navigazione rapida ai file presenti nelle sottocartelle del progetto.</p>
+        <input type="text" id="searchInput" class="search-box" placeholder="Cerca un file o una risorsa..." onkeyup="filterFiles()">
+    </header>
+
+    <main class="grid-container">
+
+        <section class="section-card cosmetica">
+            <div class="section-header">
+                <span class="badge"></span>
+                <h2 class="section-title">cosmetica</h2>
+            </div>
+            <ul class="file-list">
+                <li class="file-item"><a href="cosmetica/200_aziende_cosmetica.html"><span>200_aziende_cosmetica.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="cosmetica/200_centri_cosmetica.html"><span>200_centri_cosmetica.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="cosmetica/200_formulatori_cosmetica.html"><span>200_formulatori_cosmetica.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="cosmetica/200_prodotti_cosmetica.html"><span>200_prodotti_cosmetica.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="cosmetica/agrumati.html"><span>agrumati.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="cosmetica/approfondimenti.html"><span>approfondimenti.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="cosmetica/bergamotto.html"><span>bergamotto.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="cosmetica/coco_finale.html"><span>coco_finale.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="cosmetica/coco1.html"><span>coco1.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="cosmetica/coco2.html"><span>coco2.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="cosmetica/cosmetica%20lombarda.html"><span>cosmetica lombarda.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="cosmetica/cosmetica_cluster1.html"><span>cosmetica_cluster1.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="cosmetica/index.html"><span>index.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="cosmetica/packaging%20costruttivo%20con%20prompt.html"><span>packaging costruttivo con prompt.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="cosmetica/packaging%20costruttivo%20interattivo.html"><span>packaging costruttivo interattivo.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="cosmetica/packaging%20costruttivo.html"><span>packaging costruttivo.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="cosmetica/packaging%20profumo.html"><span>packaging profumo.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="cosmetica/packaging.html"><span>packaging.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="cosmetica/Parma%20cosmetics%20network.html"><span>Parma cosmetics network.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="cosmetica/rete%20dei%20profumieri%20globali.html"><span>rete dei profumieri globali.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="cosmetica/rete%20profumi%20iconici.html"><span>rete profumi iconici.html</span><span class="file-ext ext-html">HTML</span></a></li>
+            </ul>
+        </section>
+
+        <section class="section-card corso">
+            <div class="section-header">
+                <span class="badge"></span>
+                <h2 class="section-title">corso</h2>
+            </div>
+            <ul class="file-list">
+                <li class="file-item"><a href="corso/compila%20dispensa.html"><span>compila dispensa.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="corso/dispensa%20modulo%201.pdf"><span>dispensa modulo 1.pdf</span><span class="file-ext ext-pdf">PDF</span></a></li>
+                <li class="file-item"><a href="corso/dispensa_modulo_1__progettazione_strutturale.pdf"><span>dispensa_modulo_1__progettazione_strutturale.pdf</span><span class="file-ext ext-pdf">PDF</span></a></li>
+                <li class="file-item"><a href="corso/laboratorio%20finale.html"><span>laboratorio finale.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="corso/modulo%201%20%20con%20salvataggio.html"><span>modulo 1  con salvataggio.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="corso/modulo%201%20_dispensa.html"><span>modulo 1 _dispensa.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="corso/modulo%201.html"><span>modulo 1.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="corso/modulo%203.html"><span>modulo 3.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="corso/modulo%204.html"><span>modulo 4.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="corso/modulo%205.html"><span>modulo 5.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="corso/modulo2.html"><span>modulo2.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="corso/progetto%20di%20fine%20corso.html"><span>progetto di fine corso.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="corso/progetto%20finale%20con%20salvataggio.html"><span>progetto finale con salvataggio.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="corso/progetto_capstone_aura_luxury_lab.json"><span>progetto_capstone_aura_luxury_lab.json</span><span class="file-ext ext-json">JSON</span></a></li>
+                <li class="file-item"><a href="corso/valutatore.html"><span>valutatore.html</span><span class="file-ext ext-html">HTML</span></a></li>
+            </ul>
+        </section>
+
+        <section class="section-card packaging">
+            <div class="section-header">
+                <span class="badge"></span>
+                <h2 class="section-title">packaging e profumi</h2>
+            </div>
+            <ul class="file-list">
+                <li class="file-item"><a href="packaging%20e%20profumi/200%20aziende.html"><span>200 aziende.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="packaging%20e%20profumi/200%20designer%20con%20opere.html"><span>200 designer con opere.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="packaging%20e%20profumi/200%20opere.html"><span>200 opere.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="packaging%20e%20profumi/atlas%20design%20mondiale.html"><span>atlas design mondiale.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="packaging%20e%20profumi/bassi%202_coppia.html"><span>bassi 2_coppia.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="packaging%20e%20profumi/bassi%20base.html"><span>bassi base.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="packaging%20e%20profumi/bassi1.html"><span>bassi1.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="packaging%20e%20profumi/bassireloaded.html"><span>bassireloaded.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="packaging%20e%20profumi/designer.html"><span>designer.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="packaging%20e%20profumi/istituzioni_design.html"><span>istituzioni_design.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="packaging%20e%20profumi/packaging.html"><span>packaging.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="packaging%20e%20profumi/packaging_v1.html"><span>packaging_v1.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="packaging%20e%20profumi/packaging3d.html"><span>packaging3d.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="packaging%20e%20profumi/packagingv2.html"><span>packagingv2.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="packaging%20e%20profumi/packagingv2confustellatrice.html"><span>packagingv2confustellatrice.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="packaging%20e%20profumi/packstrutturale1.html"><span>packstrutturale1.html</span><span class="file-ext ext-html">HTML</span></a></li>
+                <li class="file-item"><a href="packaging%20e%20profumi/packstrutturale2.html"><span>packstrutturale2.html</span><span class="file-ext ext-html">HTML</span></a></li>
+            </ul>
+        </section>
+
+    </main>
+
+    <script>
+        function filterFiles() {
+            const input = document.getElementById('searchInput').value.toLowerCase();
+            const items = document.querySelectorAll('.file-item');
+
+            items.forEach(item => {
+                const text = item.innerText.toLowerCase();
+                if (text.includes(input)) {
+                    item.style.display = "";
+                } else {
+                    item.style.display = "none";
+                }
+            });
+        }
+    </script>
+</body>
+</html>
