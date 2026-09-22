@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pipe Grenci - Tra Tradizione e Innovazione | Simulator & Studio 3D</title>
+    <style>
+        :root {
+            --bg-dark: #0a0a0d;
+            --panel-bg: #141419;
+            --panel-border: #2a2a35;
+            --accent-gold: #c5a059;
+            --accent-gold-bright: #e6c280;
+            --text-light: #f0ede6;
+            --text-muted: #9a9a8f;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Georgia, serif; }
+        body { background-color: var(--bg-dark); color: var(--text-light); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+
+        /* NAVIGATION BAR */
+        nav { display: flex; background-color: #050507; border-bottom: 1px solid var(--panel-border); z-index: 1000; }
+        nav button {
+            flex: 1; padding: 14px 10px; background: none; border: none; color: var(--text-muted);
+            font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease;
+            border-bottom: 3px solid transparent; text-transform: uppercase; letter-spacing: 1px;
+        }
+        nav button.active, nav button:hover {
+            color: var(--accent-gold); background-color: var(--panel-bg); border-bottom-color: var(--accent-gold);
+        }
+
+        /* CONTAINER PER LE 4 FINESTRE */
+        .main-container { flex: 1; position: relative; overflow: hidden; }
+        
+        /* FIX VISIBILITÀ SCHEDE */
+        .window { display: none; width: 100%; height: 100%; padding: 20px; overflow-y: auto; }
+        #w1.active { display: flex !important; flex-direction: column; padding: 0; }
+        #w2.active { display: grid !important; grid-template-columns: 1fr 380px; gap: 20px; }
+        #w3.active { display: flex !important; flex-direction: column; align-items: center; background: #050507; gap: 20px; padding-bottom: 40px; }
+        #w4.active { display: flex !important; flex-direction: column; }
+
+        /* FINESTRA 1: PIPE GRENCI VISTA PRINCIPALE */
+        #w1 { position: relative; width: 100%; height: 100%; }
+        #canvas3d-main { width: 100%; height: 100%; display: block; cursor: pointer; }
+        
+        /* BRANDING OVERLAY PIPE GRENCI */
+        .brand-overlay {
+            position: absolute; top: 20px; left: 20px;
+            background: rgba(12, 12, 16, 0.88); border: 1px solid var(--accent-gold);
+            padding: 16px 24px; border-radius: 8px; backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8); pointer-events: none;
+        }
+        .brand-overlay h1 { font-family: 'Georgia', serif; font-size: 1.4rem; color: var(--accent-gold-bright); letter-spacing: 2px; text-transform: uppercase; }
+        .brand-overlay p { font-size: 0.85rem; color: var(--text-muted); font-style: italic; margin-top: 4px; }
+
+        .selection-badge {
+            position: absolute; top: 110px; left: 20px; background: rgba(15, 15, 20, 0.85);
+            border: 1px solid var(--panel-border); padding: 10px 16px; border-radius: 6px;
+            backdrop-filter: blur(8px); display: flex; flex-direction: column; gap: 4px; pointer-events: none;
+        }
+        .selection-badge span.title { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; }
+        .selection-badge span.value { font-size: 0.95rem; color: var(--accent-gold); font-weight: bold; }
+
+        .toolbar-bottom {
+            position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 12px; background: rgba(10, 10, 14, 0.92); padding: 12px 20px;
+            border-radius: 8px; border: 1px solid var(--panel-border); backdrop-filter: blur(12px); z-index: 100;
+        }
+
+        /* BUTTONS & CONTROLS */
+        .btn {
+            background-color: var(--accent-gold); color: #0d0d11; border: none; padding: 10px 16px;
+            font-weight: bold; border-radius: 4px; cursor: pointer; transition: 0.2s; font-size: 0.85rem;
+            display: inline-flex; align-items: center; gap: 8px; justify-content: center; text-decoration: none;
+        }
+        .btn:hover { background-color: var(--accent-gold-bright); transform: translateY(-1px); }
+        .btn-outline { background: transparent; border: 1px solid var(--accent-gold); color: var(--accent-gold); }
+        .btn-outline:hover { background: var(--accent-gold); color: #0d0d11; }
+
+        /* FINESTRA 2: EDITOR SINGOLA PARTE */
+        .single-viewport-box {
+            background: #08080a; border: 1px solid var(--panel-border); border-radius: 8px;
+            position: relative; display: flex; flex-direction: column; overflow: hidden;
+        }
+        #canvas3d-single { width: 100%; height: 100%; display: block; }
+        .part-selector-tabs { position: absolute; top: 15px; left: 15px; display: flex; gap: 8px; z-index: 10; }
+        .part-tab {
+            background: rgba(20,20,25,0.85); border: 1px solid var(--panel-border); color: #aaa;
+            padding: 8px 14px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; font-weight: 600;
+        }
+        .part-tab.active { background: var(--accent-gold); color: #000; border-color: var(--accent-gold); }
+
+        .controls-panel {
+            background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 8px;
+            padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px;
+        }
+        .control-section { display: none; flex-direction: column; gap: 15px; }
+        .control-section.active { display: flex; }
+        .control-section h3 { color: var(--accent-gold); border-bottom: 1px solid var(--panel-border); padding-bottom: 8px; font-size: 1.05rem; }
+        
+        .field-group { display: flex; flex-direction: column; gap: 6px; }
+        .field-group label { font-size: 0.8rem; color: var(--text-muted); }
+        select, input[type="file"], input[type="text"], textarea {
+            width: 100%; padding: 9px 12px; background: #0c0c0f; border: 1px solid var(--panel-border);
+            color: #fff; border-radius: 4px; font-size: 0.85rem;
+        }
+        .range-box { display: flex; align-items: center; gap: 12px; }
+        input[type="range"] { flex: 1; accent-color: var(--accent-gold); }
+
+        /* FINESTRA 3: SCHEDA INFOGRAFICA EDITORIALE */
+        .poster-card {
+            background: #0f0f14; color: #e6dfd3; width: 100%; max-width: 950px; border-radius: 8px;
+            padding: 35px; border: 1px solid #3d3323; box-shadow: 0 20px 60px rgba(0,0,0,0.9);
+            display: grid; grid-template-columns: 1fr 1fr; gap: 25px; position: relative; margin: 0 auto;
+        }
+        .poster-header { grid-column: 1 / -1; border-bottom: 2px solid var(--accent-gold); padding-bottom: 15px; text-align: center; }
+        .poster-header input.title { font-size: 1.8rem; font-family: 'Georgia', serif; background: none; border: none; color: var(--accent-gold); font-weight: bold; width: 100%; text-align: center; text-transform: uppercase; letter-spacing: 2px; }
+        .poster-header input.subtitle { font-size: 0.95rem; background: none; border: none; color: #8a8477; font-style: italic; width: 100%; text-align: center; margin-top: 6px; }
+
+        .infographic-block {
+            background: #15151c; border: 1px solid #2a251e; border-left: 3px solid var(--accent-gold);
+            padding: 15px; border-radius: 4px; display: flex; flex-direction: column; gap: 10px;
+        }
+        .infographic-block label { color: var(--accent-gold); font-size: 0.82rem; font-weight: bold; text-transform: uppercase; }
+        .infographic-block textarea { background: transparent; border: none; color: #ddd; font-size: 0.88rem; resize: vertical; min-height: 55px; line-height: 1.4; }
+
+        .image-upload-card {
+            border: 1px dashed var(--accent-gold); background: rgba(197, 160, 89, 0.05);
+            border-radius: 4px; padding: 12px; text-align: center; cursor: pointer; transition: 0.2s;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 90px;
+        }
+        .image-upload-card:hover { background: rgba(197, 160, 89, 0.12); }
+        .image-upload-card img { max-height: 110px; max-width: 100%; border-radius: 4px; object-fit: contain; }
+
+        /* FINESTRA 4: GENERATORE PROMPT IA */
+        .prompt-container {
+            max-width: 850px; margin: 0 auto; width: 100%;
+            background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 8px;
+            padding: 25px; display: flex; flex-direction: column; gap: 18px;
+        }
+        .prompt-container h2 { color: var(--accent-gold); font-size: 1.3rem; border-bottom: 1px solid var(--panel-border); padding-bottom: 10px; }
+        .prompt-textarea {
+            width: 100%; height: 250px; background: #070709; border: 1px solid #333344;
+            color: #79fb97; font-family: 'Consolas', 'Courier New', monospace; font-size: 0.95rem;
+            padding: 18px; border-radius: 6px; resize: vertical; line-height: 1.6; outline: none;
+        }
+        .prompt-textarea:focus { border-color: var(--accent-gold); }
+    </style>
+
+    <!-- Three.js Library & Exporters -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/STLExporter.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/OBJExporter.js"></script>
+    <!-- Libreria jsPDF per Anteprima ed Esportazione PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+    <!-- NAVIGAZIONE SCHEDE PRINCIPALI -->
+    <nav>
+        <button id="nav-w1" class="active" onclick="switchTab('w1')">1. Vista 3D Principale</button>
+        <button id="nav-w2" onclick="switchTab('w2')">2. Modifica Parte</button>
+        <button id="nav-w3" onclick="switchTab('w3')">3. Scheda Infografica Editoriale</button>
+        <button id="nav-w4" onclick="switchTab('w4')">4. Generatore Prompt IA</button>
+    </nav>
+
+    <div class="main-container">
+
+        <!-- FINESTRA 1: VISTA 3D PRINCIPALE -->
+        <div id="w1" class="window active">
+            <div id="canvas3d-main"></div>
+            
+            <!-- TITOLO BRANDING GRENCI SOVRAPPOSTO -->
+            <div class="brand-overlay">
+                <h1>Pipe Grenci</h1>
+                <p>Tra Tradizione e Innovazione</p>
+            </div>
+
+            <div class="selection-badge">
+                <span class="title">Elemento Selezionato (Clicca sul 3D)</span>
+                <span class="value" id="selectedPartNameLabel">Scultura Centrale (Fornello Cavo)</span>
+            </div>
+
+            <div class="toolbar-bottom">
+                <button class="btn" onclick="switchTab('w2')">⚙️ Modifica Dettagli 3D</button>
+                <button class="btn btn-outline" onclick="switchTab('w3')">📜 Scheda Editoriale</button>
+                <button class="btn btn-outline" onclick="switchTab('w4')">🤖 Genera Prompt IA</button>
+                <button class="btn btn-outline" onclick="exportSTL()">Esporta STL</button>
+            </div>
+        </div>
+
+        <!-- FINESTRA 2: EDITOR ISOLATO SINGOLA PARTE -->
+        <div id="w2" class="window">
+            <div class="single-viewport-box">
+                <div class="part-selector-tabs">
+                    <button class="part-tab active" id="tab-btn-bowl" onclick="selectPart('bowl')">Fornello Cavo</button>
+                    <button class="part-tab" id="tab-btn-shank" onclick="selectPart('shank')">Cannello / Veretta</button>
+                    <button class="part-tab" id="tab-btn-mouthpiece" onclick="selectPart('mouthpiece')">Bocchino</button>
+                </div>
+                <div id="canvas3d-single"></div>
+            </div>
+
+            <div class="controls-panel">
+                <!-- CONTROLLI FORNELLO -->
+                <div id="ctrl-bowl" class="control-section active">
+                    <h3>1. Scultura Centrale (Fornello Cavo)</h3>
+
+                    <div class="field-group">
+                        <label>Larghezza Foro Interno (Fornello Tabacco)</label>
+                        <div class="range-box">
+                            <input type="range" id="bowlInnerRad" min="0.3" max="0.75" step="0.02" value="0.5" oninput="updatePipeGeometry()">
+                        </div>
+                    </div>
+
+                    <div class="field-group">
+                        <label>Profondità Cavità Interna</label>
+                        <div class="range-box">
+                            <input type="range" id="bowlInnerDepth" min="0.8" max="1.6" step="0.05" value="1.2" oninput="updatePipeGeometry()">
+                        </div>
+                    </div>
+
+                    <div class="field-group">
+                        <label>Bombatura / Spessore Esterno Fornello</label>
+                        <div class="range-box">
+                            <input type="range" id="bowlOuterRad" min="0.8" max="1.6" step="0.05" value="1.25" oninput="updatePipeGeometry()">
+                        </div>
+                    </div>
+
+                    <div class="field-group">
+                        <label>Altezza Fornello</label>
+                        <div class="range-box">
+                            <input type="range" id="bowlHeight" min="1.0" max="2.2" step="0.05" value="1.5" oninput="updatePipeGeometry()">
+                        </div>
+                    </div>
+
+                    <div class="field-group">
+                        <label>Profilo Bordo Superiore (Rim)</label>
+                        <select id="rimStyle" onchange="updatePipeGeometry()">
+                            <option value="jagged" selected>Profilo Monte Bianco (Pertini)</option>
+                            <option value="flat">Liscio / Piatto Classico</option>
+                            <option value="rustic">Rusticato Irregolare Artigianale</option>
+                        </select>
+                    </div>
+
+                    <div class="field-group">
+                        <label>Essenza Legno / Finitura Grenci</label>
+                        <select id="woodType" onchange="updatePipeGeometry()">
+                            <option value="olive_red" selected>Radica Tinto Rosso Garofano (Pertini)</option>
+                            <option value="briar_natural">Radica d'Erica Naturale Fiammata</option>
+                            <option value="ebony">Ebano Nero Lucido</option>
+                            <option value="churchill_rustic">Rusticato Scuro Navale</option>
+                        </select>
+                    </div>
+
+                    <div class="field-group">
+                        <label>Mappa Rilievo Scultura (Bump Map)</label>
+                        <input type="file" accept="image/*" onchange="handleImageUpload(event, 'central')">
+                    </div>
+                </div>
+
+                <!-- CONTROLLI CANNELLO E VERETTA -->
+                <div id="ctrl-shank" class="control-section">
+                    <h3>2. Cannello & Veretta</h3>
+
+                    <div class="field-group">
+                        <label>Lunghezza Cannello</label>
+                        <div class="range-box">
+                            <input type="range" id="shankLength" min="1.0" max="3.5" step="0.1" value="2.2" oninput="updatePipeGeometry()">
+                        </div>
+                    </div>
+
+                    <div class="field-group">
+                        <label>Spessore Cannello</label>
+                        <div class="range-box">
+                            <input type="range" id="shankRadius" min="0.35" max="0.75" step="0.02" value="0.5" oninput="updatePipeGeometry()">
+                        </div>
+                    </div>
+
+                    <div class="field-group">
+                        <label>Stile Veretta di Giunzione</label>
+                        <select id="ringStyle" onchange="updatePipeGeometry()">
+                            <option value="medal_gold" selected>Veretta Medaglia d'Oro (Pertini)</option>
+                            <option value="compass_bronze">Veretta Bussola d'Ottone</option>
+                            <option value="silver_ring">Anello Argento Sterling</option>
+                            <option value="none">Senza Veretta</option>
+                        </select>
+                    </div>
+
+                    <div class="field-group">
+                        <label>Incisione Rilievo per Veretta</label>
+                        <input type="file" accept="image/*" onchange="handleImageUpload(event, 'terminal')">
+                    </div>
+                </div>
+
+                <!-- CONTROLLI BOCCHINO -->
+                <div id="ctrl-mouthpiece" class="control-section">
+                    <h3>3. Bocchino (Liscio con Texture)</h3>
+
+                    <div class="field-group">
+                        <label>Curvatura Anatomica</label>
+                        <select id="mouthpieceCurve" onchange="updatePipeGeometry()">
+                            <option value="curved" selected>Curvato Full-Bent (Pertini)</option>
+                            <option value="semi">Semi-Curvato Half-Bent</option>
+                            <option value="straight">Dritto Classico</option>
+                        </select>
+                    </div>
+
+                    <div class="field-group">
+                        <label>Lunghezza Bocchino</label>
+                        <div class="range-box">
+                            <input type="range" id="mpLength" min="1.5" max="4.2" step="0.1" value="2.8" oninput="updatePipeGeometry()">
+                        </div>
+                    </div>
+
+                    <div class="field-group">
+                        <label>Texture Superficiale Bocchino</label>
+                        <select id="mpTexturePreset" onchange="changeMouthpieceTexture(this.value)">
+                            <option value="tricolore" selected>Bandiera Tricolore Italiana (Pertini)</option>
+                            <option value="union_jack">Bandiera Union Jack UK</option>
+                            <option value="ebonite">Ebonite Nero Lucido</option>
+                            <option value="amber">Acrilico Ambrato Translucido</option>
+                        </select>
+                    </div>
+
+                    <div class="field-group">
+                        <label>Texture Personalizzata su Bocchino</label>
+                        <input type="file" accept="image/*" onchange="handleImageUpload(event, 'mouthpiece')">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FINESTRA 3: SCHEDA INFOGRAFICA EDITORIALE (MODIFICATA CON ANTEPRIMA ED ESPORTAZIONE PDF) -->
+        <div id="w3" class="window">
+            
+            <!-- BARRA AZIONI PDF EDITORIALE -->
+            <div style="width: 100%; max-width: 950px; display: flex; justify-content: flex-end; gap: 12px;">
+                <button class="btn btn-outline" onclick="generaAnteprimaPDF()">👁️ Visualizza Anteprima PDF</button>
+                <button class="btn" onclick="esportaPDF()">📄 Esporta PDF</button>
+            </div>
+
+            <!-- SCHEDA CONTENUTI EDITORIALI -->
+            <div class="poster-card">
+                <div class="poster-header">
+                    <input type="text" class="title" id="infoTitle" value="PIPE GRENCI - EDIZIONE SANDRO PERTINI" oninput="generateAIPrompt()">
+                    <input type="text" class="subtitle" id="infoSubtitle" value="Maestria Artigianale Grenci • Omaggio a Sandro Pertini (1896 – 1990)" oninput="generateAIPrompt()">
+                </div>
+
+                <!-- COLONNA SINISTRA -->
+                <div style="display:flex; flex-direction:column; gap:16px;">
+                    <div class="infographic-block">
+                        <label>Ritratto Storico / Logo Grenci</label>
+                        <div class="image-upload-card" onclick="document.getElementById('imgInputPortrait').click()">
+                            <input type="file" id="imgInputPortrait" accept="image/*" style="display:none" onchange="previewPosterImage(event, 'imgPreviewPortrait')">
+                            <div id="imgPreviewPortrait">
+                                <span style="font-size:0.8rem; color:var(--accent-gold);">📷 Clicca qui per caricare una foto o logo</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="infographic-block">
+                        <label>Citazione Celebrativa</label>
+                        <textarea id="infoQuote" oninput="generateAIPrompt()">"Ho combattuto contro i fascisti perché la libertà è libertà. Non libertà a metà." — Sandro Pertini</textarea>
+                    </div>
+
+                    <div class="infographic-block">
+                        <label>Dettaglio 1: Bordo Monte Bianco</label>
+                        <div class="image-upload-card" onclick="document.getElementById('imgInputMB').click()">
+                            <input type="file" id="imgInputMB" accept="image/*" style="display:none" onchange="previewPosterImage(event, 'imgPreviewMB')">
+                            <div id="imgPreviewMB">
+                                <span style="font-size:0.75rem; color:#aaa;">📷 Foto Cima Monte Bianco</span>
+                            </div>
+                        </div>
+                        <textarea id="infoDescMB" oninput="generateAIPrompt()">Bordo intagliato a mano riproducente la cima del Monte Bianco, simbolo della fuga in Francia del 1926.</textarea>
+                    </div>
+                </div>
+
+                <!-- COLONNA DESTRA -->
+                <div style="display:flex; flex-direction:column; gap:16px;">
+                    <div class="infographic-block">
+                        <label>Dettaglio 2: Radica Rosso Garofano</label>
+                        <div class="image-upload-card" onclick="document.getElementById('imgInputGarofano').click()">
+                            <input type="file" id="imgInputGarofano" accept="image/*" style="display:none" onchange="previewPosterImage(event, 'imgPreviewGarofano')">
+                            <div id="imgPreviewGarofano">
+                                <span style="font-size:0.75rem; color:#aaa;">📷 Foto Radica Grenci / Garofano</span>
+                            </div>
+                        </div>
+                        <textarea id="infoDescGarofano" oninput="generateAIPrompt()">Radica con finitura artigianale tinto rosso garofano, simbolo del socialismo e della passione civile.</textarea>
+                    </div>
+
+                    <div class="infographic-block">
+                        <label>Dettaglio 3: Veretta Medaglia d'Oro</label>
+                        <div class="image-upload-card" onclick="document.getElementById('imgInputMedal').click()">
+                            <input type="file" id="imgInputMedal" accept="image/*" style="display:none" onchange="previewPosterImage(event, 'imgPreviewMedal')">
+                            <div id="imgPreviewMedal">
+                                <span style="font-size:0.75rem; color:#aaa;">📷 Foto Veretta Dorata</span>
+                            </div>
+                        </div>
+                        <textarea id="infoDescMedal" oninput="generateAIPrompt()">Veretta in metallo dorato recante l'incisione della Stella della Medaglia d'Oro al Valor Militare.</textarea>
+                    </div>
+
+                    <div class="infographic-block">
+                        <label>Dettaglio 4: Bocchino Tricolore</label>
+                        <textarea id="infoDescMouthpiece" oninput="generateAIPrompt()">Bocchino anatomico acrilico con inserto Tricolore della Bandiera Italiana.</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ANTEPRIMA PDF INTEGRATA -->
+            <div id="pdf-preview-container" style="display: none; width: 100%; max-width: 950px; background: var(--panel-bg); border: 1px solid var(--accent-gold); border-radius: 8px; padding: 20px; flex-direction: column; gap: 12px; margin-top: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="color: var(--accent-gold); font-size: 1rem;">Anteprima Documento PDF</h3>
+                    <button onclick="chiudiAnteprimaPDF()" class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem; color: #ff6b6b; border-color: #ff6b6b;">Chiudi anteprima</button>
+                </div>
+                <div style="width: 100%; height: 500px; border: 1px solid var(--panel-border); border-radius: 4px; overflow: hidden; background: #111;">
+                    <iframe id="pdf-preview-iframe" style="width: 100%; height: 100%; border: none;" title="Anteprima PDF Editoriale"></iframe>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- FINESTRA 4: GENERATORE PROMPT IA -->
+        <div id="w4" class="window">
+            <div class="prompt-container">
+                <h2>Generatore Prompt IA - Pipe Grenci</h2>
+                <p style="font-size:0.85rem; color:var(--text-muted);">
+                    Testo del prompt sincronizzato in tempo reale con i parametri 3D e i dettagli editoriali.
+                </p>
+
+                <div style="display:flex; gap:15px;">
+                    <div class="field-group" style="flex:1;">
+                        <label>Modello IA Target</label>
+                        <select id="aiModel" onchange="generateAIPrompt()">
+                            <option value="midjourney" selected>Midjourney v6.0</option>
+                            <option value="dalle">DALL-E 3</option>
+                            <option value="stable">Stable Diffusion XL</option>
+                        </select>
+                    </div>
+
+                    <div class="field-group" style="flex:1;">
+                        <label>Stile Render</label>
+                        <select id="aiRenderStyle" onchange="generateAIPrompt()">
+                            <option value="studio" selected>Studio Macro Photography, Rembrandt dark lighting</option>
+                            <option value="cinematic">Cinematic 35mm photo, warm moody contrast</option>
+                            <option value="museum">Museum exhibition spotlight render</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- TESTO PROMPT GENERATO -->
+                <textarea id="promptOutput" class="prompt-textarea" readonly></textarea>
+
+                <div style="display:flex; justify-content:flex-end;">
+                    <button class="btn" onclick="copyPromptToClipboard()">📋 Copia Prompt negli Appunti</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // THREE.JS GLOBALS
+        let mainScene, mainCamera, mainRenderer, mainControls;
+        let singleScene, singleCamera, singleRenderer, singleControls;
+        
+        let pipeGroup, singleGroup;
+        let bowlMesh, shankMesh, ringMesh, mouthpieceMesh;
+        let raycaster, mouse;
+
+        let selectedPart = 'bowl';
+
+        let loadedTextures = {
+            centralBump: null,
+            terminalBump: null,
+            mpTexture: null
+        };
+
+        // GESTIONE PDF (FINESTRA EDITORIALE)
+        let previewBlobUrl = null;
+
+        function creaDocumentoPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            const title = document.getElementById('infoTitle').value || 'PIPE GRENCI';
+            const subtitle = document.getElementById('infoSubtitle').value || '';
+            const quote = document.getElementById('infoQuote').value || '';
+            const descMB = document.getElementById('infoDescMB').value || '';
+            const descGar = document.getElementById('infoDescGarofano').value || '';
+            const descMed = document.getElementById('infoDescMedal').value || '';
+            const descMP = document.getElementById('infoDescMouthpiece').value || '';
+
+            // Intestazione PDF
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(16);
+            doc.text(title, 20, 20);
+
+            doc.setFont('helvetica', 'italic');
+            doc.setFontSize(10);
+            doc.text(subtitle, 20, 28);
+
+            doc.setLineWidth(0.5);
+            doc.line(20, 32, 190, 32);
+
+            let y = 42;
+
+            // Citazione
+            if(quote) {
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(11);
+                doc.text('CITAZIONE CELEBRATIVA:', 20, y);
+                y += 6;
+                doc.setFont('helvetica', 'italic');
+                doc.setFontSize(10);
+                const splitQuote = doc.splitTextToSize(quote, 170);
+                doc.text(splitQuote, 20, y);
+                y += (splitQuote.length * 6) + 8;
+            }
+
+            // Dettagli Costruttivi
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(12);
+            doc.text('SCHEDA TECNICA ED EDITORIALE', 20, y);
+            y += 8;
+
+            const items = [
+                { label: "Bordo Monte Bianco", text: descMB },
+                { label: "Radica Rosso Garofano", text: descGar },
+                { label: "Veretta Medaglia d'Oro", text: descMed },
+                { label: "Bocchino Anatomico", text: descMP }
+            ];
+
+            items.forEach(item => {
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(10);
+                doc.text(`• ${item.label}:`, 20, y);
+                y += 5;
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(9);
+                const lines = doc.splitTextToSize(item.text, 165);
+                doc.text(lines, 25, y);
+                y += (lines.length * 5) + 5;
+            });
+
+            return doc;
+        }
+
+        function generaAnteprimaPDF() {
+            const doc = creaDocumentoPDF();
+            const blob = doc.output('blob');
+
+            if (previewBlobUrl) {
+                URL.revokeObjectURL(previewBlobUrl);
+            }
+
+            previewBlobUrl = URL.createObjectURL(blob);
+            const iframe = document.getElementById('pdf-preview-iframe');
+            iframe.src = previewBlobUrl;
+
+            const container = document.getElementById('pdf-preview-container');
+            container.style.display = 'flex';
+            container.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function chiudiAnteprimaPDF() {
+            const container = document.getElementById('pdf-preview-container');
+            container.style.display = 'none';
+            if (previewBlobUrl) {
+                URL.revokeObjectURL(previewBlobUrl);
+                previewBlobUrl = null;
+            }
+        }
+
+        function esportaPDF() {
+            const doc = creaDocumentoPDF();
+            doc.save('scheda_editoriale_grenci.pdf');
+        }
+
+        window.onload = function() {
+            initMainScene();
+            initSingleScene();
+            createTricoloreTexture();
+            buildPipe3D();
+            generateAIPrompt();
+            animate();
+        };
+
+        // GESTIONE CAMBIO SCHEDA
+        function switchTab(windowId) {
+            document.querySelectorAll('.window').forEach(w => w.classList.remove('active'));
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+
+            const targetWin = document.getElementById(windowId);
+            const targetBtn = document.getElementById(`nav-${windowId}`);
+
+            if(targetWin) targetWin.classList.add('active');
+            if(targetBtn) targetBtn.classList.add('active');
+
+            // Refresh viewport Three.js quando si torna alle viste 3D
+            setTimeout(() => {
+                onWindowResize();
+                if(windowId === 'w2') updateSinglePartView();
+                if(windowId === 'w4') generateAIPrompt();
+            }, 50);
+        }
+
+        // SCENA PRINCIPALE (FINESTRA 1)
+        function initMainScene() {
+            const container = document.getElementById('canvas3d-main');
+            mainScene = new THREE.Scene();
+            mainScene.background = new THREE.Color(0x0a0a0d);
+
+            mainCamera = new THREE.PerspectiveCamera(38, container.clientWidth / container.clientHeight, 0.1, 1000);
+            mainCamera.position.set(-2.5, 3.5, 11);
+
+            mainRenderer = new THREE.WebGLRenderer({ antialias: true });
+            mainRenderer.setSize(container.clientWidth, container.clientHeight);
+            mainRenderer.shadowMap.enabled = true;
+            mainRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+            container.appendChild(mainRenderer.domElement);
+
+            mainControls = new THREE.OrbitControls(mainCamera, mainRenderer.domElement);
+            mainControls.enableDamping = true;
+            mainControls.target.set(1, 0, 0);
+
+            const ambient = new THREE.AmbientLight(0xffffff, 0.85);
+            mainScene.add(ambient);
+
+            const keyLight = new THREE.DirectionalLight(0xffeedd, 1.6);
+            keyLight.position.set(6, 12, 8);
+            mainScene.add(keyLight);
+
+            const fillLight = new THREE.DirectionalLight(0x77aaff, 0.5);
+            fillLight.position.set(-6, -2, -6);
+            mainScene.add(fillLight);
+
+            pipeGroup = new THREE.Group();
+            mainScene.add(pipeGroup);
+
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+            mainRenderer.domElement.addEventListener('click', onMainCanvasClick);
+
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        // SCENA SINGOLA PARTE (FINESTRA 2)
+        function initSingleScene() {
+            const container = document.getElementById('canvas3d-single');
+            singleScene = new THREE.Scene();
+            singleScene.background = new THREE.Color(0x08080a);
+
+            singleCamera = new THREE.PerspectiveCamera(35, container.clientWidth / container.clientHeight, 0.1, 1000);
+            singleCamera.position.set(0, 1.5, 6);
+
+            singleRenderer = new THREE.WebGLRenderer({ antialias: true });
+            singleRenderer.setSize(container.clientWidth, container.clientHeight);
+            singleRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+            container.appendChild(singleRenderer.domElement);
+
+            singleControls = new THREE.OrbitControls(singleCamera, singleRenderer.domElement);
+            singleControls.enableDamping = true;
+
+            const ambient = new THREE.AmbientLight(0xffffff, 0.9);
+            singleScene.add(ambient);
+            const dirLight = new THREE.DirectionalLight(0xfff0dd, 1.5);
+            dirLight.position.set(4, 8, 5);
+            singleScene.add(dirLight);
+
+            singleGroup = new THREE.Group();
+            singleScene.add(singleGroup);
+        }
+
+        // MODELLAZIONE 3D CON CAVITÀ REALE
+        function buildPipe3D() {
+            while(pipeGroup.children.length > 0) pipeGroup.remove(pipeGroup.children[0]);
+
+            const innerRad = parseFloat(document.getElementById('bowlInnerRad').value);
+            const innerDepth = parseFloat(document.getElementById('bowlInnerDepth').value);
+            const outerRad = parseFloat(document.getElementById('bowlOuterRad').value);
+            const bowlH = parseFloat(document.getElementById('bowlHeight').value);
+            const rimStyle = document.getElementById('rimStyle').value;
+            
+            const shankLen = parseFloat(document.getElementById('shankLength').value);
+            const shankRad = parseFloat(document.getElementById('shankRadius').value);
+            const ringStyle = document.getElementById('ringStyle').value;
+            const mpCurve = document.getElementById('mouthpieceCurve').value;
+            const mpLen = parseFloat(document.getElementById('mpLength').value);
+
+            // 1. FORNELLO CAVO
+            const points = [];
+            points.push(new THREE.Vector2(0, -innerDepth + bowlH/2));
+            points.push(new THREE.Vector2(innerRad * 0.6, -innerDepth + bowlH/2));
+            points.push(new THREE.Vector2(innerRad, bowlH/2));
+            points.push(new THREE.Vector2(outerRad * 0.8, bowlH/2));
+            points.push(new THREE.Vector2(outerRad, 0));
+            points.push(new THREE.Vector2(outerRad * 0.4, -bowlH/2));
+            points.push(new THREE.Vector2(0, -bowlH/2));
+
+            const bowlGeo = new THREE.LatheGeometry(points, 36);
+
+            if(rimStyle === 'jagged') {
+                const pos = bowlGeo.attributes.position;
+                for(let i = 0; i < pos.count; i++) {
+                    let y = pos.getY(i);
+                    if(y > (bowlH/2 - 0.15)) {
+                        let x = pos.getX(i);
+                        let z = pos.getZ(i);
+                        let angle = Math.atan2(z, x);
+                        let wave = Math.sin(angle * 5) * 0.18 + Math.cos(angle * 3) * 0.12;
+                        pos.setY(i, y + wave);
+                    }
+                }
+                bowlGeo.computeVertexNormals();
+            }
+
+            const woodMat = new THREE.MeshStandardMaterial({
+                color: getWoodColor(),
+                roughness: 0.35,
+                bumpMap: loadedTextures.centralBump,
+                bumpScale: 0.08,
+                side: THREE.DoubleSide
+            });
+
+            bowlMesh = new THREE.Mesh(bowlGeo, woodMat);
+            bowlMesh.userData = { partName: 'bowl' };
+            pipeGroup.add(bowlMesh);
+
+            // 2. CANNELLO
+            const shankGeo = new THREE.CylinderGeometry(shankRad * 0.9, shankRad, shankLen, 32);
+            shankGeo.rotateZ(-Math.PI / 2);
+            shankGeo.translate(shankLen / 2, -0.2, 0);
+
+            shankMesh = new THREE.Mesh(shankGeo, woodMat);
+            shankMesh.userData = { partName: 'shank' };
+            pipeGroup.add(shankMesh);
+
+            // 3. VERETTA
+            let ringWidth = 0.35;
+            if(ringStyle !== 'none') {
+                const ringGeo = new THREE.CylinderGeometry(shankRad * 0.93, shankRad * 0.93, ringWidth, 32);
+                ringGeo.rotateZ(-Math.PI / 2);
+                ringGeo.translate(shankLen + ringWidth / 2, -0.2, 0);
+
+                let ringColor = 0xc5a059;
+                if(ringStyle === 'compass_bronze') ringColor = 0x8c6239;
+                if(ringStyle === 'silver_ring') ringColor = 0xcccccc;
+
+                const ringMat = new THREE.MeshStandardMaterial({
+                    color: ringColor, metalness: 0.85, roughness: 0.2,
+                    bumpMap: loadedTextures.terminalBump, bumpScale: 0.05
+                });
+
+                ringMesh = new THREE.Mesh(ringGeo, ringMat);
+                ringMesh.userData = { partName: 'shank' };
+                pipeGroup.add(ringMesh);
+            } else {
+                ringWidth = 0;
+            }
+
+            // 4. BOCCHINO
+            const mpStartX = shankLen + ringWidth;
+            let mpAngle = 0;
+            if(mpCurve === 'curved') mpAngle = Math.PI / 4;
+            if(mpCurve === 'semi') mpAngle = Math.PI / 8;
+
+            const p1 = new THREE.Vector3(mpStartX, -0.2, 0);
+            const p2 = new THREE.Vector3(mpStartX + mpLen * 0.5, -0.2, 0);
+            const p3 = new THREE.Vector3(mpStartX + mpLen, -0.2 - Math.sin(mpAngle) * mpLen * 0.5, 0);
+            const curve = new THREE.CubicBezierCurve3(p1, p1.clone().add(new THREE.Vector3(mpLen*0.3, 0, 0)), p2, p3);
+
+            const mpGeo = new THREE.TubeGeometry(curve, 32, shankRad * 0.75, 16, false);
+            
+            const preset = document.getElementById('mpTexturePreset').value;
+            let mpMat;
+            if(preset === 'ebonite') {
+                mpMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.1 });
+            } else if(preset === 'amber') {
+                mpMat = new THREE.MeshStandardMaterial({ color: 0xd97724, roughness: 0.1, transparent: true, opacity: 0.85 });
+            } else {
+                mpMat = new THREE.MeshStandardMaterial({ map: loadedTextures.mpTexture, roughness: 0.15 });
+            }
+
+            mouthpieceMesh = new THREE.Mesh(mpGeo, mpMat);
+            mouthpieceMesh.userData = { partName: 'mouthpiece' };
+            pipeGroup.add(mouthpieceMesh);
+
+            updateSinglePartView();
+        }
+
+        function getWoodColor() {
+            const type = document.getElementById('woodType').value;
+            if(type === 'olive_red') return 0x7a1a1a;
+            if(type === 'briar_natural') return 0x9e5b2a;
+            if(type === 'ebony') return 0x111115;
+            if(type === 'churchill_rustic') return 0x3d2314;
+            return 0x7a1a1a;
+        }
+
+        function updateSinglePartView() {
+            while(singleGroup.children.length > 0) singleGroup.remove(singleGroup.children[0]);
+
+            let sourceMesh = null;
+            if(selectedPart === 'bowl' && bowlMesh) sourceMesh = bowlMesh.clone();
+            else if(selectedPart === 'shank' && shankMesh) {
+                sourceMesh = new THREE.Group();
+                sourceMesh.add(shankMesh.clone());
+                if(ringMesh) sourceMesh.add(ringMesh.clone());
+            } else if(selectedPart === 'mouthpiece' && mouthpieceMesh) sourceMesh = mouthpieceMesh.clone();
+
+            if(sourceMesh) {
+                const box = new THREE.Box3().setFromObject(sourceMesh);
+                const center = box.getCenter(new THREE.Vector3());
+                sourceMesh.position.sub(center);
+                singleGroup.add(sourceMesh);
+            }
+        }
+
+        function onMainCanvasClick(event) {
+            const rect = mainRenderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, mainCamera);
+            const intersects = raycaster.intersectObjects(pipeGroup.children, true);
+
+            if(intersects.length > 0) {
+                const hit = intersects[0].object;
+                if(hit.userData && hit.userData.partName) {
+                    selectPart(hit.userData.partName);
+                }
+            }
+        }
+
+        function selectPart(partName) {
+            selectedPart = partName;
+
+            const labelMap = {
+                bowl: 'Scultura Centrale (Fornello Cavo)',
+                shank: 'Cannello & Veretta Terminale',
+                mouthpiece: 'Bocchino (Liscio con Texture)'
+            };
+            document.getElementById('selectedPartNameLabel').innerText = labelMap[partName];
+
+            document.querySelectorAll('.part-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(`tab-btn-${partName}`).classList.add('active');
+
+            document.querySelectorAll('.control-section').forEach(s => s.classList.remove('active'));
+            document.getElementById(`ctrl-${partName}`).classList.add('active');
+
+            updateSinglePartView();
+        }
+
+        // TEXTURES
+        function createTricoloreTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512; canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#008C45'; ctx.fillRect(0, 0, 170, 128);
+            ctx.fillStyle = '#FFFFFF'; ctx.fillRect(170, 0, 172, 128);
+            ctx.fillStyle = '#CD212A'; ctx.fillRect(342, 0, 170, 128);
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+            loadedTextures.mpTexture = tex;
+        }
+
+        function createUnionJackTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512; canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#00247D'; ctx.fillRect(0, 0, 512, 256);
+            ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 40;
+            ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(512,256); ctx.moveTo(512,0); ctx.lineTo(0,256); ctx.stroke();
+            ctx.strokeStyle = '#CF142B'; ctx.lineWidth = 20;
+            ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(512,256); ctx.moveTo(512,0); ctx.lineTo(0,256); ctx.stroke();
+            ctx.fillStyle = '#FFFFFF'; ctx.fillRect(206, 0, 100, 256); ctx.fillRect(0, 78, 512, 100);
+            ctx.fillStyle = '#CF142B'; ctx.fillRect(226, 0, 60, 256); ctx.fillRect(0, 98, 512, 60);
+            loadedTextures.mpTexture = new THREE.CanvasTexture(canvas);
+        }
+
+        function changeMouthpieceTexture(preset) {
+            if(preset === 'tricolore') createTricoloreTexture();
+            if(preset === 'union_jack') createUnionJackTexture();
+            updatePipeGeometry();
+        }
+
+        function handleImageUpload(event, target) {
+            const file = event.target.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    new THREE.TextureLoader().load(e.target.result, function(tex) {
+                        if(target === 'central') loadedTextures.centralBump = tex;
+                        if(target === 'terminal') loadedTextures.terminalBump = tex;
+                        if(target === 'mouthpiece') loadedTextures.mpTexture = tex;
+                        updatePipeGeometry();
+                    });
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function previewPosterImage(event, previewId) {
+            const file = event.target.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById(previewId).innerHTML = `<img src="${e.target.result}">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function updatePipeGeometry() {
+            buildPipe3D();
+            generateAIPrompt();
+        }
+
+        // GENERATORE PROMPT IA
+        function generateAIPrompt() {
+            const title = document.getElementById('infoTitle').value;
+            const quote = document.getElementById('infoQuote').value;
+            const descMB = document.getElementById('infoDescMB').value;
+            const descGar = document.getElementById('infoDescGarofano').value;
+            const descMed = document.getElementById('infoDescMedal').value;
+            const descMP = document.getElementById('infoDescMouthpiece').value;
+
+            const model = document.getElementById('aiModel').value;
+            const renderStyle = document.getElementById('aiRenderStyle').value;
+
+            let prompt = `Pipe Grenci custom handcrafted luxury tobacco pipe dedicated to "${title}". `;
+            prompt += `Bowl: Hollow carved briarwood, ${descGar}. Top Rim: ${descMB}. `;
+            prompt += `Band/Ring: Metallic gold band with ${descMed}. `;
+            prompt += `Mouthpiece: Smooth acrylic bent mouthpiece with ${descMP}. `;
+            prompt += `Inscribed quote: "${quote}". `;
+            prompt += `Render Style: ${renderStyle}, highly detailed, 8k resolution, realistic textures, macro view`;
+
+            if(model === 'midjourney') {
+                prompt += ` --ar 16:9 --v 6.0 --style raw`;
+            } else if(model === 'stable') {
+                prompt += `, octane render, masterpiece, luxury photorealism`;
+            }
+
+            document.getElementById('promptOutput').value = prompt;
+        }
+
+        function copyPromptToClipboard() {
+            const text = document.getElementById('promptOutput');
+            text.select();
+            document.execCommand("copy");
+            alert("Prompt IA Pipe Grenci copiato negli appunti!");
+        }
+
+        function onWindowResize() {
+            const c1 = document.getElementById('canvas3d-main');
+            if(c1 && mainCamera) {
+                mainCamera.aspect = c1.clientWidth / c1.clientHeight;
+                mainCamera.updateProjectionMatrix();
+                mainRenderer.setSize(c1.clientWidth, c1.clientHeight);
+            }
+            const c2 = document.getElementById('canvas3d-single');
+            if(c2 && singleCamera) {
+                singleCamera.aspect = c2.clientWidth / c2.clientHeight;
+                singleCamera.updateProjectionMatrix();
+                singleRenderer.setSize(c2.clientWidth, c2.clientHeight);
+            }
+        }
+
+        function exportSTL() {
+            const exporter = new THREE.STLExporter();
+            const result = exporter.parse(pipeGroup, { binary: true });
+            downloadFile(new Blob([result], { type: 'application/octet-stream' }), 'pipe_grenci_pertini_3d.stl');
+        }
+
+        function downloadFile(blob, filename) {
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            mainControls.update();
+            singleControls.update();
+            mainRenderer.render(mainScene, mainCamera);
+            singleRenderer.render(singleScene, singleCamera);
+        }
+    </script>
+</body>
+</html>

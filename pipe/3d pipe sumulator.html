@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Pipe Simulator & Designer - Pertini Default</title>
+    <style>
+        :root {
+            --bg-dark: #121215;
+            --panel-bg: #1e1e24;
+            --accent: #d4a373;
+            --accent-hover: #faedcd;
+            --text-light: #f4f1de;
+            --border: #333;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-light); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+
+        /* Navigation Bar / Tabs */
+        nav { display: flex; background-color: #0c0c0e; border-bottom: 1px solid var(--border); }
+        nav button {
+            flex: 1; padding: 15px; background: none; border: none; color: #888;
+            font-size: 0.9rem; font-weight: bold; cursor: pointer; transition: 0.3s;
+        }
+        nav button.active, nav button:hover { color: var(--accent); background-color: var(--panel-bg); }
+
+        /* Main Container for 4 Windows */
+        .container { flex: 1; position: relative; overflow: hidden; }
+        .window { display: none; width: 100%; height: 100%; padding: 20px; overflow-y: auto; }
+        .window.active { display: flex; }
+
+        /* Window 1: 3D Viewport */
+        #w1 { flex-direction: column; padding: 0; position: relative; }
+        #canvas3d { width: 100%; height: 100%; display: block; }
+        .export-bar {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 15px; background: rgba(0,0,0,0.8); padding: 10px 20px; border-radius: 8px; border: 1px solid var(--border);
+        }
+
+        /* UI Controls & Forms */
+        .btn {
+            background-color: var(--accent); color: #111; border: none; padding: 10px 18px;
+            font-weight: bold; border-radius: 5px; cursor: pointer; transition: 0.2s;
+        }
+        .btn:hover { background-color: var(--accent-hover); }
+        .control-group { margin-bottom: 20px; background: var(--panel-bg); padding: 15px; border-radius: 8px; border: 1px solid var(--border); }
+        .control-group h3 { color: var(--accent); margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 5px; }
+        label { display: block; margin: 10px 0 5px; font-size: 0.8rem; color: #ccc; }
+        select, input[type="file"], input[type="range"] { width: 100%; padding: 8px; background: #0c0c0e; border: 1px solid var(--border); color: #fff; border-radius: 4px; }
+
+        /* Layout Grid for Window 2 */
+        #w2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+
+        /* Window 3: Infographic Card */
+        #w3 { justify-content: center; align-items: center; background: #0c0c0e; }
+        .info-card {
+            background: #fff; color: #222; width: 100%; max-width: 650px; border-radius: 12px;
+            padding: 30px; box-shadow: 0 15px 40px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 20px;
+        }
+        .info-header { border-bottom: 2px solid #d4a373; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .info-header h2 { font-size: 1.8rem; color: #333; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .info-item { background: #f8f9fa; padding: 10px; border-radius: 6px; border-left: 4px solid var(--accent); }
+        .info-item label { color: #666; margin: 0; font-weight: bold; font-size: 0.8rem;}
+        .info-item span { display: block; font-size: 1rem; font-weight: 600; color: #111; margin-top: 4px; }
+
+        /* Window 4: AI Prompt Generator */
+        #w4 { flex-direction: column; max-width: 850px; margin: 0 auto; gap: 15px; }
+        textarea { width: 100%; height: 200px; background: #0c0c0e; border: 1px solid var(--border); color: #80ff80; font-family: monospace; font-size: 1rem; padding: 15px; border-radius: 6px; resize: vertical;}
+    </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/STLExporter.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/OBJExporter.js"></script>
+</head>
+<body>
+
+    <nav>
+        <button class="tab-btn active" onclick="switchTab('w1')">1. Vista 3D Principale</button>
+        <button class="tab-btn" onclick="switchTab('w2')">2. Modifica Parti & Texture</button>
+        <button class="tab-btn" onclick="switchTab('w3')">3. Scheda Tecnica / Infografica</button>
+        <button class="tab-btn" onclick="switchTab('w4')">4. Generatore Prompt IA</button>
+    </nav>
+
+    <div class="container">
+        
+        <div id="w1" class="window active">
+            <div id="canvas3d"></div>
+            <div class="export-bar">
+                <button class="btn" onclick="exportSTL()">Esporta File STL</button>
+                <button class="btn" onclick="exportOBJ()">Esporta File OBJ</button>
+            </div>
+        </div>
+
+        <div id="w2" class="window">
+            
+            <div class="control-group">
+                <h3>1. Bocchino</h3>
+                <label>Forma del Bocchino</label>
+                <select id="mouthpieceShape" onchange="updatePipe()">
+                    <option value="straight">Dritto Cuneo</option>
+                    <option value="curved" selected>Curvato Anatomico (Pertini)</option>
+                    <option value="tapered">Conico Classico</option>
+                </select>
+
+                <label>Colore / Materiale Bocchino</label>
+                <select id="mouthpieceMat" onchange="updatePipe()">
+                    <option value="ebonite">Ebonite Nera Polita</option>
+                    <option value="acrylic">Acrilico Ambrato Translucido</option>
+                    <option value="tricolore" selected>Tricolore (Pertini)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <h3>2. Scultura Centrale (Fornello)</h3>
+                <label>Forma del Fornello</label>
+                <select id="bodyShape" onchange="updatePipe()">
+                    <option value="billiard">Billiard (Cilindrico)</option>
+                    <option value="apple" selected>Apple (Bombato, Pertini)</option>
+                    <option value="dublin">Dublin (Conico svasato)</option>
+                </select>
+
+                <label>Essenza Legno e Finitura</label>
+                <select id="woodType" onchange="updatePipe()">
+                    <option value="briar">Radica di Erica Fiammata</option>
+                    <option value="ebony">Ebano del Gabon</option>
+                    <option value="olive" selected>Legno d'Olivo Secolare (Light, Pertini)</option>
+                    <option value="rosewood">Palissandro Rosa</option>
+                </select>
+                
+                <label>Tinta del Legno</label>
+                <select id="woodColor" onchange="updatePipe()">
+                    <option value="natural">Naturale (Olivo)</option>
+                    <option value="brown">Marrone Chiaro (Radica)</option>
+                    <option value="red" selected>Rosso Scuro (Pertini)</option>
+                    <option value="black">Nero (Ebano)</option>
+                </select>
+
+                <label>Carica Immagine per Estrusione Rilievo (es. Nave, Montagna)</label>
+                <input type="file" id="centralImg" accept="image/*" onchange="handleImageUpload(event, 'central')">
+
+                <label>Intensità Estrusione Central</label>
+                <input type="range" id="centralExtrudeDepth" min="0" max="0.5" step="0.02" value="0.1" oninput="updatePipe()">
+            </div>
+
+            <div class="control-group">
+                <h3>3. Parte Terminale (Cannello/Ghiera)</h3>
+                <label>Profilo del Terminale</label>
+                <select id="terminalShape" onchange="updatePipe()">
+                    <option value="ring" selected>Ghiera ad Anello</option>
+                    <option value="flared">Raccordo Svasato</option>
+                    <option value="stepped">Profilo a Scalino</option>
+                </select>
+
+                <label>Carica Immagine per Estrusione (es. Bussola, Stella)</label>
+                <input type="file" id="terminalImg" accept="image/*" onchange="handleImageUpload(event, 'terminal')">
+
+                <label>Intensità Estrusione Terminale</label>
+                <input type="range" id="terminalExtrudeDepth" min="0" max="0.3" step="0.02" value="0.05" oninput="updatePipe()">
+            </div>
+        </div>
+
+        <div id="w3" class="window">
+            <div class="info-card">
+                <div class="info-header">
+                    <h2>Scheda Tecnica Pipa</h2>
+                    <span style="font-size:0.8rem; color:#888;">ID PROGETTO: PIP-PERTINI-REF</span>
+                </div>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>Stile Fornello</label>
+                        <span id="infoBodyShape">Apple</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Essenza Legno Pregiato</label>
+                        <span id="infoWoodType">Legno d'Olivo Secolare</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Tinta del Legno</label>
+                        <span id="infoWoodColor">Rosso Scuro</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Forma Bocchino</label>
+                        <span id="infoMouthpiece">Curvato Anatomico</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Materiale Bocchino</label>
+                        <span id="infoMouthpieceMat">Tricolore (IT flag)</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Incisione Centrale</label>
+                        <span id="infoCentralExtrude">Nessun Rilievo</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Terminal Dettaglio</label>
+                        <span id="infoTerminalShape">Ghiera ad Anello</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Esportazione 3D</label>
+                        <span>Attiva (STL / OBJ)</span>
+                    </div>
+                </div>
+                <button class="btn" style="align-self: flex-end;" onclick="window.print()">Stampa / Esporta PDF</button>
+            </div>
+        </div>
+
+        <div id="w4" class="window">
+            <div class="control-group">
+                <h3>Parametri Generazione IA</h3>
+                <label>Motore Target</label>
+                <select id="aiTarget" onchange="updatePrompt()">
+                    <option value="midjourney" selected>Midjourney v6.0</option>
+                    <option value="dalle">DALL-E 3</option>
+                    <option value="stable">Stable Diffusion XL</option>
+                </select>
+
+                <label>Stile Fotografico / Rendering</label>
+                <select id="aiStyle" onchange="updatePrompt()">
+                    <option value="macro" selected>Macro 8k, Rembrandt lighting</option>
+                    <option value="cinematic">Cinematic 35mm, smoky, warm</option>
+                    <option value="catalog">Catalogo Artigianale Minimalista, neutral</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <h3>Prompt Generato</h3>
+                <textarea id="promptOutput" readonly></textarea>
+                <button class="btn" style="margin-top:10px;" onclick="copyPrompt()">Copia Prompt nella Clipboard</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let scene, camera, renderer, controls;
+        let pipeGroup, mouthpieceMesh, bodyMesh, terminalMesh;
+        let textures = { centralMap: null, terminalMap: null, tricoloreTex: null };
+
+        // Inizializzazione applicazione
+        window.onload = function() {
+            init3D();
+            buildPipe3D(); // Build initial state
+            updateAllDataPanels(); // Force transfer data to all tabs
+            animate();
+        };
+
+        function init3D() {
+            const container = document.getElementById('canvas3d');
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0c0c0e);
+
+            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(0, 5, 15);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+
+            // Luci
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffeedd, 1);
+            dirLight.position.set(10, 20, 10);
+            scene.add(dirLight);
+
+            // Caricamento texture tricolore per Pertini
+            const textureLoader = new THREE.TextureLoader();
+            // In a real environment, you'd use a 1x3 vertical texture (Green, White, Red)
+            // For now, let's create a dynamic gradient texture or assume a loaded image.
+            const canvas = document.createElement('canvas');
+            canvas.width = 100;
+            canvas.height = 300;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#008C45'; ctx.fillRect(0, 0, 100, 100); // Green
+            ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 100, 100, 100); // White
+            ctx.fillStyle = '#CD212A'; ctx.fillRect(0, 200, 100, 100); // Red
+            textures.tricoloreTex = new THREE.CanvasTexture(canvas);
+            textures.tricoloreTex.rotation = Math.PI / 2; // Orient correctly on the mouthpiece
+
+            pipeGroup = new THREE.Group();
+            scene.add(pipeGroup);
+
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        // --- Core 3D Reconstruction ---
+        function buildPipe3D() {
+            // Rimuovi vecchie mesh se esistenti
+            while(pipeGroup.children.length > 0) { 
+                pipeGroup.remove(pipeGroup.children[0]); 
+            }
+
+            const bodyShapeVal = document.getElementById('bodyShape').value;
+            const mouthpieceShapeVal = document.getElementById('mouthpieceShape').value;
+            const woodColorVal = document.getElementById('woodColor').value;
+
+            // 1. SCULTURA CENTRALE (Fornello) - default Apple
+            let bodyGeo;
+            if(bodyShapeVal === 'billiard') {
+                bodyGeo = new THREE.CylinderGeometry(1.2, 1, 2.5, 32, 32);
+            } else if(bodyShapeVal === 'apple') {
+                bodyGeo = new THREE.SphereGeometry(1.3, 32, 32);
+                bodyGeo.scale(1, 0.9, 1); // Make it slightly wider/shorter
+            } else {
+                bodyGeo = new THREE.ConeGeometry(1.4, 2.6, 32, 32);
+            }
+            
+            const bodyMat = new THREE.MeshStandardMaterial({
+                color: getWoodColor(woodColorVal),
+                roughness: 0.3,
+                bumpMap: textures.centralMap,
+                bumpScale: parseFloat(document.getElementById('centralExtrudeDepth').value)
+            });
+            bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
+            bodyMesh.position.set(-2, 1, 0);
+            pipeGroup.add(bodyMesh);
+
+            // 2. PARTE TERMINALE (Cannello)
+            const terminalGeo = new THREE.CylinderGeometry(0.5, 0.6, 2, 32, 32);
+            terminalGeo.rotateZ(Math.PI / 2);
+            const terminalMat = new THREE.MeshStandardMaterial({
+                color: getWoodColor(woodColorVal),
+                roughness: 0.4,
+                bumpMap: textures.terminalMap,
+                bumpScale: parseFloat(document.getElementById('terminalExtrudeDepth').value)
+            });
+            terminalMesh = new THREE.Mesh(terminalGeo, terminalMat);
+            terminalMesh.position.set(0, 0, 0);
+            pipeGroup.add(terminalMesh);
+
+            // 3. BOCCHINO (Sempre liscio, nessuna mappa di rilievo, Tricolore default)
+            let mpGeo = new THREE.CylinderGeometry(0.3, 0.45, 2.5, 32);
+            mpGeo.rotateZ(Math.PI / 2);
+            
+            const mouthpieceMatVal = document.getElementById('mouthpieceMat').value;
+            let mpMat;
+            if (mouthpieceMatVal === 'tricolore') {
+                mpMat = new THREE.MeshStandardMaterial({
+                    map: textures.tricoloreTex,
+                    roughness: 0.1,
+                    metalness: 0.2
+                });
+            } else {
+                mpMat = new THREE.MeshStandardMaterial({
+                    color: getMouthpieceColor(mouthpieceMatVal),
+                    roughness: 0.1,
+                    metalness: 0.2
+                });
+            }
+
+            mouthpieceMesh = new THREE.Mesh(mpGeo, mpMat);
+            mouthpieceMesh.position.set(2.2, 0, 0);
+            pipeGroup.add(mouthpieceMesh);
+        }
+
+        // --- Helper Color Functions ---
+        function getWoodColor(tinta) {
+            if(tinta === 'natural') return 0xc2a649; // Olive natural
+            if(tinta === 'brown') return 0x8b4513; // Light brown
+            if(tinta === 'red') return 0x800000; // Pertini red/dark red
+            if(tinta === 'black') return 0x111111; // Ebony black
+            return 0x8b4513; // default
+        }
+
+        function getMouthpieceColor(mat) {
+            if(mat === 'ebonite') return 0x050505;
+            if(mat === 'acrylic') return 0xd97724;
+            return 0x050505;
+        }
+
+        // --- Core Logic for Tab Data Transfer (Solving User Issue) ---
+        function updatePipe() {
+            buildPipe3D(); // Redraw 3D with new settings
+            updateAllDataPanels(); // Force transfer data to all tabs
+        }
+
+        function updateAllDataPanels() {
+            updateInfographic();
+            updatePrompt();
+        }
+
+        // Gestione Caricamento Immagini per Estrusione/Bump Map
+        function handleImageUpload(event, targetPart) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const textureLoader = new THREE.TextureLoader();
+                    textureLoader.load(e.target.result, function(tex) {
+                        if(targetPart === 'central') textures.centralMap = tex;
+                        if(targetPart === 'terminal') textures.terminalMap = tex;
+                        buildPipe3D(); // Rebuild with new map
+                        updateAllDataPanels(); // Update dynamic info
+                    });
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Trasferimento Dati alla Finestra 3 (Infografica)
+        function updateInfographic() {
+            if (!document.getElementById('infoBodyShape')) return; // Check if tab is loaded
+
+            document.getElementById('infoBodyShape').innerText = document.getElementById('bodyShape').options[document.getElementById('bodyShape').selectedIndex].text;
+            document.getElementById('infoWoodType').innerText = document.getElementById('woodType').options[document.getElementById('woodType').selectedIndex].text;
+            document.getElementById('infoWoodColor').innerText = document.getElementById('woodColor').options[document.getElementById('woodColor').selectedIndex].text;
+            document.getElementById('infoMouthpiece').innerText = document.getElementById('mouthpieceShape').options[document.getElementById('mouthpieceShape').selectedIndex].text;
+            document.getElementById('infoMouthpieceMat').innerText = document.getElementById('mouthpieceMat').options[document.getElementById('mouthpieceMat').selectedIndex].text;
+            document.getElementById('infoTerminalShape').innerText = document.getElementById('terminalShape').options[document.getElementById('terminalShape').selectedIndex].text;
+            
+            const depth = document.getElementById('centralExtrudeDepth').value;
+            const mapLoaded = textures.centralMap !== null;
+            document.getElementById('infoCentralExtrude').innerText = mapLoaded ? `Rilievo (${depth}mm) Trama Caricata` : `Nessun Rilievo`;
+        }
+
+        // Generazione Prompt IA (Finestra 4) - Fixed to be visible and correct
+        function updatePrompt() {
+            if (!document.getElementById('promptOutput')) return; // Check if tab is loaded
+
+            const wood = document.getElementById('woodType').options[document.getElementById('woodType').selectedIndex].text;
+            const tinta = document.getElementById('woodColor').options[document.getElementById('woodColor').selectedIndex].text;
+            const body = document.getElementById('bodyShape').options[document.getElementById('bodyShape').selectedIndex].text;
+            const mpMat = document.getElementById('mouthpieceMat').options[document.getElementById('mouthpieceMat').selectedIndex].text;
+            const style = document.getElementById('aiStyle').options[document.getElementById('aiStyle').selectedIndex].text;
+            const target = document.getElementById('aiTarget').value;
+
+            // Specific mention for Tricolore
+            let mpDesc = mpMat;
+            if (mpMat === 'Tricolore (IT flag)') mpDesc = 'tricolor Italian flag colors (green, white, red)';
+
+            let prompt = `Highly detailed photograph of an artisan handcrafted tobacco pipe, ${body} bowl shape, made of premium ${wood} wood stained in a deep ${tinta} color. Smooth shiny ${mpDesc} mouthpiece. `;
+            
+            // Central Map mention if loaded (user provided nave, montagna images)
+            if (textures.centralMap) prompt += `Complex relief carving featuring a specific pattern (like a ship, mountain, or star) extruded from the central bowl. `;
+            
+            prompt += `${style}, octane render, highly photorealistic, studio setting`;
+            
+            if(target === 'midjourney') {
+                prompt += ` --ar 16:9 --v 6.0 --style raw --q 2 --chaos 10`;
+            } else if(target === 'stable') {
+                prompt += `, incredibly detailed, masterpiece, 8k resolution`;
+            }
+
+            document.getElementById('promptOutput').value = prompt; // Explicitly set value to be visible
+        }
+
+        function copyPrompt() {
+            const text = document.getElementById('promptOutput');
+            text.select();
+            document.execCommand("copy");
+            alert("Prompt IA copiato negli appunti!");
+        }
+
+        // Esportazione File 3D
+        function exportSTL() {
+            const exporter = new THREE.STLExporter();
+            const result = exporter.parse(pipeGroup, { binary: true });
+            downloadFile(new Blob([result], { type: 'application/octet-stream' }), 'pipa_progetto_pertini.stl');
+        }
+
+        function exportOBJ() {
+            const exporter = new THREE.OBJExporter();
+            const result = exporter.parse(pipeGroup);
+            downloadFile(new Blob([result], { type: 'text/plain' }), 'pipa_progetto_pertini.obj');
+        }
+
+        function downloadFile(blob, filename) {
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+        }
+
+        // Gestione Tab / Finestre
+        function switchTab(windowId) {
+            document.querySelectorAll('.window').forEach(w => w.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            
+            document.getElementById(windowId).classList.add('active');
+            event.target.classList.add('active');
+
+            if(windowId === 'w1') onWindowResize();
+            if(windowId === 'w3') updateInfographic(); // Force refresh infographic when viewing
+            if(windowId === 'w4') updatePrompt(); // Force refresh prompt when viewing
+        }
+
+        function onWindowResize() {
+            const container = document.getElementById('canvas3d');
+            if(!container) return;
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>

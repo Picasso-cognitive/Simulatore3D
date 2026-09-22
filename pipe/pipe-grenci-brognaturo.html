@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pipe Grenci Brognaturo — Atelier · configuratore</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#211812; --bg2:#2a1f16; --panel:#312418; --panel2:#3a2c1d;
+    --ink:#f2e6d4; --ink-soft:#c9b499; --line:rgba(214,176,120,.16);
+    --line2:rgba(214,176,120,.28); --amber:#d0913f; --amber-deep:#a86a24;
+    --ember:#c23b30; --ok:#7ea862;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(1200px 600px at 78% -8%, rgba(208,145,63,.10), transparent 60%),
+      radial-gradient(900px 500px at -5% 110%, rgba(194,59,48,.07), transparent 55%),
+      var(--bg);
+    color:var(--ink); font-family:"Hanken Grotesk",system-ui,sans-serif;
+    line-height:1.5; -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit}
+  /* Header */
+  header{
+    display:flex; align-items:flex-end; justify-content:space-between; gap:24px;
+    padding:26px clamp(18px,4vw,44px) 20px; flex-wrap:wrap;
+    border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(42,31,22,.7), transparent);
+  }
+  .brand{display:flex; flex-direction:column; gap:2px}
+  .brand .top{font-size:.72rem; letter-spacing:.28em; color:var(--amber); font-weight:600}
+  .brand h1{
+    font-family:"Fraunces",serif; font-weight:900; font-optical-sizing:auto;
+    font-size:clamp(1.9rem,4.6vw,3.1rem); line-height:.95; margin:2px 0 0;
+    letter-spacing:-.01em;
+  }
+  .brand h1 em{font-style:italic; font-weight:400; color:var(--amber)}
+  .brand .sub{color:var(--ink-soft); font-size:.9rem; margin-top:6px}
+  .tools{display:flex; gap:8px; flex-wrap:wrap}
+  .tools button, .filelabel{
+    font:inherit; font-size:.82rem; font-weight:600; color:var(--ink);
+    background:var(--panel); border:1px solid var(--line2); border-radius:10px;
+    padding:9px 13px; cursor:pointer; transition:.15s;
+  }
+  .tools button:hover,.filelabel:hover{border-color:var(--amber); color:#fff}
+  .filelabel input{display:none}
+
+  /* Layout */
+  main{
+    display:grid; grid-template-columns:minmax(360px,1fr) minmax(360px,1.05fr);
+    gap:clamp(16px,2.5vw,34px); padding:clamp(16px,3vw,34px) clamp(18px,4vw,44px) 60px;
+    align-items:start;
+  }
+  @media (max-width:960px){ main{grid-template-columns:1fr} }
+
+  /* Stage */
+  .stage{position:sticky; top:16px; display:flex; flex-direction:column; gap:16px}
+  @media (max-width:960px){ .stage{position:static} }
+  .preview{
+    background:
+      radial-gradient(120% 90% at 50% 12%, #3b2c1d, #241a12 78%);
+    border:1px solid var(--line2); border-radius:var(--radius); overflow:hidden;
+    box-shadow:inset 0 1px 0 rgba(255,220,170,.06), 0 24px 60px -30px #000;
+  }
+  .preview svg{display:block; width:100%; height:auto}
+  .plate{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:10px 16px; border-top:1px solid var(--line);
+    font-family:"Fraunces",serif; font-size:.95rem; color:var(--ink-soft);
+  }
+  .plate b{color:var(--ink); font-weight:600}
+
+  .spec{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:16px 18px;
+  }
+  .spec h3{
+    margin:0 0 12px; font-family:"Fraunces",serif; font-weight:600; font-size:1.05rem;
+    display:flex; align-items:center; gap:9px;
+  }
+  .spec h3::before{content:""; width:8px; height:8px; border-radius:50%; background:var(--amber)}
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:2px 22px}
+  @media (max-width:520px){ .grid{grid-template-columns:1fr} }
+  .row{display:flex; justify-content:space-between; gap:10px; padding:6px 0;
+    border-bottom:1px dashed var(--line); font-size:.9rem}
+  .row span{color:var(--ink-soft)} .row b{font-weight:600; text-align:right}
+
+  /* Controls */
+  .controls{display:flex; flex-direction:column; gap:14px}
+  .card{
+    background:linear-gradient(180deg, var(--panel), var(--bg2));
+    border:1px solid var(--line); border-radius:var(--radius); padding:16px 18px;
+  }
+  .card > .head{display:flex; align-items:baseline; gap:10px; margin-bottom:12px}
+  .card .num{
+    font-family:"Fraunces",serif; font-weight:900; font-size:1rem; color:var(--amber);
+    width:1.7em; flex:none;
+  }
+  .card .head h2{margin:0; font-size:1.02rem; font-weight:700}
+  .card .head p{margin:0; color:var(--ink-soft); font-size:.82rem}
+  .card .head .htxt{display:flex; flex-direction:column}
+
+  .seg{display:flex; flex-wrap:wrap; gap:8px}
+  .seg button, .swatch, .chip{
+    font:inherit; cursor:pointer; border-radius:10px; transition:.14s;
+    border:1px solid var(--line2); background:var(--panel2); color:var(--ink);
+  }
+  .seg button{padding:9px 13px; font-size:.85rem; font-weight:600; display:flex; flex-direction:column; gap:2px; align-items:flex-start}
+  .seg button small{font-weight:400; color:var(--ink-soft); font-size:.72rem}
+  .seg button:hover{border-color:var(--amber)}
+  .seg button.on{background:var(--amber); color:#241a12; border-color:var(--amber)}
+  .seg button.on small{color:#4a3416}
+
+  /* shape gallery */
+  .gallery{display:grid; grid-template-columns:repeat(auto-fill,minmax(148px,1fr)); gap:10px}
+  .shape{
+    text-align:left; padding:8px; border:1px solid var(--line2); border-radius:12px;
+    background:var(--panel2); cursor:pointer; transition:.14s; color:var(--ink);
+  }
+  .shape:hover{border-color:var(--amber)}
+  .shape.on{border-color:var(--amber); box-shadow:0 0 0 1px var(--amber) inset}
+  .shape svg{width:100%; height:64px; display:block}
+  .shape .nm{font-weight:700; font-size:.86rem; margin-top:4px}
+  .shape .df{font-size:.72rem; color:var(--ink-soft); line-height:1.35; margin-top:2px}
+
+  /* swatches */
+  .swatches{display:flex; flex-wrap:wrap; gap:8px}
+  .swatch{width:40px; height:40px; padding:0; position:relative}
+  .swatch.on{outline:2px solid var(--amber); outline-offset:2px}
+  .swatch .tri{position:absolute; inset:4px; border-radius:6px; overflow:hidden}
+  .colorpick{display:flex; align-items:center; gap:8px; margin-top:10px; font-size:.82rem; color:var(--ink-soft)}
+  input[type=color]{width:38px; height:32px; border:1px solid var(--line2); border-radius:8px; background:none; cursor:pointer; padding:2px}
+
+  label.field{display:flex; flex-direction:column; gap:5px; font-size:.8rem; color:var(--ink-soft); margin-top:10px}
+  input[type=text], select{
+    font:inherit; font-size:.9rem; color:var(--ink); background:var(--panel2);
+    border:1px solid var(--line2); border-radius:9px; padding:9px 11px;
+  }
+  input[type=text]::placeholder{color:#8a7658}
+  .chips{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px}
+  .chip{padding:6px 10px; font-size:1rem; line-height:1}
+  .chip.on{background:var(--amber); border-color:var(--amber)}
+  .subrow{display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin-top:10px}
+  .toggle{display:flex; align-items:center; gap:8px; font-size:.85rem; cursor:pointer}
+  .toggle input{width:18px; height:18px; accent-color:var(--amber)}
+
+  .presets{display:flex; gap:10px; flex-wrap:wrap}
+  .preset{
+    flex:1 1 150px; text-align:left; padding:11px 13px; border-radius:12px; cursor:pointer;
+    background:linear-gradient(180deg,#3a2a1a,#2c2015); border:1px solid var(--line2); color:var(--ink); transition:.14s;
+  }
+  .preset:hover{border-color:var(--amber)}
+  .preset b{display:block; font-family:"Fraunces",serif; font-size:.98rem}
+  .preset small{color:var(--ink-soft); font-size:.76rem}
+
+  .note{font-size:.78rem; color:var(--ink-soft); margin-top:10px; line-height:1.45}
+  footer{padding:24px clamp(18px,4vw,44px) 50px; color:var(--ink-soft); font-size:.8rem; border-top:1px solid var(--line)}
+
+  @media print{
+    header .tools, .controls{display:none!important}
+    main{grid-template-columns:1fr; padding:0}
+    body{background:#fff; color:#000}
+    .preview{border-color:#ccc}
+    .spec,.card{background:#fff; border-color:#ccc; color:#000}
+    .row span,.row b{color:#000}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="top">ATELIER · BROGNATURO</div>
+    <h1>Pipe Grenci <em>Brognaturo</em></h1>
+    <div class="sub">Configuratore artigianale · progetta la tua pipa dal fornello al bocchino</div>
+  </div>
+  <div class="tools">
+    <button id="btnPng">Scarica anteprima</button>
+    <button id="btnPrint">Stampa scheda</button>
+    <button id="btnSave">Salva progetto</button>
+    <label class="filelabel">Apri progetto<input type="file" id="fileLoad" accept="application/json"></label>
+  </div>
+</header>
+
+<main>
+  <!-- STAGE -->
+  <section class="stage">
+    <div class="preview">
+      <div id="stageSvg"></div>
+      <div class="plate">
+        <span id="plateName">La tua pipa</span>
+        <span><b id="plateLen">—</b> mm</span>
+      </div>
+    </div>
+    <div class="spec">
+      <h3>Scheda tecnica</h3>
+      <div class="grid" id="specGrid"></div>
+    </div>
+  </section>
+
+  <!-- CONTROLS -->
+  <section class="controls">
+    <div class="card">
+      <div class="head"><span class="num">◆</span><div class="htxt"><h2>Modelli di partenza</h2><p>Carica un progetto e poi personalizzalo</p></div></div>
+      <div class="presets" id="presets"></div>
+    </div>
+
+    <div class="card">
+      <div class="head"><span class="num">1</span><div class="htxt"><h2>Forma del fornello</h2><p>Scegli la famiglia: ogni forma ha la sua definizione</p></div></div>
+      <div class="gallery" id="gallery"></div>
+    </div>
+
+    <div class="card">
+      <div class="head"><span class="num">2</span><div class="htxt"><h2>Curvatura</h2><p>Il profilo del bocchino</p></div></div>
+      <div class="seg" id="segBend"></div>
+    </div>
+
+    <div class="card">
+      <div class="head"><span class="num">3</span><div class="htxt"><h2>Durata della fumata</h2><p>Calibra la camera del fornello sul tempo che vuoi</p></div></div>
+      <div class="seg" id="segDur"></div>
+      <div class="note" id="durNote"></div>
+    </div>
+
+    <div class="card">
+      <div class="head"><span class="num">4</span><div class="htxt"><h2>Bocchino</h2><p>Stile e fino a tre colori</p></div></div>
+      <div class="seg" id="segStem"></div>
+      <div class="subrow" id="stemColors">
+        <div class="colorpick">Colore 1 <input type="color" id="c1"></div>
+        <div class="colorpick">Colore 2 <input type="color" id="c2"></div>
+        <div class="colorpick">Colore 3 <input type="color" id="c3"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="head"><span class="num">5</span><div class="htxt"><h2>Vera (ghiera)</h2><p>La fascetta tra gambo e bocchino, con incisione</p></div></div>
+      <div class="seg" id="segBand"></div>
+      <label class="field">Incisione sulla vera
+        <input type="text" id="bandText" maxlength="18" placeholder="es. AL VALORE">
+      </label>
+    </div>
+
+    <div class="card">
+      <div class="head"><span class="num">6</span><div class="htxt"><h2>Finitura &amp; texture</h2><p>Liscia, sabbiata, rusticata, scolpita o mista</p></div></div>
+      <div class="seg" id="segTex"></div>
+      <div class="note">La <b>mista</b> lascia liscia la faccia centrale sopra il fornello e rustica i fianchi.</div>
+    </div>
+
+    <div class="card">
+      <div class="head"><span class="num">7</span><div class="htxt"><h2>Colore del corpo</h2><p>Tinta uniforme o combinazioni particolari</p></div></div>
+      <div class="swatches" id="swatches"></div>
+      <div class="colorpick">Personalizzato <input type="color" id="bodyCustom"></div>
+    </div>
+
+    <div class="card">
+      <div class="head"><span class="num">8</span><div class="htxt"><h2>Cima sopra il fornello</h2><p>Il bordo superiore</p></div></div>
+      <div class="seg" id="segRim"></div>
+      <div class="subrow">
+        <label class="toggle"><input type="checkbox" id="whitePeak"> Vetta più chiara / bianca</label>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="head"><span class="num">9</span><div class="htxt"><h2>Rilievi &amp; dedica</h2><p>Bassorilievo sul fornello e nome del pezzo</p></div></div>
+      <div class="chips" id="reliefChips"></div>
+      <label class="field">Simbolo/testo del rilievo
+        <input type="text" id="reliefText" maxlength="4" placeholder="🎤 o una lettera">
+      </label>
+      <label class="field">Dedica / nome della pipa
+        <input type="text" id="dedica" maxlength="34" placeholder="es. A Sandro Pertini">
+      </label>
+    </div>
+
+    <div class="card">
+      <div class="note">Le misure sono stime ingegneristiche indicative (spessore pareti ~7&nbsp;mm, densità tabacco ~0,25&nbsp;g/cm³): un punto di partenza per il tornio, non una quota di collaudo. L'anteprima è uno schema vettoriale stilizzato, non un rendering fotorealistico.</div>
+    </div>
+  </section>
+</main>
+
+<footer>Pipe Grenci Brognaturo — configuratore d'atelier. Progetto salvabile in locale (nessun dato inviato).</footer>
+
+<script>
+/* ---------- Data ---------- */
+const SHAPES = [
+  {id:'billiard', nm:'Billiard', df:'La classica: fornello cilindrico, gambo e bocchino in linea. L\u2019equilibrio di riferimento.'},
+  {id:'dublin',   nm:'Dublin',   df:'Fornello troncoconico svasato verso l\u2019alto. Slanciata ed elegante.'},
+  {id:'apple',    nm:'Apple / Mela', df:'Fornello tondo a mela, morbido e compatto.'},
+  {id:'bulldog',  nm:'Bulldog',  df:'Doppio cono con spigolo a met\u00e0, gambo a diamante. Carattere deciso.'},
+  {id:'poker',    nm:'Poker',    df:'Fondo piatto: sta in piedi da sola sul tavolo.'},
+  {id:'canadese', nm:'Canadese', df:'Gambo ovale lungo, bocchino corto a sella.'},
+  {id:'corta',    nm:'Corta', df:'Tascabile (nose-warmer): gambo e bocchino ridotti al minimo.'},
+  {id:'churchwarden', nm:'Churchwarden', df:'Bocchino lunghissimo: fumata fresca e lenta.'},
+];
+const FAM = {
+  billiard:{shank:52,stem:60,shape:'billiard'},
+  dublin:{shank:52,stem:60,shape:'dublin'},
+  apple:{shank:50,stem:60,shape:'apple'},
+  bulldog:{shank:52,stem:60,shape:'bulldog'},
+  poker:{shank:48,stem:58,shape:'poker'},
+  canadese:{shank:98,stem:30,shape:'billiard'},
+  corta:{shank:26,stem:32,shape:'billiard'},
+  churchwarden:{shank:56,stem:158,shape:'billiard'},
+};
+const BENDS = [{id:'dritta',nm:'Dritta',f:0},{id:'mezza',nm:'Mezza curva',f:.2},{id:'curva',nm:'Curva',f:.42}];
+const DURS = [
+  {min:15,dC:16,hC:28,lbl:'15 min'},
+  {min:30,dC:18,hC:36,lbl:'30 min'},
+  {min:60,dC:20,hC:44,lbl:'1 ora'},
+  {min:90,dC:22,hC:52,lbl:'1 ora \u00bd'},
+];
+const STEMS = [
+  {id:'classico',nm:'Classico nero',sub:'ebanite'},
+  {id:'random',nm:'Random',sub:'macchie di colore'},
+  {id:'long',nm:'Longitudinale',sub:'righe in lunghezza'},
+  {id:'trasv',nm:'Trasversale',sub:'righe di traverso'},
+];
+const BANDS = [
+  {id:'none',nm:'Nessuna'},{id:'argento',nm:'Argento',a:'#dfe2e6',b:'#9aa0a8'},
+  {id:'oro',nm:'Oro',a:'#f4d98a',b:'#c69a34'},{id:'ottone',nm:'Ottone',a:'#e6c877',b:'#a9812c'},
+  {id:'legno',nm:'Legno',a:'#a5763f',b:'#6d4a22'},{id:'corno',nm:'Corno',a:'#4a4038',b:'#241d17'},
+];
+const TEX = [{id:'liscia',nm:'Liscia'},{id:'sabbiata',nm:'Sabbiata'},{id:'rusticata',nm:'Rusticata'},{id:'scolpita',nm:'Scolpita'},{id:'mista',nm:'Mista'}];
+const BODIES = [
+  {id:'radica',nm:'Radica naturale',d:'#7a3f18',l:'#bd7433'},
+  {id:'moro',nm:'Testa di moro',d:'#31200f',l:'#5a3a20'},
+  {id:'nero',nm:'Nero satinato',d:'#151311',l:'#333029'},
+  {id:'garofano',nm:'Rosso garofano',d:'#7d0f18',l:'#c22633'},
+  {id:'bosco',nm:'Verde bosco',d:'#183221',l:'#2e5a37'},
+  {id:'notte',nm:'Blu notte',d:'#131f38',l:'#264a7e'},
+  {id:'miele',nm:'Miele / ocra',d:'#875612',l:'#cf9a30'},
+  {id:'tricolore',nm:'Tricolore',tri:true},
+];
+const RIMS = [{id:'piatta',nm:'Piatta'},{id:'bombata',nm:'Bombata'},{id:'montagna',nm:'Scolpita a montagna'}];
+const RELIEFS = ['\uD83C\uDFA4','\uD83C\uDF39','\u2B50','\uD83C\uDFB5','\u2693','\uD83C\uDF43','\uD83D\uDD25','\u26F0\uFE0F'];
+
+/* ---------- State ---------- */
+let S = {
+  fam:'billiard', bend:'mezza', dur:30,
+  stem:'classico', c1:'#b3121f', c2:'#f2f2f2', c3:'#0a7a3a',
+  band:'none', bandText:'',
+  tex:'liscia', body:'radica', bodyCustom:'#8a5a2a',
+  rim:'piatta', whitePeak:false,
+  relief:'', dedica:''
+};
+
+/* ---------- Color utils ---------- */
+function hexToRgb(h){h=h.replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');return{r:parseInt(h.substr(0,2),16),g:parseInt(h.substr(2,2),16),b:parseInt(h.substr(4,2),16)};}
+function rgbToHex(r,g,b){const c=n=>Math.max(0,Math.min(255,Math.round(n))).toString(16).padStart(2,'0');return '#'+c(r)+c(g)+c(b);}
+function shade(hex,amt){const{r,g,b}=hexToRgb(hex);const f=amt<0?0:255;const p=Math.abs(amt);return rgbToHex(r+(f-r)*p,g+(f-g)*p,b+(f-b)*p);}
+
+/* ---------- Geometry helpers ---------- */
+function pt(x,y){return{x,y};}
+function quad(a,c,b,t){const u=1-t;return{x:u*u*a.x+2*u*t*c.x+t*t*b.x,y:u*u*a.y+2*u*t*c.y+t*t*b.y};}
+function quadT(a,c,b,t){const u=1-t;return{x:2*u*(c.x-a.x)+2*t*(b.x-c.x),y:2*u*(c.y-a.y)+2*t*(b.y-c.y)};}
+
+/* bowl silhouette path */
+function bowlPath(cx,baseY,w,h,shape){
+  const L=cx-w/2,R=cx+w/2,T=baseY-h,B=baseY;
+  if(shape==='dublin'){
+    const tw=w*1.16,bw=w*.82,r=w*.08;
+    return `M ${cx-bw/2} ${B} L ${cx-tw/2+r} ${T} Q ${cx-tw/2} ${T} ${cx-tw/2} ${T} L ${cx+tw/2} ${T} Q ${cx+tw/2} ${T} ${cx+tw/2-r} ${T} L ${cx+bw/2} ${B} Z`;
+  }
+  if(shape==='apple'){
+    const tw=w*.72,mw=w*1.02,bw=w*.68;
+    return `M ${cx-bw/2} ${B} C ${cx-mw/2} ${B-h*.35} ${cx-mw/2} ${B-h*.72} ${cx-tw/2} ${T} `+
+           `Q ${cx} ${T-h*.05} ${cx+tw/2} ${T} C ${cx+mw/2} ${B-h*.72} ${cx+mw/2} ${B-h*.35} ${cx+bw/2} ${B} Z`;
+  }
+  if(shape==='bulldog'){
+    const tw=w*.98,mw=w*1.14,bw=w*.5,my=B-h*.46;
+    return `M ${cx-bw/2} ${B} L ${cx-mw/2} ${my} L ${cx-tw/2} ${T} L ${cx+tw/2} ${T} L ${cx+mw/2} ${my} L ${cx+bw/2} ${B} Z`;
+  }
+  // billiard / poker (flat bottom, gentle taper)
+  const r=w*.24, botW=(shape==='poker')?w*1.02:w*.94;
+  const bl=cx-botW/2, br=cx+botW/2;
+  return `M ${bl} ${B} L ${L} ${T+r} Q ${L} ${T} ${L+r} ${T} L ${R-r} ${T} Q ${R} ${T} ${R} ${T+r} L ${br} ${B} Z`;
+}
+
+/* stem tapered (possibly curved) polygon + samples */
+function stemGeom(x0,y0,len,bendF,wStart,wEnd){
+  const a=pt(x0,y0), b=pt(x0+len,y0+ bendF*len*0.9 );
+  const c=pt(x0+len*0.55, y0+ bendF*len*1.15 );
+  const N=26, top=[],bot=[],mid=[];
+  for(let i=0;i<=N;i++){
+    const t=i/N, p=quad(a,c,b,t), tan=quadT(a,c,b,t);
+    const m=Math.hypot(tan.x,tan.y)||1, nx=-tan.y/m, ny=tan.x/m;
+    const w=(wStart+(wEnd-wStart)*t)/2;
+    top.push(pt(p.x+nx*w,p.y+ny*w)); bot.push(pt(p.x-nx*w,p.y-ny*w));
+    mid.push({x:p.x,y:p.y,nx,ny,w:w*2});
+  }
+  let d='M '+top.map(p=>p.x.toFixed(1)+' '+p.y.toFixed(1)).join(' L ');
+  d+=' L '+bot.slice().reverse().map(p=>p.x.toFixed(1)+' '+p.y.toFixed(1)).join(' L ')+' Z';
+  return {d, mid, bit:b};
+}
+
+/* ---------- Main render ---------- */
+let UID=0;
+function buildPipe(st, mini){
+  const fam=FAM[st.fam], dur=DURS.find(d=>d.min===st.dur)||DURS[1];
+  const wall=7, base=12;
+  const extDia=dur.dC+2*wall, extH=dur.hC+base+4;
+  const bendF=(BENDS.find(b=>b.id===st.bend)||BENDS[0]).f;
+  const bandW = st.band==='none'?0:5;
+
+  // fit scale horizontally & vertically
+  const spanMM = extDia + fam.shank + bandW + fam.stem + 8;
+  let mm = Math.min(3.15, 905/spanMM, 350/extH);
+  if(mini) mm = Math.min(2.0, 260/spanMM, 120/extH);
+
+  const VW=mini?300:1000, VH=mini?150:560;
+  const bowlW=extDia*mm, bowlH=extH*mm;
+  const leftMargin = mini?18:56;
+  const cx=leftMargin+bowlW/2;
+  const baseY=(st.fam==='poker') ? (VH- (mini?18:70)) : (mini? VH*0.62+bowlH*0.5 : 300+bowlH*0.5);
+  const topY=baseY-bowlH;
+
+  const shankH=Math.max(dur.dC*0.86,15)*mm;
+  const shankCY=baseY-bowlH*0.34;
+  const shankX0=cx+bowlW*0.40;
+  const shankX1=shankX0+fam.shank*mm;
+  const bandX=shankX1;
+  const stemX0=bandX+bandW*mm;
+
+  const uid=(mini?'m':'p')+(UID++);
+  const body=BODIES.find(b=>b.id===st.body);
+  const cust=st.bodyCustom;
+  let dCol,lCol,tri=false;
+  if(body&&body.tri){tri=true;}
+  else if(body){dCol=body.d;lCol=body.l;}
+  else {dCol=shade(cust,-0.35);lCol=shade(cust,0.25);}
+  if(!tri&&st.body==='custom'){}
+
+  const stemDark='#141210';
+  const stemGeoTop=stemGeom(stemX0,shankCY,fam.stem*mm,bendF,shankH*0.94,shankH*0.5);
+
+  const svg=[];
+  svg.push(`<svg viewBox="0 0 ${VW} ${VH}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">`);
+
+  /* defs */
+  svg.push('<defs>');
+  if(tri){
+    svg.push(`<linearGradient id="bg${uid}" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#0f7a34"/><stop offset="0.33" stop-color="#0f7a34"/>
+      <stop offset="0.34" stop-color="#f3f0e8"/><stop offset="0.66" stop-color="#f3f0e8"/>
+      <stop offset="0.67" stop-color="#c22633"/><stop offset="1" stop-color="#c22633"/></linearGradient>`);
+  }else{
+    svg.push(`<linearGradient id="bg${uid}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="${shade(lCol,0.12)}"/><stop offset="0.5" stop-color="${lCol}"/>
+      <stop offset="1" stop-color="${dCol}"/></linearGradient>`);
+  }
+  // stem gradient
+  svg.push(`<linearGradient id="st${uid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2622"/><stop offset="0.5" stop-color="${stemDark}"/><stop offset="1" stop-color="#050403"/></linearGradient>`);
+  // band gradient
+  const bd=BANDS.find(b=>b.id===st.band);
+  if(bd&&bd.a) svg.push(`<linearGradient id="bn${uid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${bd.a}"/><stop offset="0.5" stop-color="${bd.a}"/><stop offset="1" stop-color="${bd.b}"/></linearGradient>`);
+  // texture filters
+  svg.push(`<filter id="rust${uid}"><feTurbulence type="turbulence" baseFrequency="0.11 0.16" numOctaves="4" seed="7" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.9 0" result="a"/><feComponentTransfer in="a" result="a2"><feFuncA type="gamma" amplitude="1" exponent="1.4" offset="0"/></feComponentTransfer><feComposite in="a2" in2="SourceGraphic" operator="in"/></filter>`);
+  svg.push(`<filter id="sand${uid}"><feTurbulence type="fractalNoise" baseFrequency="0.5" numOctaves="2" seed="3" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.35 0" result="a"/><feComposite in="a" in2="SourceGraphic" operator="in"/></filter>`);
+  // clip to bowl+shank
+  const bp=bowlPath(cx,baseY,bowlW,bowlH,fam.shape);
+  const shankRect=`M ${shankX0} ${shankCY-shankH/2} L ${shankX1} ${shankCY-shankH/2} L ${shankX1} ${shankCY+shankH/2} L ${shankX0} ${shankCY+shankH/2} Z`;
+  svg.push(`<clipPath id="bowlclip${uid}"><path d="${bp}"/><path d="${shankRect}"/></clipPath>`);
+  svg.push(`<clipPath id="stemclip${uid}"><path d="${stemGeoTop.d}"/></clipPath>`);
+  svg.push('</defs>');
+
+  // soft ground shadow
+  svg.push(`<ellipse cx="${cx+bowlW*0.4}" cy="${baseY+ (mini?6:12)}" rx="${bowlW*0.9}" ry="${mini?6:12}" fill="#000" opacity="0.28"/>`);
+
+  /* SHANK (under bowl edge) */
+  svg.push(`<path d="${shankRect}" fill="url(#bg${uid})"/>`);
+  /* BOWL */
+  svg.push(`<path d="${bp}" fill="url(#bg${uid})" stroke="${shade(dCol||'#5a3a20',-0.25)}" stroke-width="${mini?0.8:1.4}" stroke-opacity="0.5"/>`);
+
+  /* TEXTURE overlay (clipped) */
+  const bbx=cx-bowlW*0.7, bby=topY-4, bbw=bowlW*1.4+fam.shank*mm, bbh=bowlH+shankH;
+  if(st.tex==='rusticata'||st.tex==='mista'){
+    svg.push(`<g clip-path="url(#bowlclip${uid})"><rect x="${bbx}" y="${bby}" width="${bbw}" height="${bbh}" fill="${shade(dCol||'#3a2412',-0.4)}" filter="url(#rust${uid})" opacity="0.85"/></g>`);
+  }
+  if(st.tex==='sabbiata'){
+    svg.push(`<g clip-path="url(#bowlclip${uid})"><rect x="${bbx}" y="${bby}" width="${bbw}" height="${bbh}" fill="${shade(dCol||'#3a2412',-0.25)}" filter="url(#sand${uid})" opacity="0.6"/></g>`);
+  }
+  if(st.tex==='mista'){ // smooth central panel over rustic
+    const pw=bowlW*0.30;
+    svg.push(`<g clip-path="url(#bowlclip${uid})"><rect x="${cx-pw/2}" y="${topY-2}" width="${pw}" height="${bowlH+4}" fill="url(#bg${uid})" opacity="0.96"/></g>`);
+  }
+  if(st.tex==='scolpita'){
+    let g='';for(let i=-6;i<=10;i++){const xx=cx-bowlW*0.5+i*bowlW*0.12;g+=`<path d="M ${xx} ${topY} L ${xx+bowlH*0.18} ${baseY}" stroke="${shade(dCol||'#3a2412',-0.4)}" stroke-width="${mini?1:2.4}" opacity="0.5"/>`;}
+    svg.push(`<g clip-path="url(#bowlclip${uid})">${g}</g>`);
+  }
+  if(st.tex==='liscia'){ // subtle grain arcs + sheen
+    let g='';for(let i=1;i<5;i++){const yy=topY+bowlH*i/5;g+=`<path d="M ${cx-bowlW*0.46} ${yy} Q ${cx} ${yy-bowlH*0.04} ${cx+bowlW*0.46} ${yy}" stroke="${shade(dCol||'#3a2412',-0.18)}" stroke-width="${mini?0.6:1}" fill="none" opacity="0.35"/>`;}
+    svg.push(`<g clip-path="url(#bowlclip${uid})">${g}<ellipse cx="${cx-bowlW*0.18}" cy="${topY+bowlH*0.4}" rx="${bowlW*0.16}" ry="${bowlH*0.3}" fill="#fff" opacity="0.06"/></g>`);
+  }
+  if(fam.shape==='bulldog'){ // bevel grooves
+    const my=baseY-bowlH*0.46;
+    svg.push(`<g clip-path="url(#bowlclip${uid})"><line x1="${cx-bowlW*0.55}" y1="${my}" x2="${cx+bowlW*0.55}" y2="${my}" stroke="${shade(dCol||'#3a2412',-0.4)}" stroke-width="${mini?1.4:3}" opacity="0.6"/><line x1="${cx-bowlW*0.5}" y1="${my+ (mini?4:9)}" x2="${cx+bowlW*0.5}" y2="${my+(mini?4:9)}" stroke="${shade(dCol||'#3a2412',-0.35)}" stroke-width="${mini?1:2}" opacity="0.45"/></g>`);
+  }
+
+  /* RIM / cima */
+  const rimW=bowlW* (fam.shape==='dublin'?1.10:0.9);
+  const rimCX=cx, rimCY=topY, rimRY=Math.max(bowlH*0.06,mini?3:7);
+  if(st.rim==='montagna'){
+    const peakCol = st.whitePeak? '#f2efe6' : shade(lCol||'#c98a2a',0.2);
+    const n=6; let pk=`M ${rimCX-rimW/2} ${rimCY+rimRY} `;
+    const pts=[];
+    for(let i=0;i<=n;i++){const x=rimCX-rimW/2 + rimW*i/n; const hh=(i%2? (mini?10:24):(mini?4:10))*(0.7+0.6*Math.abs(Math.sin(i*1.7))); pts.push([x,rimCY-hh]);}
+    pts.forEach(p=>pk+=`L ${p[0].toFixed(1)} ${p[1].toFixed(1)} `);
+    pk+=`L ${rimCX+rimW/2} ${rimCY+rimRY} Z`;
+    svg.push(`<path d="${pk}" fill="${peakCol}" stroke="${shade(dCol||'#5a3a20',-0.2)}" stroke-width="0.6" opacity="0.96" filter="url(#sand${uid})"/>`);
+    // white cap on tallest
+    if(st.whitePeak){const tallest=pts.reduce((a,b)=>b[1]<a[1]?b:a,pts[0]);svg.push(`<circle cx="${tallest[0]}" cy="${tallest[1]+ (mini?2:4)}" r="${mini?2:4}" fill="#fff"/>`);}
+  }else if(st.rim==='bombata'){
+    svg.push(`<path d="M ${rimCX-rimW/2} ${rimCY+rimRY} Q ${rimCX} ${rimCY-rimRY*2.4} ${rimCX+rimW/2} ${rimCY+rimRY} Z" fill="${shade(lCol||'#c98a2a',0.05)}" opacity="0.9"/>`);
+    svg.push(`<ellipse cx="${rimCX}" cy="${rimCY+rimRY*0.2}" rx="${rimW*0.28}" ry="${rimRY*0.8}" fill="#120a05" opacity="0.85"/>`);
+  }else{ // piatta
+    svg.push(`<ellipse cx="${rimCX}" cy="${rimCY}" rx="${rimW/2}" ry="${rimRY}" fill="${shade(lCol||'#c98a2a',0.08)}" stroke="${shade(dCol||'#5a3a20',-0.2)}" stroke-width="0.6"/>`);
+    svg.push(`<ellipse cx="${rimCX}" cy="${rimCY+rimRY*0.15}" rx="${rimW*0.30}" ry="${rimRY*0.72}" fill="#120a05" opacity="0.9"/>`);
+  }
+
+  /* RELIEF bassorilievo on bowl face */
+  if(st.relief && !mini){
+    const rx=cx, ry=topY+bowlH*0.56;
+    svg.push(`<text x="${rx}" y="${ry+2}" font-size="${bowlW*0.34}" text-anchor="middle" dominant-baseline="middle" fill="#000" opacity="0.28">${escapeXml(st.relief)}</text>`);
+    svg.push(`<text x="${rx}" y="${ry}" font-size="${bowlW*0.34}" text-anchor="middle" dominant-baseline="middle" fill="${shade(lCol||'#c98a2a',0.25)}" opacity="0.9">${escapeXml(st.relief)}</text>`);
+  }
+
+  /* BAND / vera */
+  if(bd && bd.a){
+    const bw=bandW*mm, by=shankCY-shankH*0.52, bh=shankH*1.04;
+    svg.push(`<rect x="${bandX}" y="${by}" width="${bw}" height="${bh}" rx="${mini?1:2}" fill="url(#bn${uid})" stroke="rgba(0,0,0,0.35)" stroke-width="0.6"/>`);
+    if(st.bandText && !mini){
+      svg.push(`<text x="${bandX+bw/2}" y="${shankCY+shankH*0.55+ (mini?0:2)}" font-size="8" text-anchor="middle" fill="${shade(bd.b,-0.4)}" font-family="Hanken Grotesk,sans-serif" transform="rotate(90 ${bandX+bw/2} ${shankCY})">${escapeXml(st.bandText)}</text>`);
+    }
+  }
+
+  /* STEM */
+  svg.push(`<path d="${stemGeoTop.d}" fill="url(#st${uid})" stroke="#000" stroke-width="0.5" stroke-opacity="0.4"/>`);
+  // stem decorations clipped
+  const mids=stemGeoTop.mid;
+  if(st.stem==='long'){
+    let g='';[[-0.3,st.c1],[0,st.c2],[0.3,st.c3]].forEach(([o,col])=>{
+      let d='M '+mids.map(m=>`${(m.x+m.nx*m.w*o).toFixed(1)} ${(m.y+m.ny*m.w*o).toFixed(1)}`).join(' L ');
+      g+=`<path d="${d}" fill="none" stroke="${col}" stroke-width="${mini?2:4}" stroke-linecap="round" opacity="0.92"/>`;
+    });
+    svg.push(`<g clip-path="url(#stemclip${uid})">${g}</g>`);
+  }else if(st.stem==='trasv'){
+    let g='';const cols=[st.c1,st.c2,st.c3];
+    for(let i=2;i<mids.length-1;i+=2){const m=mids[i];const col=cols[(i/2|0)%3];g+=`<line x1="${(m.x+m.nx*m.w*0.5).toFixed(1)}" y1="${(m.y+m.ny*m.w*0.5).toFixed(1)}" x2="${(m.x-m.nx*m.w*0.5).toFixed(1)}" y2="${(m.y-m.ny*m.w*0.5).toFixed(1)}" stroke="${col}" stroke-width="${mini?3:5}" opacity="0.9"/>`;}
+    svg.push(`<g clip-path="url(#stemclip${uid})">${g}</g>`);
+  }else if(st.stem==='random'){
+    let g='';const cols=[st.c1,st.c2,st.c3];let seed=99;const rnd=()=>{seed=(seed*9301+49297)%233280;return seed/233280;};
+    for(let i=0;i<34;i++){const t=rnd();const idx=Math.min(mids.length-1,Math.floor(t*mids.length));const m=mids[idx];const o=(rnd()-0.5)*0.9;const cxk=m.x+m.nx*m.w*o,cyk=m.y+m.ny*m.w*o;g+=`<circle cx="${cxk.toFixed(1)}" cy="${cyk.toFixed(1)}" r="${(mini?1.4:2.6)*(0.6+rnd())}" fill="${cols[i%3]}" opacity="0.9"/>`;}
+    svg.push(`<g clip-path="url(#stemclip${uid})">${g}</g>`);
+  }
+  // stem sheen
+  svg.push(`<g clip-path="url(#stemclip${uid})"><path d="M ${mids[0].x} ${mids[0].y-mids[0].w*0.3} L ${mids[mids.length-1].x} ${mids[mids.length-1].y-mids[mids.length-1].w*0.15}" stroke="#fff" stroke-width="${mini?1:2}" opacity="0.12" stroke-linecap="round"/></g>`);
+
+  svg.push('</svg>');
+  return {svg:svg.join(''), dims:{extDia,extH,dur,fam,bandW,mm}};
+}
+function escapeXml(s){return String(s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));}
+
+/* ---------- Spec sheet ---------- */
+function computeSpec(){
+  const {dims}=buildPipe(S,true);
+  const {extDia,extH,dur,fam,bandW}=dims;
+  const cap=Math.PI*Math.pow(dur.dC/20,2)*(dur.hC/10); // cm3
+  const grams=cap*0.25;
+  const total=Math.round(extDia*0.5+fam.shank+bandW+fam.stem);
+  return {extDia,extH,dur,fam,total,cap,grams};
+}
+function renderSpec(){
+  const sp=computeSpec();
+  const famNm=SHAPES.find(s=>s.id===S.fam).nm;
+  const bendNm=BENDS.find(b=>b.id===S.bend).nm;
+  const stemNm=STEMS.find(s=>s.id===S.stem).nm;
+  const bandNm=BANDS.find(b=>b.id===S.band).nm;
+  const texNm=TEX.find(t=>t.id===S.tex).nm;
+  const bodyNm=BODIES.find(b=>b.id===S.body)?BODIES.find(b=>b.id===S.body).nm:'Personalizzato';
+  const rimNm=RIMS.find(r=>r.id===S.rim).nm;
+  const rows=[
+    ['Forma',famNm],['Curvatura',bendNm],
+    ['Durata prevista',sp.dur.lbl],
+    ['Camera \u00d8',sp.dur.dC+' mm'],['Camera prof.',sp.dur.hC+' mm'],
+    ['\u00d8 esterno fornello',sp.extDia+' mm'],['Altezza fornello',sp.extH+' mm'],
+    ['Lunghezza gambo',sp.fam.shank+' mm'],['Lunghezza bocchino',sp.fam.stem+' mm'],
+    ['Lunghezza totale',sp.total+' mm'],
+    ['Capacit\u00e0 tabacco',sp.grams.toFixed(1).replace('.',',')+' g'],
+    ['Bocchino',stemNm],['Vera',bandNm+(S.bandText?' \u00ab'+S.bandText+'\u00bb':'')],
+    ['Finitura',texNm],['Colore',bodyNm],['Cima',rimNm+(S.whitePeak?' \u00b7 vetta chiara':'')],
+    ['Rilievo',S.relief||'\u2014'],['Dedica',S.dedica||'\u2014'],
+  ];
+  document.getElementById('specGrid').innerHTML=rows.map(r=>`<div class="row"><span>${r[0]}</span><b>${escapeHtml(r[1])}</b></div>`).join('');
+  document.getElementById('plateName').textContent=S.dedica||('Pipa '+famNm);
+  document.getElementById('plateLen').textContent=sp.total;
+}
+function escapeHtml(s){return String(s).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));}
+
+/* ---------- Full render ---------- */
+function render(){
+  document.getElementById('stageSvg').innerHTML=buildPipe(S,false).svg;
+  renderSpec();
+  document.querySelectorAll('[data-grp]').forEach(el=>{
+    const g=el.dataset.grp,v=el.dataset.val;
+    el.classList.toggle('on', String(S[g])===String(v));
+  });
+  document.getElementById('stemColors').style.opacity = S.stem==='classico'?'0.4':'1';
+  // sync inputs
+  c1.value=S.c1;c2.value=S.c2;c3.value=S.c3;bodyCustom.value=S.bodyCustom;
+  bandText.value=S.bandText;reliefText.value=S.relief;dedica.value=S.dedica;whitePeak.checked=S.whitePeak;
+  document.getElementById('durNote').innerHTML=`Camera calibrata: <b>\u00d8 ${DURS.find(d=>d.min===S.dur).dC} mm \u00d7 ${DURS.find(d=>d.min===S.dur).hC} mm</b> di profondit\u00e0. Pi\u00f9 lunga la fumata, pi\u00f9 grande il fornello.`;
+}
+
+/* ---------- Build UI ---------- */
+function seg(container,items,grp,{sub}={}){
+  const el=document.getElementById(container);
+  el.innerHTML=items.map(it=>`<button data-grp="${grp}" data-val="${it.id}">${it.nm}${sub&&it.sub?`<small>${it.sub}</small>`:''}</button>`).join('');
+  el.querySelectorAll('button').forEach(b=>b.onclick=()=>{S[grp]=b.dataset.val; render();});
+}
+seg('segBend',BENDS,'bend');
+seg('segDur',DURS.map(d=>({id:d.min,nm:d.lbl})),'dur');
+seg('segStem',STEMS,'stem',{sub:true});
+seg('segBand',BANDS,'band');
+seg('segTex',TEX,'tex');
+seg('segRim',RIMS,'rim');
+// dur values are numbers
+document.querySelectorAll('#segDur button').forEach(b=>b.onclick=()=>{S.dur=+b.dataset.val;render();});
+
+// gallery
+document.getElementById('gallery').innerHTML=SHAPES.map(s=>{
+  const mini=buildPipe(Object.assign({},S,{fam:s.id,bend:'dritta',dur:30,tex:'liscia',rim:'piatta',relief:'',band:'none'}),true).svg;
+  return `<button class="shape" data-grp="fam" data-val="${s.id}">${mini}<div class="nm">${s.nm}</div><div class="df">${s.df}</div></button>`;
+}).join('');
+document.querySelectorAll('.shape').forEach(b=>b.onclick=()=>{S.fam=b.dataset.val;render();});
+
+// swatches
+document.getElementById('swatches').innerHTML=BODIES.map(b=>{
+  const fill=b.tri?`<div class="tri" style="background:linear-gradient(0deg,#0f7a34 33%,#f3f0e8 33% 66%,#c22633 66%)"></div>`:`<div class="tri" style="background:linear-gradient(180deg,${b.l},${b.d})"></div>`;
+  return `<button class="swatch" data-grp="body" data-val="${b.id}" title="${b.nm}">${fill}</button>`;
+}).join('');
+document.querySelectorAll('.swatch').forEach(b=>b.onclick=()=>{S.body=b.dataset.val;render();});
+
+// relief chips
+document.getElementById('reliefChips').innerHTML=RELIEFS.map(r=>`<button class="chip" data-val="${r}">${r}</button>`).join('');
+document.querySelectorAll('#reliefChips .chip').forEach(b=>b.onclick=()=>{S.relief=(S.relief===b.dataset.val?'':b.dataset.val);render();});
+
+// inputs
+c1.oninput=e=>{S.c1=e.target.value;render();};
+c2.oninput=e=>{S.c2=e.target.value;render();};
+c3.oninput=e=>{S.c3=e.target.value;render();};
+bodyCustom.oninput=e=>{S.bodyCustom=e.target.value;S.body='custom';render();};
+bandText.oninput=e=>{S.bandText=e.target.value;render();};
+reliefText.oninput=e=>{S.relief=e.target.value;render();};
+dedica.oninput=e=>{S.dedica=e.target.value;render();};
+whitePeak.onchange=e=>{S.whitePeak=e.target.checked;render();};
+
+/* ---------- Presets ---------- */
+const PRESETS=[
+  {key:'std',nm:'Billiard standard',note:'Il punto di partenza classico',st:{fam:'billiard',bend:'mezza',dur:30,stem:'classico',band:'none',tex:'liscia',body:'radica',rim:'piatta',whitePeak:false,relief:'',dedica:''}},
+  {key:'pertini',nm:'Omaggio a Pertini',note:'Garofano, vera «AL VALORE», cima Monte Bianco, microfono',st:{fam:'dublin',bend:'mezza',dur:60,stem:'random',c1:'#b3121f',c2:'#f4f4f4',c3:'#0a7a3a',band:'argento',bandText:'AL VALORE',tex:'mista',body:'garofano',rim:'montagna',whitePeak:true,relief:'\uD83C\uDFA4',dedica:'A Sandro Pertini'}},
+  {key:'church',nm:'Churchwarden da lettura',note:'Bocchino lunghissimo, fumata lenta',st:{fam:'churchwarden',bend:'mezza',dur:60,stem:'classico',band:'legno',bandText:'',tex:'liscia',body:'moro',rim:'bombata',whitePeak:false,relief:'',dedica:''}},
+  {key:'poker',nm:'Poker da scrivania',note:'Fondo piatto, sta in piedi da sola',st:{fam:'poker',bend:'dritta',dur:30,stem:'classico',band:'ottone',bandText:'',tex:'sabbiata',body:'miele',rim:'piatta',whitePeak:false,relief:'',dedica:''}},
+];
+document.getElementById('presets').innerHTML=PRESETS.map(p=>`<button class="preset" data-k="${p.key}"><b>${p.nm}</b><small>${p.note}</small></button>`).join('');
+document.querySelectorAll('.preset').forEach(b=>b.onclick=()=>{
+  const p=PRESETS.find(x=>x.key===b.dataset.k);
+  S=Object.assign({c1:'#b3121f',c2:'#f2f2f2',c3:'#0a7a3a',bodyCustom:'#8a5a2a'},S,p.st);
+  render();
+  window.scrollTo({top:0,behavior:'smooth'});
+});
+
+/* ---------- Export ---------- */
+document.getElementById('btnPrint').onclick=()=>window.print();
+document.getElementById('btnSave').onclick=()=>{
+  const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=(S.dedica?S.dedica.replace(/[^\w]+/g,'_'):'pipa')+'.json';a.click();
+};
+document.getElementById('fileLoad').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=()=>{try{S=Object.assign(S,JSON.parse(r.result));render();}catch(_){alert('File non valido');}};
+  r.readAsText(f);
+};
+document.getElementById('btnPng').onclick=()=>{
+  const svgStr=buildPipe(S,false).svg;
+  const img=new Image();
+  const blob=new Blob([svgStr],{type:'image/svg+xml;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  img.onload=()=>{
+    const c=document.createElement('canvas');c.width=2000;c.height=1120;
+    const ctx=c.getContext('2d');ctx.fillStyle='#2a1f16';ctx.fillRect(0,0,c.width,c.height);
+    ctx.drawImage(img,0,0,c.width,c.height);
+    c.toBlob(bb=>{const a=document.createElement('a');a.href=URL.createObjectURL(bb);a.download=(S.dedica?S.dedica.replace(/[^\w]+/g,'_'):'pipa')+'.png';a.click();});
+    URL.revokeObjectURL(url);
+  };
+  img.onerror=()=>alert('Impossibile esportare l\u2019immagine');
+  img.src=url;
+};
+
+render();
+</script>
+</body>
+</html>
