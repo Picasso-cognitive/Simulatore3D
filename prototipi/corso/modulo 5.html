@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulatore Modulo 5 - E-Commerce, Smart Packaging & Drop Test</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@300;400;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+
+    <!-- Three.js + OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <style>
+        :root {
+            --bg-main: #0a0c10;
+            --panel-bg: #131722;
+            --panel-border: #23293a;
+            --accent-rose: #f43f5e;
+            --accent-cyan: #06b6d4;
+            --accent-amber: #f59e0b;
+            --accent-green: #10b981;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* SIDEBAR PANELS */
+        .sidebar {
+            width: 380px;
+            min-width: 380px;
+            background: var(--panel-bg);
+            border-right: 1px solid var(--panel-border);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            z-index: 10;
+        }
+
+        .header {
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--panel-border);
+            background: rgba(0,0,0,0.25);
+        }
+
+        .header h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.05rem;
+            color: var(--accent-rose);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .header p {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .content-scroll {
+            flex: 1;
+            padding: 18px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .section-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--accent-rose);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--panel-border);
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        label {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            font-weight: 500;
+        }
+
+        label span.val {
+            color: var(--accent-rose);
+            font-family: 'Fira Code', monospace;
+        }
+
+        select, input[type="range"], input[type="text"] {
+            width: 100%;
+            background: #090b10;
+            border: 1px solid var(--panel-border);
+            color: var(--text-main);
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            outline: none;
+        }
+
+        input[type="range"] {
+            padding: 0;
+            height: 6px;
+            accent-color: var(--accent-rose);
+            cursor: pointer;
+        }
+
+        .btn-action {
+            background: var(--accent-rose);
+            color: #fff;
+            border: none;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.2s;
+            margin-top: 4px;
+        }
+
+        .btn-action:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        /* CARD TECH SPECS */
+        .tech-card {
+            background: #090b10;
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            padding: 10px 12px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            font-size: 0.7rem;
+            font-family: 'Fira Code', monospace;
+        }
+
+        .tech-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tech-item .lbl {
+            color: var(--text-muted);
+            font-size: 0.62rem;
+        }
+
+        .tech-item .val {
+            color: var(--accent-amber);
+            font-weight: 600;
+        }
+
+        /* WORKSPACE & VIEWPORTS */
+        .workspace {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #07080c;
+        }
+
+        .top-bar {
+            height: 50px;
+            background: var(--panel-bg);
+            border-bottom: 1px solid var(--panel-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 6px;
+            background: #090b10;
+            padding: 4px;
+            border-radius: 8px;
+            border: 1px solid var(--panel-border);
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 6px 14px;
+            font-size: 0.75rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: var(--panel-bg);
+            color: var(--accent-rose);
+            border: 1px solid var(--panel-border);
+        }
+
+        .metrics-bar {
+            display: flex;
+            gap: 14px;
+        }
+
+        .metric-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            font-family: 'Fira Code', monospace;
+            background: rgba(255,255,255,0.03);
+            padding: 4px 10px;
+            border-radius: 20px;
+            border: 1px solid var(--panel-border);
+        }
+
+        .view-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2px;
+            background: var(--panel-border);
+            position: relative;
+        }
+
+        .viewport-box {
+            background: #08090d;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .viewport-header {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            z-index: 5;
+            background: rgba(19, 23, 34, 0.88);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--panel-border);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            pointer-events: none;
+        }
+
+        .viewport-header .dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--accent-rose);
+        }
+
+        canvas.view-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* THEORY BANNER FOOTER */
+        .theory-banner {
+            position: absolute;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 48px);
+            background: rgba(19, 23, 34, 0.94);
+            border: 1px solid var(--panel-border);
+            border-left: 4px solid var(--accent-rose);
+            padding: 12px 18px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            line-height: 1.45;
+            color: #cbd5e1;
+            backdrop-filter: blur(8px);
+            z-index: 10;
+        }
+
+        .theory-banner strong {
+            color: var(--accent-rose);
+            display: block;
+            margin-bottom: 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR CONTROLLI -->
+    <div class="sidebar">
+        <div class="header">
+            <h1>Modulo 5: E-Commerce & Smart Pack</h1>
+            <p>Laboratorio Drop Test ISTA & Smart Connectivity</p>
+        </div>
+
+        <div class="content-scroll">
+            
+            <!-- 1. DROP TEST & LOGISTICA E-COMMERCE -->
+            <div class="section-title">1. Test di Caduta ISTA 1A / ASTM</div>
+
+            <div class="control-group">
+                <label for="dropHeight">Altezza di Caduta Libera <span class="val" id="valDropHeight">80 cm</span></label>
+                <input type="range" id="dropHeight" min="30" max="150" step="10" value="80">
+            </div>
+
+            <div class="control-group">
+                <label for="cushionType">Materiale Inserti Protezione</label>
+                <select id="cushionType">
+                    <option value="cardboard_grid" selected>Griglia Cartone Nido d'Ape (Ecodesign)</option>
+                    <option value="molded_pulp">Polpa di Cellulosa Stampata (Molded Pulp)</option>
+                    <option value="air_cushion">Cuscini d'Aria Riutilizzabili (Air Film)</option>
+                    <option value="none">Nessun Inserto (Solo Astuccio Esterno)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="productMass">Massa Prodotto Interno <span class="val" id="valMass">1.5 kg</span></label>
+                <input type="range" id="productMass" min="0.2" max="5.0" step="0.1" value="1.5">
+            </div>
+
+            <button class="btn-action" id="btnRunDrop">Esegui Drop Test 3D</button>
+
+            <!-- CARD TECH DYNAMICS -->
+            <div class="tech-card">
+                <div class="tech-item">
+                    <span class="lbl">Decelerazione Picco:</span>
+                    <span class="val" id="valGForce">38.2 G</span>
+                </div>
+                <div class="tech-item">
+                    <span class="lbl">Esito Test ISTA:</span>
+                    <span class="val" id="valIstaStatus" style="color:var(--accent-green);">SUPERATO</span>
+                </div>
+                <div class="tech-item">
+                    <span class="lbl">Deflessione Inserto:</span>
+                    <span class="val" id="valDeflection">14.5 mm</span>
+                </div>
+                <div class="tech-item">
+                    <span class="lbl">Energia d'Impatto:</span>
+                    <span class="val" id="valEnergy">11.8 J</span>
+                </div>
+            </div>
+
+            <!-- 2. SMART PACKAGING & DIGITAL LINK -->
+            <div class="section-title">2. Smart Packaging & GS1 Link</div>
+
+            <div class="control-group">
+                <label for="smartTech">Tecnologia Connessa</label>
+                <select id="smartTech">
+                    <option value="gs1_qr" selected>QR Code GS1 Digital Link (Standard 2026)</option>
+                    <option value="nfc_chip">Tag NFC / RFID Passivo (Anti-counterfeiting)</option>
+                    <option value="watermark">Digital Watermarking Invisibile</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="gs1Url">URI GS1 Digital Link</label>
+                <input type="text" id="gs1Url" value="https://id.brand.com/01/08012345678901">
+            </div>
+
+        </div>
+    </div>
+
+    <!-- WORKSPACE PRINCIPALE -->
+    <div class="workspace">
+        <div class="top-bar">
+            <div class="nav-tabs">
+                <button class="tab-btn active">Simulatore E-Commerce Drop Test & Smart Connectivity</button>
+            </div>
+
+            <div class="metrics-bar">
+                <div class="metric-badge">
+                    Tolleranza Prodotto: <span id="metricTolerance" style="color:var(--accent-green);">&lt; 50G SAFE</span>
+                </div>
+                <div class="metric-badge">
+                    Scannabilità GS1: <span id="metricScan" style="color:var(--accent-cyan);">GRADO A (100%)</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="view-container">
+            
+            <!-- VIEWPORT A: SIMULATORE 3D DROP TEST DINAMICO -->
+            <div class="viewport-box">
+                <div class="viewport-header">
+                    <span class="dot" style="background:var(--accent-rose);"></span> 1. Animazione Caduta & Deflessione 3D (ISTA 1A)
+                </div>
+                <canvas class="view-canvas" id="canvas3D"></canvas>
+            </div>
+
+            <!-- VIEWPORT B: MAPPA STRESS & INSPECTOR GS1 DIGITAL LINK -->
+            <div class="viewport-box">
+                <div class="viewport-header">
+                    <span class="dot" style="background:var(--accent-cyan);"></span> 2. Mappa Stress d'Impatto & Codice GS1 Digital Link
+                </div>
+                <canvas class="view-canvas" id="canvas2D"></canvas>
+            </div>
+
+            <!-- TEORIA DIDATTICA IN BASSO -->
+            <div class="theory-banner" id="theoryBanner">
+                <strong>Principî di E-Commerce & Smart Packaging:</strong>
+                Il test di caduta libera ISTA 1A simula le sollecitazioni del trasporto espresso. La protezione ideale mantiene la decelerazione di picco al di sotto dei $50G$. Il QR Code GS1 Digital Link sostituisce il codice a barre tradizionale combinando l'identificazione di cassa con il reindirizzamento web dinamico.
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // =================================================================
+        // DATABASE MATERIALI AMMORTIZZANTI (CUSHIONING)
+        // =================================================================
+        const cushionMaterials = {
+            cardboard_grid: { stiffness: 120, maxDeflection: 20, name: 'Griglia Cartone', ecoGrade: 'A+' },
+            molded_pulp: { stiffness: 85, maxDeflection: 25, name: 'Polpa Stampata', ecoGrade: 'A' },
+            air_cushion: { stiffness: 45, maxDeflection: 35, name: 'Cuscini d\'Aria', ecoGrade: 'B' },
+            none: { stiffness: 450, maxDeflection: 3, name: 'Nessuno', ecoGrade: 'F' }
+        };
+
+        // =================================================================
+        // SETUP THREE.JS (SIMULATORE CADUTA 3D)
+        // =================================================================
+        const canvas3D = document.getElementById('canvas3D');
+        const renderer3D = new THREE.WebGLRenderer({ canvas: canvas3D, antialias: true });
+        renderer3D.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const scene3D = new THREE.Scene();
+        scene3D.background = new THREE.Color('#08090d');
+
+        const camera3D = new THREE.PerspectiveCamera(40, 1, 0.1, 1000);
+        camera3D.position.set(0, 80, 220);
+
+        const controls3D = new THREE.OrbitControls(camera3D, renderer3D.domElement);
+        controls3D.enableDamping = true;
+
+        const ambLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene3D.add(ambLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+        dirLight.position.set(50, 120, 80);
+        scene3D.add(dirLight);
+
+        // Grid impatto
+        const groundGrid = new THREE.GridHelper(300, 20, 0xf43f5e, 0x23293a);
+        groundGrid.position.y = -40;
+        scene3D.add(groundGrid);
+
+        // Gruppo Scatola da Imballaggio
+        const packGroup = new THREE.Group();
+        scene3D.add(packGroup);
+
+        let outerBoxMesh, innerProductMesh, cushionMesh;
+
+        function init3DDropScene() {
+            while(packGroup.children.length > 0) packGroup.remove(packGroup.children[0]);
+
+            // Outer Shipping Box
+            const boxGeom = new THREE.BoxGeometry(60, 60, 60);
+            const boxMat = new THREE.MeshStandardMaterial({
+                color: 0xc49a6c, // Cartone Avana
+                roughness: 0.8
+            });
+            outerBoxMesh = new THREE.Mesh(boxGeom, boxMat);
+            packGroup.add(outerBoxMesh);
+
+            // Cushion Layer Visibile (trasparente)
+            const cushionGeom = new THREE.BoxGeometry(54, 54, 54);
+            const cushionMat = new THREE.MeshBasicMaterial({
+                color: 0x06b6d4,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.4
+            });
+            cushionMesh = new THREE.Mesh(cushionGeom, cushionMat);
+            packGroup.add(cushionMesh);
+
+            // Inner Delicate Product (Flacone o Oggetto Vetro)
+            const prodGeom = new THREE.CylinderGeometry(12, 12, 36, 16);
+            const prodMat = new THREE.MeshStandardMaterial({
+                color: 0xf43f5e,
+                metalness: 0.3,
+                roughness: 0.2
+            });
+            innerProductMesh = new THREE.Mesh(prodGeom, prodMat);
+            packGroup.add(innerProductMesh);
+
+            packGroup.position.y = 20;
+        }
+
+        // Animazione Caduta Libera
+        let isAnimatingDrop = false;
+        let dropAnimTime = 0;
+
+        function triggerDropAnimation() {
+            if (isAnimatingDrop) return;
+            isAnimatingDrop = true;
+            dropAnimTime = 0;
+        }
+
+        function updateDropPhysics() {
+            if (!isAnimatingDrop) return;
+
+            dropAnimTime += 0.03;
+            const h = parseFloat(document.getElementById('dropHeight').value);
+            const startY = -40 + (h * 0.8);
+
+            if (dropAnimTime < 1.0) {
+                // Fase 1: Caduta libera accelerata
+                const progress = dropAnimTime;
+                packGroup.position.y = startY * (1 - progress * progress) - 10;
+            } else if (dropAnimTime < 1.3) {
+                // Fase 2: Impatto & Deflessione ammortizzatore
+                const impactProgress = (dropAnimTime - 1.0) / 0.3;
+                const compressFactor = Math.sin(impactProgress * Math.PI) * 0.25;
+                packGroup.position.y = -10;
+                outerBoxMesh.scale.set(1 + compressFactor*0.3, 1 - compressFactor*0.5, 1 + compressFactor*0.3);
+            } else {
+                // Ripristino
+                outerBoxMesh.scale.set(1, 1, 1);
+                packGroup.position.y = -10;
+                isAnimatingDrop = false;
+            }
+        }
+
+        // =================================================================
+        // SETUP CANVAS 2D (INSPECTOR SMART PACKAGING & STRESS MAP)
+        // =================================================================
+        const canvas2D = document.getElementById('canvas2D');
+        const ctx2D = canvas2D.getContext('2d');
+
+        function draw2DInspector() {
+            const w = canvas2D.width = canvas2D.clientWidth;
+            const h = canvas2D.height = canvas2D.clientHeight;
+            ctx2D.clearRect(0, 0, w, h);
+
+            const dropH = parseFloat(document.getElementById('dropHeight').value);
+            const mass = parseFloat(document.getElementById('productMass').value);
+            const cushionKey = document.getElementById('cushionType').value;
+            const cushion = cushionMaterials[cushionKey];
+
+            // 1. Background Grid
+            ctx2D.fillStyle = '#090b10';
+            ctx2D.fillRect(0, 0, w, h);
+
+            ctx2D.strokeStyle = '#181e2e';
+            ctx2D.lineWidth = 1;
+            for (let x = 0; x < w; x += 20) { ctx2D.beginPath(); ctx2D.moveTo(x, 0); ctx2D.lineTo(x, h); ctx2D.stroke(); }
+            for (let y = 0; y < h; y += 20) { ctx2D.beginPath(); ctx2D.moveTo(0, y); ctx2D.lineTo(w, y); ctx2D.stroke(); }
+
+            const cx = w / 2;
+            const cy = h / 2 - 20;
+
+            // 2. Mappa di Stress Termico/Meccanico (Heatmap d'Impatto)
+            const gForce = (dropH * mass * 9.81) / (cushion.stiffness * 0.1);
+            const stressRatio = Math.min(1.0, gForce / 80);
+
+            const grad = ctx2D.createRadialGradient(cx, cy + 60, 10, cx, cy + 60, 110);
+            grad.addColorStop(0, `rgba(244, 63, 94, ${stressRatio})`);
+            grad.addColorStop(0.5, `rgba(245, 158, 11, ${stressRatio * 0.6})`);
+            grad.addColorStop(1, 'rgba(16, 185, 129, 0)');
+
+            ctx2D.fillStyle = grad;
+            ctx2D.beginPath(); ctx2D.arc(cx, cy + 60, 110, 0, Math.PI * 2); ctx2D.fill();
+
+            // Disegno Astuccio in 2D
+            ctx2D.strokeStyle = '#f8fafc';
+            ctx2D.lineWidth = 2;
+            ctx2D.strokeRect(cx - 70, cy - 70, 140, 140);
+
+            // Simbolo GS1 Digital Link / QR Code
+            ctx2D.fillStyle = '#ffffff';
+            ctx2D.fillRect(cx - 30, cy - 30, 60, 60);
+
+            // Matrice QR Mockup
+            ctx2D.fillStyle = '#000000';
+            ctx2D.fillRect(cx - 24, cy - 24, 18, 18);
+            ctx2D.fillRect(cx + 6, cy - 24, 18, 18);
+            ctx2D.fillRect(cx - 24, cy + 6, 18, 18);
+            ctx2D.fillRect(cx - 2, cy - 2, 10, 10);
+
+            // Text Label
+            ctx2D.fillStyle = '#06b6d4';
+            ctx2D.font = '11px "Fira Code", monospace';
+            ctx2D.textAlign = 'center';
+            ctx2D.fillText('GS1 DIGITAL LINK QR MATRIX', cx, cy + 100);
+            ctx2D.fillText(`Pressione Max Impatto: ${(stressRatio * 100).toFixed(0)}%`, cx, cy + 118);
+        }
+
+        // =================================================================
+        // CONTROLLI & CALCOLI DINAMICI
+        // =================================================================
+        function updateSimulation() {
+            const h = parseFloat(document.getElementById('dropHeight').value);
+            const mass = parseFloat(document.getElementById('productMass').value);
+            const cushionKey = document.getElementById('cushionType').value;
+            const cushion = cushionMaterials[cushionKey];
+
+            document.getElementById('valDropHeight').textContent = h + ' cm';
+            document.getElementById('valMass').textContent = mass + ' kg';
+
+            // Calcoli Dinamici Fisica d'Impatto
+            // Energia E = m * g * h
+            const energy = mass * 9.81 * (h / 100);
+            
+            // Decelerazione di Picco G = (2 * E / (k * s^2)) -> Approssimazione ingegneristica
+            const deflectionMm = Math.min(cushion.maxDeflection, Math.sqrt(energy / (cushion.stiffness * 0.05)) * 10);
+            const gForce = Math.round((2 * energy) / ((deflectionMm / 1000) * mass * 9.81));
+
+            document.getElementById('valGForce').textContent = gForce + ' G';
+            document.getElementById('valDeflection').textContent = deflectionMm.toFixed(1) + ' mm';
+            document.getElementById('valEnergy').textContent = energy.toFixed(1) + ' J';
+
+            // Verifica Tolleranza ISTA
+            const istaStatus = document.getElementById('valIstaStatus');
+            const tolBadge = document.getElementById('metricTolerance');
+
+            if (gForce <= 50) {
+                istaStatus.textContent = 'SUPERATO';
+                istaStatus.style.color = 'var(--accent-green)';
+                tolBadge.textContent = '< 50G SAFE';
+                tolBadge.style.color = 'var(--accent-green)';
+            } else {
+                istaStatus.textContent = 'FALLITO (DANNO)';
+                istaStatus.style.color = 'var(--accent-rose)';
+                tolBadge.textContent = '> 50G CRITICAL';
+                tolBadge.style.color = 'var(--accent-rose)';
+            }
+
+            draw2DInspector();
+        }
+
+        // Event Listeners
+        ['dropHeight', 'cushionType', 'productMass', 'smartTech', 'gs1Url'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updateSimulation);
+        });
+
+        document.getElementById('btnRunDrop').addEventListener('click', triggerDropAnimation);
+
+        function resizeViewports() {
+            const w = canvas3D.clientWidth;
+            const h = canvas3D.clientHeight;
+            if (w && h) {
+                renderer3D.setSize(w, h, false);
+                camera3D.aspect = w / h;
+                camera3D.updateProjectionMatrix();
+            }
+            draw2DInspector();
+        }
+
+        window.addEventListener('resize', resizeViewports);
+
+        // Loop di Rendering
+        function animate() {
+            requestAnimationFrame(animate);
+            updateDropPhysics();
+            controls3D.update();
+            renderer3D.render(scene3D, camera3D);
+        }
+
+        // Init
+        setTimeout(() => {
+            init3DDropScene();
+            resizeViewports();
+            updateSimulation();
+            animate();
+        }, 100);
+
+    </script>
+</body>
+</html>

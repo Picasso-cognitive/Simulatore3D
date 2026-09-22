@@ -1,0 +1,28 @@
+{
+  "metadata": {
+    "projectType": "Capstone Packaging Engineering",
+    "version": "1.0",
+    "exportDate": "2026-09-04T16:46:31.936Z"
+  },
+  "cadDimensions": {
+    "fefcoType": "0427",
+    "boxLengthMm": 280,
+    "boxWidthMm": 180,
+    "boxHeightMm": 100,
+    "bleedMarginMm": 3
+  },
+  "brandIdentity": {
+    "brandName": "AURA LUXURY LAB",
+    "brandTagline": "Sustainable Premium Packaging",
+    "palette": {
+      "primary": "#0f172a",
+      "secondary": "#f59e0b",
+      "accent": "#10b981"
+    }
+  },
+  "finish3D": "foil_gold",
+  "pitchDeck": {
+    "targetMarket": "Cosmesi Biologica Premium & E-Commerce D2C",
+    "usp": "100% Plastic-Free, Unboxing Esperienziale e GS1 Digital Link"
+  }
+}

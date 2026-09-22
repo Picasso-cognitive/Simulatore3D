@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulatore Modulo 3 - Tipografia, Colore & Nobilitazioni</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Fira+Code:wght@400;600&family=Inter:wght@300;400;600;700&family=Space+Grotesk:wght@600;700&family=Playfair+Display:ital,wght@0,700;1,400&display=swap" rel="stylesheet">
+
+    <!-- Three.js + OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <style>
+        :root {
+            --bg-main: #0a0b10;
+            --panel-bg: #141722;
+            --panel-border: #23293e;
+            --accent-purple: #a855f7;
+            --accent-gold: #f59e0b;
+            --accent-cyan: #06b6d4;
+            --accent-green: #10b981;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* SIDEBAR PANELS */
+        .sidebar {
+            width: 380px;
+            min-width: 380px;
+            background: var(--panel-bg);
+            border-right: 1px solid var(--panel-border);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            z-index: 10;
+        }
+
+        .header {
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--panel-border);
+            background: rgba(0,0,0,0.25);
+        }
+
+        .header h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.05rem;
+            color: var(--accent-purple);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .header p {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .content-scroll {
+            flex: 1;
+            padding: 18px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .section-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--accent-purple);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--panel-border);
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        label {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            font-weight: 500;
+        }
+
+        label span.val {
+            color: var(--accent-gold);
+            font-family: 'Fira Code', monospace;
+        }
+
+        select, input[type="range"], input[type="text"] {
+            width: 100%;
+            background: #090b11;
+            border: 1px solid var(--panel-border);
+            color: var(--text-main);
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            outline: none;
+        }
+
+        input[type="range"] {
+            padding: 0;
+            height: 6px;
+            accent-color: var(--accent-purple);
+            cursor: pointer;
+        }
+
+        /* TECH INFO CARD */
+        .tech-card {
+            background: #090b11;
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            padding: 10px 12px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            font-size: 0.7rem;
+            font-family: 'Fira Code', monospace;
+        }
+
+        .tech-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tech-item .lbl {
+            color: var(--text-muted);
+            font-size: 0.62rem;
+        }
+
+        .tech-item .val {
+            color: var(--accent-cyan);
+            font-weight: 600;
+        }
+
+        /* WORKSPACE & VIEWPORTS */
+        .workspace {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #07080c;
+        }
+
+        .top-bar {
+            height: 50px;
+            background: var(--panel-bg);
+            border-bottom: 1px solid var(--panel-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 6px;
+            background: #090b11;
+            padding: 4px;
+            border-radius: 8px;
+            border: 1px solid var(--panel-border);
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 6px 14px;
+            font-size: 0.75rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: var(--panel-bg);
+            color: var(--accent-gold);
+            border: 1px solid var(--panel-border);
+        }
+
+        .metrics-bar {
+            display: flex;
+            gap: 14px;
+        }
+
+        .metric-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            font-family: 'Fira Code', monospace;
+            background: rgba(255,255,255,0.03);
+            padding: 4px 10px;
+            border-radius: 20px;
+            border: 1px solid var(--panel-border);
+        }
+
+        .view-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2px;
+            background: var(--panel-border);
+            position: relative;
+        }
+
+        .viewport-box {
+            background: #08090d;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .viewport-header {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            z-index: 5;
+            background: rgba(20, 23, 34, 0.88);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--panel-border);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            pointer-events: none;
+        }
+
+        .viewport-header .dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--accent-gold);
+        }
+
+        canvas.view-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* THEORY BANNER FOOTER */
+        .theory-banner {
+            position: absolute;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 48px);
+            background: rgba(20, 23, 34, 0.94);
+            border: 1px solid var(--panel-border);
+            border-left: 4px solid var(--accent-gold);
+            padding: 12px 18px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            line-height: 1.45;
+            color: #cbd5e1;
+            backdrop-filter: blur(8px);
+            z-index: 10;
+        }
+
+        .theory-banner strong {
+            color: var(--accent-gold);
+            display: block;
+            margin-bottom: 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR CONTROLLI -->
+    <div class="sidebar">
+        <div class="header">
+            <h1>Modulo 3: Nobilitazioni & Colore</h1>
+            <p>Laboratorio 3D Finiture di Lusso & Pre-Stampa</p>
+        </div>
+
+        <div class="content-scroll">
+            
+            <!-- 1. FINITURE E NOBILITAZIONI (LUXURY FINISHES) -->
+            <div class="section-title">1. Finiture di Lusso (Embellishments)</div>
+
+            <div class="control-group">
+                <label for="paperFinish">Substrato / Vernice di Fondo</label>
+                <select id="paperFinish">
+                    <option value="matt">Carta Opaca Seta (Matt Coated)</option>
+                    <option value="softtouch" selected>Soft-Touch Veloce (Vellutato)</option>
+                    <option value="glossy">Carta Lucida Varnish (High Gloss)</option>
+                    <option value="blackUncoated">Nero Profondo Uncoated (Luxury Stock)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="foilType">Stampa a Caldo (Hot Foil Stamping)</label>
+                <select id="foilType">
+                    <option value="gold" selected>Oro Caldo Lucido (Metallic Gold)</option>
+                    <option value="silver">Argento Specchio (Metallic Silver)</option>
+                    <option value="copper">Rame Metallizzato (Rose Copper)</option>
+                    <option value="none">Nessun Foil</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="uvSpot">Vernice UV Selettiva Spessorata</label>
+                <select id="uvSpot">
+                    <option value="active" selected>Attiva (Spot Gloss UV +30µm)</option>
+                    <option value="none">Disattiva</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="embossMode">Sbalzo a Secco (Embossing/Debossing)</label>
+                <select id="embossMode">
+                    <option value="emboss" selected>Embossing Positivo (Rilievo in Fuori)</option>
+                    <option value="deboss">Debossing Negativo (Incisione in Dentro)</option>
+                    <option value="none">Nessun Rilievo</option>
+                </select>
+            </div>
+
+            <!-- 2. STACK TECNICO DI PRE-STAMPA -->
+            <div class="section-title">2. Gestione Colore & Pre-Stampa</div>
+
+            <div class="control-group">
+                <label for="colorSpace">Profilo Spazio Colore</label>
+                <select id="colorSpace">
+                    <option value="pantone">Pantone® Spot Color (Tinta Piatta)</option>
+                    <option value="cmyk">Quadricromia CMYK (Coated FOGRA39)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="plateInspector">Vista Canali Separazione (Pre-press)</label>
+                <select id="plateInspector">
+                    <option value="composite">Stampa Completa (Composite Proof)</option>
+                    <option value="foilPlate">Cliché Stampa a Caldo (Foil Plate)</option>
+                    <option value="uvPlate">Maschera Vernice UV Selettiva</option>
+                    <option value="embossPlate">Matrice Sbalzo a Secco (Die Plate)</option>
+                </select>
+            </div>
+
+            <!-- SCHEDA TECNICA DINAMICA -->
+            <div class="tech-card">
+                <div class="tech-item">
+                    <span class="lbl">Copertura Inchiostro (TAC):</span>
+                    <span class="val" id="valTAC">240% (Ottimale)</span>
+                </div>
+                <div class="tech-item">
+                    <span class="lbl">Tol. Registro Stampa:</span>
+                    <span class="val" id="valRegister">±0.15 mm</span>
+                </div>
+                <div class="tech-item">
+                    <span class="lbl">Delta E (Pantone Match):</span>
+                    <span class="val" id="valDeltaE">0.8 (Eccellente)</span>
+                </div>
+                <div class="tech-item">
+                    <span class="lbl">Spessore Foil:</span>
+                    <span class="val" id="valFoilMicron">12 µm</span>
+                </div>
+            </div>
+
+            <!-- 3. TIPOGRAFIA & TESTO -->
+            <div class="section-title">3. Tipografia & Custom Title</div>
+
+            <div class="control-group">
+                <label for="brandText">Titolo Brand Packaging</label>
+                <input type="text" id="brandText" value="L'ÉLIXIR">
+            </div>
+
+            <div class="control-group">
+                <label for="fontFamily">Famiglia Tipografica</label>
+                <select id="fontFamily">
+                    <option value="'Cinzel', serif" selected>Cinzel (Serif Classico / Luxury)</option>
+                    <option value="'Playfair Display', serif">Playfair Display (Serif Elegante)</option>
+                    <option value="'Space Grotesk', sans-serif">Space Grotesk (Sans Tech / Modern)</option>
+                </select>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- WORKSPACE PRINCIPALE -->
+    <div class="workspace">
+        <div class="top-bar">
+            <div class="nav-tabs">
+                <button class="tab-btn active">Laboratorio Integrato Nobilitazioni 3D & Pre-Stampa</button>
+            </div>
+
+            <div class="metrics-bar">
+                <div class="metric-badge">
+                    Canali Attivi: <span id="metricChannels" style="color:var(--accent-gold);">CMYK + 2 Spot</span>
+                </div>
+                <div class="metric-badge">
+                    Resa Riflessione: <span id="metricReflectivity" style="color:var(--accent-purple);">HIGH METALLIC</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="view-container">
+            
+            <!-- VIEWPORT A: RENDERING 3D CON RIFLESSIONE SPECIALE -->
+            <div class="viewport-box">
+                <div class="viewport-header">
+                    <span class="dot" style="background:var(--accent-gold);"></span> 1. Rendering 3D Nobilitazioni in Luce Reale (Ruota per Riflessi)
+                </div>
+                <canvas class="view-canvas" id="canvas3D"></canvas>
+            </div>
+
+            <!-- VIEWPORT B: ANTEPRIMA PELLICOLE E CLICHÉ DI PRE-STAMPA -->
+            <div class="viewport-box">
+                <div class="viewport-header">
+                    <span class="dot" style="background:var(--accent-purple);"></span> 2. Controllo Cliché Stampa & Maschere Vettoriali 2D
+                </div>
+                <canvas class="view-canvas" id="canvas2D"></canvas>
+            </div>
+
+            <!-- TEORIA DIDATTICA IN BASSO -->
+            <div class="theory-banner" id="theoryBanner">
+                <strong>Principî di Nobilitazione del Packaging:</strong>
+                La Stampa a Caldo (Hot Foil) trasferisce una lamina metallica tramite pressione e calore ad almeno 130°C. La Vernice UV Selettiva crea un contrasto tattile e visivo immediato sovrapponendosi a superfici opache o Soft-Touch.
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // =================================================================
+        // DYNAMIC CANVAS TEXTURE GENERATOR ENGINE
+        // =================================================================
+        // Genera mappe dinamiche in memoria (Color, Roughness, Metalness, Bump)
+        const texWidth = 1024;
+        const texHeight = 1024;
+
+        const cColor = document.createElement('canvas');
+        const cRough = document.createElement('canvas');
+        const cMetal = document.createElement('canvas');
+        const cBump = document.createElement('canvas');
+
+        [cColor, cRough, cMetal, cBump].forEach(c => { c.width = texWidth; c.height = texHeight; });
+
+        const ctxColor = cColor.getContext('2d');
+        const ctxRough = cRough.getContext('2d');
+        const ctxMetal = cMetal.getContext('2d');
+        const ctxBump = cBump.getContext('2d');
+
+        function generateDynamicTextures() {
+            const paper = document.getElementById('paperFinish').value;
+            const foil = document.getElementById('foilType').value;
+            const uv = document.getElementById('uvSpot').value;
+            const emboss = document.getElementById('embossMode').value;
+            const text = document.getElementById('brandText').value || 'BRAND';
+            const font = document.getElementById('fontFamily').value;
+            const cSpace = document.getElementById('colorSpace').value;
+
+            // 1. CLEAR CANVASES
+            // Substrate Base Color
+            let bgColor = '#181b26';
+            if (paper === 'blackUncoated') bgColor = '#0c0d12';
+            if (paper === 'glossy') bgColor = '#1e2333';
+            if (paper === 'matt') bgColor = '#222738';
+
+            ctxColor.fillStyle = bgColor; ctxColor.fillRect(0, 0, texWidth, texHeight);
+            
+            // Substrate Base Roughness
+            let baseRough = '#cccccd'; // Matt
+            if (paper === 'softtouch') baseRough = '#f0f0f0'; // Very Rough / Soft
+            if (paper === 'glossy') baseRough = '#222222'; // Smooth Glossy
+            ctxRough.fillStyle = baseRough; ctxRough.fillRect(0, 0, texWidth, texHeight);
+
+            // Substrate Base Metalness
+            ctxMetal.fillStyle = '#000000'; ctxMetal.fillRect(0, 0, texWidth, texHeight);
+
+            // Substrate Base Bump (Flat Mid-gray = 128)
+            ctxBump.fillStyle = '#808080'; ctxBump.fillRect(0, 0, texWidth, texHeight);
+
+            // 2. DRAW GRAPHIC ELEMENTS & TYPOGRAPHY
+            const centerX = texWidth / 2;
+            const centerY = texHeight / 2;
+
+            // Frame Line
+            const drawFrame = (ctx, strokeStyle, lineWidth) => {
+                ctx.strokeStyle = strokeStyle;
+                ctx.lineWidth = lineWidth;
+                ctx.strokeRect(100, 100, texWidth - 200, texHeight - 200);
+            };
+
+            // Main Brand Typography
+            const drawTypo = (ctx, fillStyle) => {
+                ctx.fillStyle = fillStyle;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.font = `700 86px ${font}`;
+                ctx.fillText(text.toUpperCase(), centerX, centerY - 20);
+
+                ctx.font = `600 24px 'Space Grotesk', sans-serif`;
+                ctx.fillText('EAU DE PARFUM • 100 ML', centerX, centerY + 80);
+            };
+
+            // Apply Pantone Color or CMYK Graphic Tone
+            let textColor = (cSpace === 'pantone') ? '#e2e8f0' : '#cbd5e1';
+            drawTypo(ctxColor, textColor);
+            drawFrame(ctxColor, textColor, 4);
+
+            // 3. APPLY HOT FOIL STAMPING LAYER
+            if (foil !== 'none') {
+                let foilHex = '#ffd700'; // Gold
+                if (foil === 'silver') foilHex = '#e0e0e0';
+                if (foil === 'copper') foilHex = '#b87333';
+
+                drawTypo(ctxColor, foilHex);
+                drawFrame(ctxColor, foilHex, 6);
+
+                // Metalness map: White where metallic foil is applied
+                drawTypo(ctxMetal, '#ffffff');
+                drawFrame(ctxMetal, '#ffffff', 6);
+
+                // Roughness map for foil: Extremely shiny/smooth (#050505)
+                drawTypo(ctxRough, '#050505');
+                drawFrame(ctxRough, '#050505', 6);
+            }
+
+            // 4. APPLY SPOT UV VARNISH LAYER
+            if (uv === 'active') {
+                // UV Spot adds high gloss (#000000 in roughness map)
+                // Let's create subtle decorative UV dots pattern on background
+                ctxRough.fillStyle = '#000000';
+                for (let x = 150; x < texWidth - 150; x += 60) {
+                    for (let y = 150; y < texHeight - 150; y += 60) {
+                        ctxRough.beginPath();
+                        ctxRough.arc(x, y, 8, 0, Math.PI * 2);
+                        ctxRough.fill();
+                    }
+                }
+                // Also apply UV gloss over the main brand title
+                drawTypo(ctxRough, '#000000');
+            }
+
+            // 5. APPLY EMBOSSING / DEBOSSING (BUMP MAP)
+            if (emboss !== 'none') {
+                let bumpVal = (emboss === 'emboss') ? '#ffffff' : '#000000'; // White = Raised, Black = Inset
+                drawTypo(ctxBump, bumpVal);
+                drawFrame(ctxBump, bumpVal, 8);
+            }
+        }
+
+        // =================================================================
+        // SETUP THREE.JS (3D SCENE & REAL-TIME LIGHT REFLECTION)
+        // =================================================================
+        const canvas3D = document.getElementById('canvas3D');
+        const renderer3D = new THREE.WebGLRenderer({ canvas: canvas3D, antialias: true });
+        renderer3D.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const scene3D = new THREE.Scene();
+        scene3D.background = new THREE.Color('#08090d');
+
+        const camera3D = new THREE.PerspectiveCamera(40, 1, 0.1, 1000);
+        camera3D.position.set(0, 0, 140);
+
+        const controls3D = new THREE.OrbitControls(camera3D, renderer3D.domElement);
+        controls3D.enableDamping = true;
+        controls3D.autoRotate = true;
+        controls3D.autoRotateSpeed = 1.5;
+
+        // Lighting for High-End Metallic Reflections
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene3D.add(ambientLight);
+
+        const pointLight1 = new THREE.PointLight(0xfff5ea, 1.2, 300);
+        pointLight1.position.set(60, 80, 100);
+        scene3D.add(pointLight1);
+
+        const pointLight2 = new THREE.PointLight(0x38bdf8, 0.8, 300);
+        pointLight2.position.set(-80, -60, -50);
+        scene3D.add(pointLight2);
+
+        // Textures Three.js
+        const texColor = new THREE.CanvasTexture(cColor);
+        const texRough = new THREE.CanvasTexture(cRough);
+        const texMetal = new THREE.CanvasTexture(cMetal);
+        const texBump = new THREE.CanvasTexture(cBump);
+
+        // Material 3D Luxury Packaging
+        const boxMaterial = new THREE.MeshStandardMaterial({
+            map: texColor,
+            roughnessMap: texRough,
+            metalnessMap: texMetal,
+            bumpMap: texBump,
+            bumpScale: 1.2,
+            roughness: 0.5,
+            metalness: 0.1
+        });
+
+        // Pack Geometry (Astuccio Profumo / Luxury Box)
+        const boxGeometry = new THREE.BoxGeometry(65, 85, 25);
+        const packMesh = new THREE.Mesh(boxGeometry, boxMaterial);
+        scene3D.add(packMesh);
+
+        function update3DTextures() {
+            generateDynamicTextures();
+            texColor.needsUpdate = true;
+            texRough.needsUpdate = true;
+            texMetal.needsUpdate = true;
+            texBump.needsUpdate = true;
+        }
+
+        // =================================================================
+        // CANVAS 2D - PRE-PRESS FILM SEPARATION & CLICHÉ INSPECTOR
+        // =================================================================
+        const canvas2D = document.getElementById('canvas2D');
+        const ctx2D = canvas2D.getContext('2d');
+
+        function drawPrePressInspector() {
+            const w = canvas2D.width = canvas2D.clientWidth;
+            const h = canvas2D.height = canvas2D.clientHeight;
+            ctx2D.clearRect(0, 0, w, h);
+
+            const mode = document.getElementById('plateInspector').value;
+            const text = document.getElementById('brandText').value || 'BRAND';
+            const font = document.getElementById('fontFamily').value;
+
+            // Background Grid Pre-Press
+            ctx2D.fillStyle = '#0a0d14';
+            ctx2D.fillRect(0, 0, w, h);
+
+            ctx2D.strokeStyle = '#181e2e';
+            ctx2D.lineWidth = 1;
+            for (let x = 0; x < w; x += 20) { ctx2D.beginPath(); ctx2D.moveTo(x, 0); ctx2D.lineTo(x, h); ctx2D.stroke(); }
+            for (let y = 0; y < h; y += 20) { ctx2D.beginPath(); ctx2D.moveTo(0, y); ctx2D.lineTo(w, y); ctx2D.stroke(); }
+
+            const cx = w / 2;
+            const cy = h / 2;
+
+            ctx2D.save();
+
+            if (mode === 'composite') {
+                // Render Full Composite Preview
+                ctx2D.drawImage(cColor, cx - 140, cy - 140, 280, 280);
+                
+                // Crop Overlay Marks (Crocini di Registro)
+                drawRegistrationMarks(ctx2D, cx, cy, 150, '#f59e0b');
+            } else {
+                // Render High-Contrast Black Film Cliché (K-Plate)
+                ctx2D.fillStyle = '#000000';
+                ctx2D.fillRect(cx - 140, cy - 140, 280, 280);
+                ctx2D.strokeStyle = '#ffffff';
+                ctx2D.lineWidth = 2;
+                ctx2D.strokeRect(cx - 140, cy - 140, 280, 280);
+
+                ctx2D.fillStyle = '#ffffff';
+                ctx2D.textAlign = 'center';
+                ctx2D.textBaseline = 'middle';
+                ctx2D.font = `700 32px ${font}`;
+
+                if (mode === 'foilPlate') {
+                    ctx2D.fillText(text.toUpperCase(), cx, cy - 10);
+                    ctx2D.strokeRect(cx - 110, cy - 100, 220, 200);
+                    ctx2D.fillStyle = '#a855f7';
+                    ctx2D.font = '11px "Fira Code", monospace';
+                    ctx2D.fillText('CLICHÉ STAMPA A CALDO (HOT FOIL DIE)', cx, cy + 120);
+                } else if (mode === 'uvPlate') {
+                    // Pattern dots UV
+                    for (let px = cx - 110; px <= cx + 110; px += 25) {
+                        for (let py = cy - 110; py <= cy + 110; py += 25) {
+                            ctx2D.beginPath(); ctx2D.arc(px, py, 4, 0, Math.PI * 2); ctx2D.fill();
+                        }
+                    }
+                    ctx2D.fillText(text.toUpperCase(), cx, cy - 10);
+                    ctx2D.fillStyle = '#06b6d4';
+                    ctx2D.font = '11px "Fira Code", monospace';
+                    ctx2D.fillText('MASCHERA VERNICE UV SELETTIVA (GLOSS SPOT)', cx, cy + 120);
+                } else if (mode === 'embossPlate') {
+                    ctx2D.fillText(text.toUpperCase(), cx, cy - 10);
+                    ctx2D.lineWidth = 4;
+                    ctx2D.strokeRect(cx - 110, cy - 100, 220, 200);
+                    ctx2D.fillStyle = '#10b981';
+                    ctx2D.font = '11px "Fira Code", monospace';
+                    ctx2D.fillText('MATRICE DI EMBOSSING / CONTRO-MATRICE', cx, cy + 120);
+                }
+
+                drawRegistrationMarks(ctx2D, cx, cy, 150, '#ffffff');
+            }
+
+            ctx2D.restore();
+        }
+
+        function drawRegistrationMarks(ctx, x, y, radius, color) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1;
+            const offsets = [[-radius, -radius], [radius, -radius], [-radius, radius], [radius, radius]];
+
+            offsets.forEach(([ox, oy]) => {
+                const mx = x + ox;
+                const my = y + oy;
+                ctx.beginPath();
+                ctx.arc(mx, my, 8, 0, Math.PI * 2);
+                ctx.moveTo(mx - 12, my); ctx.lineTo(mx + 12, my);
+                ctx.moveTo(mx, my - 12); ctx.lineTo(mx, my + 12);
+                ctx.stroke();
+            });
+        }
+
+        // =================================================================
+        // UPDATE METRICS & CONTROLS
+        // =================================================================
+        function updateAllControls() {
+            const paper = document.getElementById('paperFinish').value;
+            const foil = document.getElementById('foilType').value;
+            const cSpace = document.getElementById('colorSpace').value;
+
+            // Technical Cards Metrics Update
+            document.getElementById('valTAC').textContent = (cSpace === 'pantone') ? '100% (Tinta Piatta)' : '280% (CMYK Standard)';
+            document.getElementById('valDeltaE').textContent = (cSpace === 'pantone') ? '0.4 (Match Perfetto)' : '1.8 (Tollerato)';
+            document.getElementById('valFoilMicron').textContent = (foil !== 'none') ? '12 µm (Hot Foil)' : '0 µm';
+
+            // Metrics top bar
+            let activeChannels = 'CMYK';
+            if (foil !== 'none') activeChannels += ' + Spot Foil';
+            if (document.getElementById('uvSpot').value === 'active') activeChannels += ' + Spot UV';
+            document.getElementById('metricChannels').textContent = activeChannels;
+
+            document.getElementById('metricReflectivity').textContent = (foil !== 'none') ? 'HIGH METALLIC FOIL' : (paper === 'glossy' ? 'HIGH GLOSS' : 'MATT SOFT');
+
+            update3DTextures();
+            drawPrePressInspector();
+        }
+
+        // Listeners
+        const controlIds = ['paperFinish', 'foilType', 'uvSpot', 'embossMode', 'colorSpace', 'plateInspector', 'brandText', 'fontFamily'];
+        controlIds.forEach(id => {
+            document.getElementById(id).addEventListener('input', updateAllControls);
+        });
+
+        function resizeViewports() {
+            const w = canvas3D.clientWidth;
+            const h = canvas3D.clientHeight;
+            if (w && h) {
+                renderer3D.setSize(w, h, false);
+                camera3D.aspect = w / h;
+                camera3D.updateProjectionMatrix();
+            }
+            drawPrePressInspector();
+        }
+
+        window.addEventListener('resize', resizeViewports);
+
+        // Animation Loop
+        function animate() {
+            requestAnimationFrame(animate);
+            controls3D.update();
+            renderer3D.render(scene3D, camera3D);
+        }
+
+        // Init
+        setTimeout(() => {
+            resizeViewports();
+            updateAllControls();
+            animate();
+        }, 100);
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dispensa Modulo 1 - Progettazione Strutturale CAD 2D</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Space+Grotesk:wght@600;700&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #0f172a;
+            --accent: #0284c7;
+            --text-dark: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --bg-light: #f8fafc;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+
+        body {
+            background-color: #e2e8f0;
+            color: var(--text-dark);
+            line-height: 1.6;
+            font-size: 11pt;
+        }
+
+        /* BARRA AZIONI (VISIBILE SOLO A SCHERMO) */
+        .toolbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: #0f172a;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+        }
+
+        .toolbar-title {
+            color: #fff;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.95rem;
+        }
+
+        .btn-print {
+            background: #0284c7;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-print:hover {
+            background: #0369a1;
+        }
+
+        /* FOGLIO A4 PER ANTEPRIMA E STAMPA */
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 20mm;
+            margin: 80px auto 40px auto;
+            background: #fff;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        /* HEADER E FOOTER DOCUMENTO */
+        .doc-header {
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 12px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .doc-header h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.6rem;
+            color: var(--primary);
+            line-height: 1.2;
+        }
+
+        .doc-header .meta {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-align: right;
+            font-weight: 500;
+        }
+
+        .section-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.1rem;
+            color: var(--accent);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 4px;
+            margin: 20px 0 12px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        p {
+            margin-bottom: 10px;
+            text-align: justify;
+        }
+
+        ul, ol {
+            margin-left: 20px;
+            margin-bottom: 12px;
+        }
+
+        li {
+            margin-bottom: 4px;
+        }
+
+        /* TABELLE */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 14px 0;
+            font-size: 0.85rem;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: var(--bg-light);
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        /* BOX FORMULA */
+        .formula-box {
+            background: var(--bg-light);
+            border-left: 4px solid var(--accent);
+            padding: 12px 16px;
+            margin: 14px 0;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            color: var(--primary);
+        }
+
+        /* BOX CODE / JSON */
+        .code-box {
+            background: #0f172a;
+            color: #f8fafc;
+            padding: 14px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.72rem;
+            white-space: pre-wrap;
+            word-break: break-all;
+            margin: 14px 0;
+            line-height: 1.4;
+        }
+
+        .note-box {
+            background: #fffbeeb;
+            border: 1px solid #fde68a;
+            border-left: 4px solid #d97706;
+            padding: 10px 14px;
+            font-size: 0.82rem;
+            margin: 12px 0;
+            border-radius: 4px;
+        }
+
+        /* STILI DI STAMPA PDF */
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+
+            body {
+                background: #fff;
+            }
+
+            .page {
+                width: 100%;
+                margin: 0;
+                padding: 0;
+                box-shadow: none;
+            }
+
+            @page {
+                size: A4;
+                margin: 15mm;
+            }
+
+            .page-break {
+                page-break-before: always;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- BARRA D'AZIONE PER SCARICARE IL PDF -->
+    <div class="toolbar no-print">
+        <div class="toolbar-title">Dispensa Didattica Modulo 1 — Corso Capstone Packaging</div>
+        <button class="btn-print" onclick="window.print()">🖨️ SCARICA / STAMPA PDF</button>
+    </div>
+
+    <!-- DOCUMENTO A4 -->
+    <div class="page">
+        
+        <div class="doc-header">
+            <div>
+                <h1>Modulo 1 — Progettazione Strutturale CAD 2D & Identity</h1>
+                <div style="font-size:0.85rem; color: var(--accent); font-weight:600; margin-top:4px;">Ingegneria del Packaging & Simulatore Interattivo</div>
+            </div>
+            <div class="meta">
+                Corso Capstone 2026<br>
+                Documentazione Ufficiale
+            </div>
+        </div>
+
+        <div class="section-title">Obiettivi Formativi del Modulo</div>
+        <ul>
+            <li>Comprendere e applicare i codici internazionali dello standard <strong>FEFCO</strong>.</li>
+            <li>Padroneggiare le convenzioni grafiche CAD 2D di fustellatura: linee di <strong>taglio</strong>, <strong>cordonatura</strong> e <strong>abbondanza (bleed)</strong>.</li>
+            <li>Analizzare la relazione tra dimensioni tridimensionali $(L \times P \times H)$ e resa industriale su foglio macchina.</li>
+            <li>Configurare la Brand Identity primaria sincronizzando palette cromatiche HEX e tipografia.</li>
+            <li>Testare, esportare e importare i progetti strutturali in formato <code>.json</code> nel Simulatore Capstone.</li>
+        </ul>
+
+        <div class="section-title">1. Fondamenti di Ingegneria della Fustella CAD</div>
+        <p>La fustella è la matrice meccanica composta da lame d'acciaio inserite in un supporto di legno multistrato. In ambito CAD e nella prestampa esecutiva, ogni linea ha un significato funzionale univoco codificato dai colori standard di settore:</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Tipologia Linea</th>
+                    <th>Colore Standard</th>
+                    <th>Codice Hex</th>
+                    <th>Tipo Tratto</th>
+                    <th>Funzione Cartotecnica</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Taglio Esecutivo</strong></td>
+                    <td>Rosso Magenta</td>
+                    <td><code>#f43f5e</code></td>
+                    <td>Continuo</td>
+                    <td>Separa fisicamente il cartone dallo sfrido.</td>
+                </tr>
+                <tr>
+                    <td><strong>Cordonatura</strong></td>
+                    <td>Blu Ciano</td>
+                    <td><code>#06b6d4</code></td>
+                    <td>Tratteggiato</td>
+                    <td>Incide parzialmente le fibre per facilitare la piega.</td>
+                </tr>
+                <tr>
+                    <td><strong>Abbondanza (Bleed)</strong></td>
+                    <td>Verde Smeraldo</td>
+                    <td><code>#10b981</code></td>
+                    <td>Puntinato</td>
+                    <td>Margine di sicurezza grafico anti-filetto bianco.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="section-title">Formule di Calcolo dell'Ingombro e della Resa</div>
+        <p>L'area totale del foglio steso occupato dalla singola fustella (comprensiva del margine di abbondanza $b$) è espressa dalla formula:</p>
+
+        <div class="formula-box">
+            A_tot (m²) = [(2L + 2P + 2b) × (2H + 2P + 2b)] / 1.000.000
+        </div>
+        
+        <ul>
+            <li><strong>L</strong>: Lunghezza interna in mm</li>
+            <li><strong>P</strong>: Profondità/Larghezza interna in mm</li>
+            <li><strong>H</strong>: Altezza interna in mm</li>
+            <li><strong>b</strong>: Margine di bleed (abbondanza) in mm</li>
+        </ul>
+
+        <div class="note-box">
+            <strong>Nota Tecnica:</strong> Il margine di abbondanza (Bleed) standard per la stampa offset e digitale su cartone teso varia tra <strong>2.0 mm</strong> e <strong>3.0 mm</strong>. Per accoppiati in microonda si consigliano fino a <strong>5.0 mm</strong>.
+        </div>
+
+        <div class="page-break"></div> <!-- INTERRUZIONE PAGINA PER STAMPA PULITA -->
+
+        <div class="section-title">2. Standard Industriali FEFCO</div>
+        <p>Gli standard FEFCO (<em>European Federation of Corrugated Board Manufacturers</em>) codificano univocamente le geometrie di packaging industriale:</p>
+        
+        <ul>
+            <li><strong>FEFCO 0427 (Folder Box / Mailer):</strong> Scatola avvolgente automontante. Ideale per l'e-commerce D2C e l'unboxing esperienziale. Non richiede punti di colla.</li>
+            <li><strong>FEFCO 0211 (Tuck-in Box):</strong> Astuccio pieghevole ad incastro classico con lembi alternati o combacianti per cosmesi e retail.</li>
+            <li><strong>FEFCO 0201 (Slotted Box):</strong> Cassa americana standard utilizzata prevalentemente come imballo secondario da spedizione.</li>
+        </ul>
+
+        <div class="section-title">3. File JSON di Esempio Pratico (Verde Pura Cosmetics)</div>
+        <p>Di seguito è riportata la struttura dati standard utilizzata dal simulatore per il salvataggio e il caricamento dei progetti strutturali:</p>
+
+        <div class="code-box">
+{
+  "metadata": {
+    "projectType": "Capstone Packaging Engineering",
+    "courseModule": "Modulo 1 - CAD & Brand Identity Primaria",
+    "version": "1.0",
+    "exportDate": "2026-09-04T18:00:00.000Z"
+  },
+  "cadDimensions": {
+    "fefcoType": "0427",
+    "boxLengthMm": 260,
+    "boxWidthMm": 160,
+    "boxHeightMm": 80,
+    "bleedMarginMm": 3.0
+  },
+  "brandIdentity": {
+    "brandName": "VERDE PURA COSMETICS",
+    "brandTagline": "Organic & Botanical Skin Therapy",
+    "palette": {
+      "primary": "#064e3b",
+      "secondary": "#d97706",
+      "accent": "#10b981"
+    }
+  },
+  "finish3D": "foil_gold",
+  "pitchDeck": {
+    "targetMarket": "Cosmesi Organica di Alta Gamma & E-Commerce D2C",
+    "usp": "Involucro 100% Compostabile con Sigillo Foil Oro"
+  }
+}
+        </div>
+
+        <div class="section-title">4. Esercizio Individuale Richiesto</div>
+        <ol>
+            <li>Aprire il simulatore interattivo del Modulo 1.</li>
+            <li>Caricare il file JSON di esempio o impostare manualmente i parametri <strong>FEFCO 0427</strong> con dimensioni $260 \times 160 \times 80\text{ mm}$.</li>
+            <li>Sperimentare la variazione del margine di Bleed da $1.0\text{ mm}$ a $5.0\text{ mm}$ osservando la risposta nell'Inspector CAD 2D.</li>
+            <li>Personalizzare la Brand Identity con il proprio marchio e cliccare su <strong>"💾 Salva JSON"</strong> per generare il file di consegna.</li>
+        </ol>
+
+    </div>
+
+</body>
+</html>

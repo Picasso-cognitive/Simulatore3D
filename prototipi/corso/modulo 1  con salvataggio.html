@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modulo 1 - Progettazione CAD 2D & Simulatore Packaging</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@300;400;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+
+    <!-- Three.js + OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <style>
+        :root {
+            --bg-main: #06080d;
+            --panel-bg: #0d111a;
+            --panel-border: #1a2234;
+            --accent-gold: #f59e0b;
+            --accent-cyan: #06b6d4;
+            --accent-purple: #a855f7;
+            --accent-emerald: #10b981;
+            --accent-rose: #f43f5e;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* SIDEBAR PANELS */
+        .sidebar {
+            width: 420px;
+            min-width: 420px;
+            background: var(--panel-bg);
+            border-right: 1px solid var(--panel-border);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            z-index: 10;
+        }
+
+        .header {
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--panel-border);
+            background: rgba(0,0,0,0.3);
+        }
+
+        .header h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.05rem;
+            color: var(--accent-gold);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .header p {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .content-scroll {
+            flex: 1;
+            padding: 18px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .section-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--accent-gold);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--panel-border);
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        label {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            font-weight: 500;
+        }
+
+        label span.val {
+            color: var(--accent-gold);
+            font-family: 'Fira Code', monospace;
+        }
+
+        select, input[type="range"], input[type="text"], input[type="color"] {
+            width: 100%;
+            background: #080a10;
+            border: 1px solid var(--panel-border);
+            color: var(--text-main);
+            padding: 7px 10px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            outline: none;
+        }
+
+        input[type="color"] {
+            padding: 2px;
+            height: 32px;
+            cursor: pointer;
+        }
+
+        input[type="range"] {
+            padding: 0;
+            height: 6px;
+            accent-color: var(--accent-gold);
+            cursor: pointer;
+        }
+
+        .color-pickers-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+        }
+
+        .color-box-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+        }
+
+        .btn-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .btn-json-export {
+            background: var(--accent-purple);
+            color: #fff;
+            border: none;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.2s;
+        }
+
+        .btn-json-import {
+            background: rgba(255,255,255,0.05);
+            color: var(--accent-cyan);
+            border: 1px solid var(--accent-cyan);
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.2s;
+        }
+
+        .btn-preset {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--accent-emerald);
+            border: 1px solid var(--accent-emerald);
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            grid-column: span 2;
+            transition: all 0.2s;
+        }
+
+        .btn-json-export:hover, .btn-json-import:hover, .btn-preset:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: var(--accent-gold);
+            color: #000;
+            border: none;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.2s;
+            width: 100%;
+        }
+
+        .readiness-card {
+            background: #080a10;
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 0.7rem;
+            font-family: 'Fira Code', monospace;
+        }
+
+        .readiness-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .readiness-item .status {
+            color: var(--accent-emerald);
+            font-weight: 600;
+        }
+
+        /* WORKSPACE & VIEWPORTS */
+        .workspace {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #040508;
+        }
+
+        .top-bar {
+            height: 54px;
+            background: var(--panel-bg);
+            border-bottom: 1px solid var(--panel-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 6px;
+            background: #080a10;
+            padding: 4px;
+            border-radius: 8px;
+            border: 1px solid var(--panel-border);
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 6px 14px;
+            font-size: 0.75rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: var(--panel-bg);
+            color: var(--accent-gold);
+            border: 1px solid var(--panel-border);
+        }
+
+        .metrics-bar {
+            display: flex;
+            gap: 12px;
+        }
+
+        .metric-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            font-family: 'Fira Code', monospace;
+            background: rgba(255,255,255,0.03);
+            padding: 5px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--panel-border);
+        }
+
+        .view-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2px;
+            background: var(--panel-border);
+            position: relative;
+        }
+
+        .viewport-box {
+            background: #06070c;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .viewport-header {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            z-index: 5;
+            background: rgba(13, 17, 26, 0.9);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--panel-border);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            pointer-events: none;
+        }
+
+        .viewport-header .dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--accent-gold);
+        }
+
+        canvas.view-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* OVERLAYS (DISPENSA / BRAND / PITCH) */
+        .inspector-overlay {
+            width: 100%;
+            height: 100%;
+            padding: 30px;
+            overflow-y: auto;
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+            background: #07090e;
+        }
+
+        .inspector-overlay.active {
+            display: flex;
+        }
+
+        /* DISPENSA STYLE */
+        .dispensa-card {
+            background: #0d111a;
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            line-height: 1.6;
+            font-size: 0.85rem;
+            color: #cbd5e1;
+        }
+
+        .dispensa-card h2 {
+            font-family: 'Space Grotesk', sans-serif;
+            color: var(--accent-gold);
+            font-size: 1.2rem;
+            border-bottom: 1px solid var(--panel-border);
+            padding-bottom: 8px;
+        }
+
+        .dispensa-card h3 {
+            font-family: 'Space Grotesk', sans-serif;
+            color: var(--accent-cyan);
+            font-size: 0.95rem;
+            margin-top: 8px;
+        }
+
+        .dispensa-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+            margin: 10px 0;
+        }
+
+        .dispensa-table th, .dispensa-table td {
+            border: 1px solid var(--panel-border);
+            padding: 8px 12px;
+            text-align: left;
+        }
+
+        .dispensa-table th {
+            background: rgba(255,255,255,0.03);
+            color: var(--accent-gold);
+        }
+
+        .formula-box {
+            background: #080a10;
+            border: 1px dashed var(--accent-cyan);
+            padding: 12px;
+            border-radius: 8px;
+            font-family: 'Fira Code', monospace;
+            color: var(--accent-cyan);
+            text-align: center;
+            font-size: 0.85rem;
+        }
+
+        /* BRAND BOOK & PITCH CARDS */
+        .brand-book-page, .slide-preview-card {
+            background: #0d111a;
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .palette-display {
+            display: flex;
+            gap: 12px;
+        }
+
+        .swatch {
+            flex: 1;
+            height: 70px;
+            border-radius: 8px;
+            display: flex;
+            align-items: flex-end;
+            padding: 8px;
+            font-size: 0.65rem;
+            font-family: 'Fira Code', monospace;
+            font-weight: 600;
+            color: #fff;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HIDDEN CANVAS PER BAKE TEXTURE 3D -->
+    <canvas id="hiddenTextureCanvas" width="1024" height="1024" style="display:none;"></canvas>
+
+    <!-- INPUT FILE NASCOSTO PER IMPORTAZIONE JSON -->
+    <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
+
+    <!-- SIDEBAR CONTROLLI -->
+    <div class="sidebar">
+        <div class="header">
+            <h1>Modulo 1 — CAD 2D & Packaging</h1>
+            <p>Laboratorio Capstone e Simulatore Interattivo</p>
+        </div>
+
+        <div class="content-scroll">
+            
+            <!-- 0. GESTIONE FILE PROGETTO (JSON) -->
+            <div class="section-title">0. Gestione File Progetto</div>
+            <div class="btn-grid">
+                <button class="btn-json-export" id="btnExportJson">💾 Salva JSON</button>
+                <button class="btn-json-import" id="btnImportJson">📂 Carica JSON</button>
+                <button class="btn-preset" id="btnLoadModule1Preset">⚡ Carica Esempio Modulo 1 (Verde Pura)</button>
+            </div>
+
+            <!-- 1. FUSTELLA CAD ESECUTIVA -->
+            <div class="section-title">1. CAD Esecutivo & Fustella</div>
+
+            <div class="control-group">
+                <label for="fefcoType">Standard Strutturale FEFCO</label>
+                <select id="fefcoType">
+                    <option value="0427" selected>FEFCO 0427 - Tuck Top Mailer (E-Commerce)</option>
+                    <option value="0201">FEFCO 0201 - RSC Standard Slotted Box</option>
+                    <option value="0211">FEFCO 0211 - Astuccio Chiusura ad Incastro</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="boxLength">Lunghezza L <span class="val" id="valL">260 mm</span></label>
+                <input type="range" id="boxLength" min="150" max="450" step="10" value="260">
+            </div>
+
+            <div class="control-group">
+                <label for="boxWidth">Larghezza P <span class="val" id="valP">160 mm</span></label>
+                <input type="range" id="boxWidth" min="100" max="350" step="10" value="160">
+            </div>
+
+            <div class="control-group">
+                <label for="boxHeight">Altezza H <span class="val" id="valH">80 mm</span></label>
+                <input type="range" id="boxHeight" min="50" max="250" step="5" value="80">
+            </div>
+
+            <div class="control-group">
+                <label for="bleedMargin">Abbondanza Stampa (Bleed) <span class="val" id="valBleed">3.0 mm</span></label>
+                <input type="range" id="bleedMargin" min="1.0" max="5.0" step="0.5" value="3.0">
+            </div>
+
+            <!-- 2. BRAND IDENTITY -->
+            <div class="section-title">2. Brand Identity & Typography</div>
+
+            <div class="control-group">
+                <label for="brandName">Nome del Brand</label>
+                <input type="text" id="brandName" value="VERDE PURA COSMETICS">
+            </div>
+
+            <div class="control-group">
+                <label for="brandTagline">Payoff / Tagline Prodotto</label>
+                <input type="text" id="brandTagline" value="Organic & Botanical Skin Therapy">
+            </div>
+
+            <div class="control-group">
+                <label>Palette Colori Identitari</label>
+                <div class="color-pickers-row">
+                    <div class="color-box-item">
+                        <span>Primario</span>
+                        <input type="color" id="colorPrimary" value="#064e3b">
+                    </div>
+                    <div class="color-box-item">
+                        <span>Secondario</span>
+                        <input type="color" id="colorSecondary" value="#d97706">
+                    </div>
+                    <div class="color-box-item">
+                        <span>Accento</span>
+                        <input type="color" id="colorAccent" value="#10b981">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. FINITURE 3D -->
+            <div class="section-title">3. Finiture Nobilitazione 3D</div>
+
+            <div class="control-group">
+                <label for="finishType">Trattamento Superficiale</label>
+                <select id="finishType">
+                    <option value="foil_gold" selected>Stampa a Caldo Foil Oro + Vernice UV</option>
+                    <option value="emboss">Goffratura a Rilievo Secco (Embossing)</option>
+                    <option value="soft_touch">Plastificazione Soft-Touch Opaca</option>
+                    <option value="natural_kraft">Cartone Kraft Naturale Nudo</option>
+                </select>
+            </div>
+
+            <!-- 4. PITCH DECK -->
+            <div class="section-title">4. Pitch Deck & Presentazione</div>
+
+            <div class="control-group">
+                <label for="pitchTarget">Target Market</label>
+                <input type="text" id="pitchTarget" value="Cosmesi Organica di Alta Gamma & D2C">
+            </div>
+
+            <div class="control-group">
+                <label for="pitchUsp">Proposta Unica di Valore (USP)</label>
+                <input type="text" id="pitchUsp" value="Involucro 100% Compostabile con Sigillo Foil Oro">
+            </div>
+
+            <button class="btn-primary" id="btnExportAll" style="margin-top:8px;">Genera Dossier Integrato</button>
+
+            <!-- READINESS CARD -->
+            <div class="readiness-card" style="margin-top:12px;">
+                <div class="readiness-item">
+                    <span>Fustella CAD 2D:</span>
+                    <span class="status">PRONTA</span>
+                </div>
+                <div class="readiness-item">
+                    <span>Render 3D Mock-up:</span>
+                    <span class="status">TEXTURIZZATO</span>
+                </div>
+                <div class="readiness-item">
+                    <span>Brand Book:</span>
+                    <span class="status">COMPILATO</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- WORKSPACE PRINCIPALE -->
+    <div class="workspace">
+        <div class="top-bar">
+            <div class="nav-tabs">
+                <button class="tab-btn active" id="tabDispensa">📖 Dispensa Modulo 1</button>
+                <button class="tab-btn" id="tabCad">📐 Fustella CAD 2D</button>
+                <button class="tab-btn" id="tabBrand">🎨 Brand Guideline Book</button>
+                <button class="tab-btn" id="tabPitch">📊 Pitch Deck</button>
+            </div>
+
+            <div class="metrics-bar">
+                <div class="metric-badge">
+                    Area Foglio: <span id="metricArea" style="color:var(--accent-gold);">0.28 m²</span>
+                </div>
+                <div class="metric-badge">
+                    Standard: <span id="metricFefco" style="color:var(--accent-cyan);">FEFCO 0427</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="view-container">
+            
+            <!-- VIEWPORT 1: RENDER 3D INTERATTIVO -->
+            <div class="viewport-box">
+                <div class="viewport-header">
+                    <span class="dot" style="background:var(--accent-gold);"></span> Viewport 3D — Render Dinamico Packaging
+                </div>
+                <canvas class="view-canvas" id="canvas3D"></canvas>
+            </div>
+
+            <!-- VIEWPORT 2: INSPECTOR MULTI-TAB -->
+            <div class="viewport-box">
+                
+                <!-- TAB 0: DISPENSA DIDATTICA MODULO 1 -->
+                <div class="inspector-overlay active" id="wrapperDispensa">
+                    <div class="dispensa-card">
+                        <h2>Modulo 1 — Progettazione Strutturale CAD 2D & Identity</h2>
+                        <p>Benvenuto nel Modulo 1 del corso Capstone. In questa unità apprenderai le basi industriali per la creazione di fustelle esecutive e la sincronizzazione con l'identità del brand.</p>
+
+                        <h3>1. Convenzioni Grafiche di Fustellatura CAD</h3>
+                        <table class="dispensa-table">
+                            <thead>
+                                <tr>
+                                    <th>Elemento</th>
+                                    <th>Colore</th>
+                                    <th>Tratto</th>
+                                    <th>Funzione Industriale</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Taglio</strong></td>
+                                    <td style="color:#f43f5e;">Rosso (#f43f5e)</td>
+                                    <td>Continuo</td>
+                                    <td>Corte fisico del cartone.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Cordonatura</strong></td>
+                                    <td style="color:#06b6d4;">Ciano (#06b6d4)</td>
+                                    <td>Tratteggiato</td>
+                                    <td>Incisione per la piega delle fibre.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Abbondanza (Bleed)</strong></td>
+                                    <td style="color:#10b981;">Verde (#10b981)</td>
+                                    <td>Puntinato</td>
+                                    <td>Margine grafico anti-filetto bianco.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <h3>2. Formula di Calcolo Ingombro Steso</h3>
+                        <div class="formula-box">
+                            Area Totale (m²) = [(2L + 2P + 2b) × (2H + 2P + 2b)] / 1.000.000
+                        </div>
+
+                        <h3>3. Istruzioni per il Laboratorio</h3>
+                        <p>• Usa i controlli nel menu di sinistra per variare dimensioni e palette.<br>
+                        • Clicca su <strong>"💾 Salva JSON"</strong> per scaricare la configurazione sul tuo computer.<br>
+                        • Clicca su <strong>"📂 Carica JSON"</strong> per ripristinare un salvataggio precedente.<br>
+                        • Clicca su <strong>"⚡ Carica Esempio Modulo 1"</strong> per caricare istantaneamente il preset botanico.</p>
+                    </div>
+                </div>
+
+                <!-- TAB 1: CAD 2D CANVAS -->
+                <div id="wrapperCad" style="width:100%; height:100%; position:relative; display:none;">
+                    <div class="viewport-header">
+                        <span class="dot" style="background:var(--accent-cyan);"></span> Fustella CAD Esecutiva 2D (Linee Vettoriali)
+                    </div>
+                    <canvas class="view-canvas" id="canvas2D"></canvas>
+                </div>
+
+                <!-- TAB 2: BRAND GUIDELINE BOOK -->
+                <div class="inspector-overlay" id="wrapperBrand">
+                    <div class="brand-book-page">
+                        <h2 style="font-family:'Space Grotesk'; color:var(--accent-gold);" id="bookTitle">VERDE PURA COSMETICS — Brand Book</h2>
+                        <p style="font-size:0.8rem; color:var(--text-muted);" id="bookSubtitle">Organic & Botanical Skin Therapy</p>
+
+                        <div style="font-size:0.75rem; font-weight:600;">SPECIFICHE COLORI IDENTITARI:</div>
+                        <div class="palette-display">
+                            <div class="swatch" id="swatchPrimary" style="background:#064e3b;">HEX: #064e3b<br>Primary</div>
+                            <div class="swatch" id="swatchSecondary" style="background:#d97706; color:#000;">HEX: #d97706<br>Secondary</div>
+                            <div class="swatch" id="swatchAccent" style="background:#10b981; color:#000;">HEX: #10b981<br>Accent</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 3: PITCH DECK -->
+                <div class="inspector-overlay" id="wrapperPitch">
+                    <div class="slide-preview-card">
+                        <h3 style="color:var(--accent-cyan); font-family:'Space Grotesk';">SLIDE 1: EXECUTIVE SUMMARY</h3>
+                        <p style="font-size:0.8rem; line-height:1.5; color:var(--text-muted);">
+                            • <strong>Brand Name:</strong> <span id="pitchSlideBrand">VERDE PURA COSMETICS</span><br>
+                            • <strong>Target:</strong> <span id="pitchSlideTarget">Cosmesi Organica D2C</span><br>
+                            • <strong>USP:</strong> <span id="pitchSlideUsp">100% Compostabile con Sigillo Foil Oro</span>
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // =================================================================
+        // SETUP THREE.JS (VIEWPORT 3D RENDER)
+        // =================================================================
+        const canvas3D = document.getElementById('canvas3D');
+        const renderer3D = new THREE.WebGLRenderer({ canvas: canvas3D, antialias: true });
+        renderer3D.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const scene3D = new THREE.Scene();
+        scene3D.background = new THREE.Color('#06070c');
+
+        const camera3D = new THREE.PerspectiveCamera(40, 1, 0.1, 1000);
+        camera3D.position.set(120, 120, 180);
+
+        const controls3D = new THREE.OrbitControls(camera3D, renderer3D.domElement);
+        controls3D.enableDamping = true;
+
+        const ambLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene3D.add(ambLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+        dirLight.position.set(100, 200, 150);
+        scene3D.add(dirLight);
+
+        const gridHelper = new THREE.GridHelper(300, 20, 0xf59e0b, 0x1a2234);
+        gridHelper.position.y = -40;
+        scene3D.add(gridHelper);
+
+        let box3DMesh;
+
+        function generateBrandTexture() {
+            const texCanvas = document.getElementById('hiddenTextureCanvas');
+            const ctx = texCanvas.getContext('2d');
+            const w = texCanvas.width;
+            const h = texCanvas.height;
+
+            const cPrimary = document.getElementById('colorPrimary').value;
+            const cSecondary = document.getElementById('colorSecondary').value;
+            const brandName = document.getElementById('brandName').value;
+            const tagline = document.getElementById('brandTagline').value;
+
+            ctx.fillStyle = cPrimary;
+            ctx.fillRect(0, 0, w, h);
+
+            ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+            ctx.lineWidth = 2;
+            for(let i=0; i<w; i+=40) {
+                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, h); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(w, i); ctx.stroke();
+            }
+
+            ctx.strokeStyle = cSecondary;
+            ctx.lineWidth = 12;
+            ctx.strokeRect(60, 60, w - 120, h - 120);
+
+            ctx.fillStyle = cSecondary;
+            ctx.font = 'bold 50px "Space Grotesk", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(brandName.toUpperCase(), w / 2, h / 2 - 20);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '22px "Inter", sans-serif';
+            ctx.fillText(tagline, w / 2, h / 2 + 30);
+
+            const texture = new THREE.CanvasTexture(texCanvas);
+            texture.needsUpdate = true;
+            return texture;
+        }
+
+        function update3DModel() {
+            if (box3DMesh) scene3D.remove(box3DMesh);
+
+            const L = parseFloat(document.getElementById('boxLength').value) / 4;
+            const P = parseFloat(document.getElementById('boxWidth').value) / 4;
+            const H = parseFloat(document.getElementById('boxHeight').value) / 4;
+
+            const texture = generateBrandTexture();
+
+            const geom = new THREE.BoxGeometry(L, H, P);
+            const mat = new THREE.MeshStandardMaterial({
+                map: texture,
+                roughness: 0.4,
+                metalness: 0.2
+            });
+
+            box3DMesh = new THREE.Mesh(geom, mat);
+            box3DMesh.position.y = -40 + H / 2;
+            scene3D.add(box3DMesh);
+        }
+
+        // =================================================================
+        // CANVAS 2D SETUP (FUSTELLA CAD ESECUTIVA)
+        // =================================================================
+        const canvas2D = document.getElementById('canvas2D');
+        const ctx2D = canvas2D.getContext('2d');
+
+        function draw2DCadDieline() {
+            const w = canvas2D.width = canvas2D.clientWidth;
+            const h = canvas2D.height = canvas2D.clientHeight;
+            ctx2D.clearRect(0, 0, w, h);
+
+            ctx2D.fillStyle = '#06070c';
+            ctx2D.fillRect(0, 0, w, h);
+
+            ctx2D.strokeStyle = '#121826';
+            ctx2D.lineWidth = 1;
+            for (let x = 0; x < w; x += 20) { ctx2D.beginPath(); ctx2D.moveTo(x, 0); ctx2D.lineTo(x, h); ctx2D.stroke(); }
+            for (let y = 0; y < h; y += 20) { ctx2D.beginPath(); ctx2D.moveTo(0, y); ctx2D.lineTo(w, y); ctx2D.stroke(); }
+
+            const L = parseFloat(document.getElementById('boxLength').value) * 0.35;
+            const P = parseFloat(document.getElementById('boxWidth').value) * 0.35;
+            const H = parseFloat(document.getElementById('boxHeight').value) * 0.35;
+            const bleed = parseFloat(document.getElementById('bleedMargin').value) * 2;
+
+            const cx = w / 2;
+            const cy = h / 2;
+
+            // Bleed (Verde)
+            ctx2D.strokeStyle = '#10b981';
+            ctx2D.lineWidth = 1;
+            ctx2D.setLineDash([3, 3]);
+            ctx2D.strokeRect(cx - L - P - bleed, cy - H - P - bleed, (2*L + 2*P) + 2*bleed, (2*H + 2*P) + 2*bleed);
+            ctx2D.setLineDash([]);
+
+            // Taglio (Rosso)
+            ctx2D.strokeStyle = '#f43f5e';
+            ctx2D.lineWidth = 2;
+            ctx2D.strokeRect(cx - L - P, cy - H/2, 2*L + 2*P, H);
+            ctx2D.strokeRect(cx - L/2, cy - H/2 - P, L, P);
+            ctx2D.strokeRect(cx - L/2, cy + H/2, L, P);
+
+            // Cordonatura (Blu)
+            ctx2D.strokeStyle = '#06b6d4';
+            ctx2D.lineWidth = 1.5;
+            ctx2D.setLineDash([6, 4]);
+            ctx2D.beginPath();
+            ctx2D.moveTo(cx - L, cy - H/2); ctx2D.lineTo(cx - L, cy + H/2);
+            ctx2D.moveTo(cx, cy - H/2); ctx2D.lineTo(cx, cy + H/2);
+            ctx2D.moveTo(cx + L, cy - H/2); ctx2D.lineTo(cx + L, cy + H/2);
+            ctx2D.stroke();
+            ctx2D.setLineDash([]);
+        }
+
+        // =================================================================
+        // GESTIONE EXPORT / IMPORT FILE JSON PROGETTO
+        // =================================================================
+        function exportProjectToJson() {
+            const projectData = {
+                metadata: {
+                    projectType: "Capstone Packaging Engineering",
+                    courseModule: "Modulo 1 - CAD & Brand Identity",
+                    version: "1.0",
+                    exportDate: new Date().toISOString()
+                },
+                cadDimensions: {
+                    fefcoType: document.getElementById('fefcoType').value,
+                    boxLengthMm: parseFloat(document.getElementById('boxLength').value),
+                    boxWidthMm: parseFloat(document.getElementById('boxWidth').value),
+                    boxHeightMm: parseFloat(document.getElementById('boxHeight').value),
+                    bleedMarginMm: parseFloat(document.getElementById('bleedMargin').value)
+                },
+                brandIdentity: {
+                    brandName: document.getElementById('brandName').value,
+                    brandTagline: document.getElementById('brandTagline').value,
+                    palette: {
+                        primary: document.getElementById('colorPrimary').value,
+                        secondary: document.getElementById('colorSecondary').value,
+                        accent: document.getElementById('colorAccent').value
+                    }
+                },
+                finish3D: document.getElementById('finishType').value,
+                pitchDeck: {
+                    targetMarket: document.getElementById('pitchTarget').value,
+                    usp: document.getElementById('pitchUsp').value
+                }
+            };
+
+            const jsonString = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(projectData, null, 2));
+            const downloadAnchor = document.createElement('a');
+            const fileName = `progetto_modulo1_${projectData.brandIdentity.brandName.toLowerCase().replace(/\s+/g, '_')}.json`;
+            
+            downloadAnchor.setAttribute("href", jsonString);
+            downloadAnchor.setAttribute("download", fileName);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importProjectFromJson(event) {
+            const fileReader = new FileReader();
+            fileReader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+
+                    if (data.cadDimensions) {
+                        if (data.cadDimensions.fefcoType) document.getElementById('fefcoType').value = data.cadDimensions.fefcoType;
+                        if (data.cadDimensions.boxLengthMm) document.getElementById('boxLength').value = data.cadDimensions.boxLengthMm;
+                        if (data.cadDimensions.boxWidthMm) document.getElementById('boxWidth').value = data.cadDimensions.boxWidthMm;
+                        if (data.cadDimensions.boxHeightMm) document.getElementById('boxHeight').value = data.cadDimensions.boxHeightMm;
+                        if (data.cadDimensions.bleedMarginMm) document.getElementById('bleedMargin').value = data.cadDimensions.bleedMarginMm;
+                    }
+
+                    if (data.brandIdentity) {
+                        if (data.brandIdentity.brandName) document.getElementById('brandName').value = data.brandIdentity.brandName;
+                        if (data.brandIdentity.brandTagline) document.getElementById('brandTagline').value = data.brandIdentity.brandTagline;
+                        if (data.brandIdentity.palette) {
+                            if (data.brandIdentity.palette.primary) document.getElementById('colorPrimary').value = data.brandIdentity.palette.primary;
+                            if (data.brandIdentity.palette.secondary) document.getElementById('colorSecondary').value = data.brandIdentity.palette.secondary;
+                            if (data.brandIdentity.palette.accent) document.getElementById('colorAccent').value = data.brandIdentity.palette.accent;
+                        }
+                    }
+
+                    if (data.finish3D) document.getElementById('finishType').value = data.finish3D;
+
+                    if (data.pitchDeck) {
+                        if (data.pitchDeck.targetMarket) document.getElementById('pitchTarget').value = data.pitchDeck.targetMarket;
+                        if (data.pitchDeck.usp) document.getElementById('pitchUsp').value = data.pitchDeck.usp;
+                    }
+
+                    updateAllCalculations();
+                    alert("Progetto JSON del Modulo 1 caricato con successo!");
+
+                } catch (err) {
+                    alert("Errore nel caricamento del file JSON.");
+                }
+            };
+            fileReader.readAsText(event.target.files[0]);
+        }
+
+        function loadModule1Preset() {
+            document.getElementById('fefcoType').value = "0427";
+            document.getElementById('boxLength').value = 260;
+            document.getElementById('boxWidth').value = 160;
+            document.getElementById('boxHeight').value = 80;
+            document.getElementById('bleedMargin').value = 3.0;
+
+            document.getElementById('brandName').value = "VERDE PURA COSMETICS";
+            document.getElementById('brandTagline').value = "Organic & Botanical Skin Therapy";
+            document.getElementById('colorPrimary').value = "#064e3b";
+            document.getElementById('colorSecondary').value = "#d97706";
+            document.getElementById('colorAccent').value = "#10b981";
+
+            document.getElementById('finishType').value = "foil_gold";
+            document.getElementById('pitchTarget').value = "Cosmesi Organica di Alta Gamma & D2C";
+            document.getElementById('pitchUsp').value = "Involucro 100% Compostabile con Sigillo Foil Oro";
+
+            updateAllCalculations();
+        }
+
+        // =================================================================
+        // GESTIONE NAVIGATION TABS & UPDATES
+        // =================================================================
+        const tabDispensa = document.getElementById('tabDispensa');
+        const tabCad = document.getElementById('tabCad');
+        const tabBrand = document.getElementById('tabBrand');
+        const tabPitch = document.getElementById('tabPitch');
+
+        const wrapperDispensa = document.getElementById('wrapperDispensa');
+        const wrapperCad = document.getElementById('wrapperCad');
+        const wrapperBrand = document.getElementById('wrapperBrand');
+        const wrapperPitch = document.getElementById('wrapperPitch');
+
+        function switchTab(activeTab) {
+            [tabDispensa, tabCad, tabBrand, tabPitch].forEach(t => t.classList.remove('active'));
+            [wrapperDispensa, wrapperBrand, wrapperPitch].forEach(w => w.classList.remove('active'));
+            wrapperCad.style.display = 'none';
+
+            if (activeTab === 'dispensa') {
+                tabDispensa.classList.add('active');
+                wrapperDispensa.classList.add('active');
+            } else if (activeTab === 'cad') {
+                tabCad.classList.add('active');
+                wrapperCad.style.display = 'block';
+                draw2DCadDieline();
+            } else if (activeTab === 'brand') {
+                tabBrand.classList.add('active');
+                wrapperBrand.classList.add('active');
+            } else if (activeTab === 'pitch') {
+                tabPitch.classList.add('active');
+                wrapperPitch.classList.add('active');
+            }
+        }
+
+        tabDispensa.addEventListener('click', () => switchTab('dispensa'));
+        tabCad.addEventListener('click', () => switchTab('cad'));
+        tabBrand.addEventListener('click', () => switchTab('brand'));
+        tabPitch.addEventListener('click', () => switchTab('pitch'));
+
+        function updateAllCalculations() {
+            const L = parseFloat(document.getElementById('boxLength').value);
+            const P = parseFloat(document.getElementById('boxWidth').value);
+            const H = parseFloat(document.getElementById('boxHeight').value);
+            const bleed = parseFloat(document.getElementById('bleedMargin').value);
+
+            const brandName = document.getElementById('brandName').value;
+            const tagline = document.getElementById('brandTagline').value;
+            const cPrimary = document.getElementById('colorPrimary').value;
+            const cSecondary = document.getElementById('colorSecondary').value;
+            const cAccent = document.getElementById('colorAccent').value;
+            const fefco = document.getElementById('fefcoType').value;
+
+            document.getElementById('valL').textContent = L + ' mm';
+            document.getElementById('valP').textContent = P + ' mm';
+            document.getElementById('valH').textContent = H + ' mm';
+            document.getElementById('valBleed').textContent = bleed.toFixed(1) + ' mm';
+
+            const sheetW = (2*L + 2*P + bleed*2) / 1000;
+            const sheetH = (2*H + 2*P + bleed*2) / 1000;
+            const areaM2 = (sheetW * sheetH).toFixed(2);
+
+            document.getElementById('metricArea').textContent = areaM2 + ' m²';
+            document.getElementById('metricFefco').textContent = 'FEFCO ' + fefco;
+
+            document.getElementById('bookTitle').textContent = brandName.toUpperCase() + ' — Brand Book';
+            document.getElementById('bookSubtitle').textContent = tagline;
+            document.getElementById('swatchPrimary').style.background = cPrimary;
+            document.getElementById('swatchPrimary').innerHTML = `HEX: ${cPrimary}<br>Primary`;
+            document.getElementById('swatchSecondary').style.background = cSecondary;
+            document.getElementById('swatchSecondary').innerHTML = `HEX: ${cSecondary}<br>Secondary`;
+            document.getElementById('swatchAccent').style.background = cAccent;
+            document.getElementById('swatchAccent').innerHTML = `HEX: ${cAccent}<br>Accent`;
+
+            document.getElementById('pitchSlideBrand').textContent = brandName;
+            document.getElementById('pitchSlideTarget').textContent = document.getElementById('pitchTarget').value;
+            document.getElementById('pitchSlideUsp').textContent = document.getElementById('pitchUsp').value;
+
+            update3DModel();
+            draw2DCadDieline();
+        }
+
+        document.getElementById('btnExportJson').addEventListener('click', exportProjectToJson);
+        document.getElementById('btnImportJson').addEventListener('click', () => document.getElementById('jsonFileInput').click());
+        document.getElementById('jsonFileInput').addEventListener('change', importProjectFromJson);
+        document.getElementById('btnLoadModule1Preset').addEventListener('click', loadModule1Preset);
+
+        const inputs = ['fefcoType', 'boxLength', 'boxWidth', 'boxHeight', 'bleedMargin', 'brandName', 'brandTagline', 'colorPrimary', 'colorSecondary', 'colorAccent', 'finishType', 'pitchTarget', 'pitchUsp'];
+        inputs.forEach(id => {
+            document.getElementById(id).addEventListener('input', updateAllCalculations);
+        });
+
+        document.getElementById('btnExportAll').addEventListener('click', () => {
+            alert(`DOSSIER CAPSTONE GENERATO:\n\n1. Fustella CAD FEFCO ${document.getElementById('fefcoType').value}\n2. Render 3D High-Res\n3. Brand Book (${document.getElementById('brandName').value})\n\nProgetto salvabile in JSON.`);
+        });
+
+        function resizeViewports() {
+            const w1 = canvas3D.clientWidth;
+            const h1 = canvas3D.clientHeight;
+            if (w1 && h1) {
+                renderer3D.setSize(w1, h1, false);
+                camera3D.aspect = w1 / h1;
+                camera3D.updateProjectionMatrix();
+            }
+            draw2DCadDieline();
+        }
+
+        window.addEventListener('resize', resizeViewports);
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls3D.update();
+            renderer3D.render(scene3D, camera3D);
+        }
+
+        setTimeout(() => {
+            resizeViewports();
+            updateAllCalculations();
+            animate();
+        }, 100);
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulatore Modulo 1 - Architettura Packaging & Shelf Impact</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@300;400;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-main: #0c0d12;
+            --panel-bg: #161922;
+            --panel-border: #262b3a;
+            --accent-gold: #f59e0b;
+            --accent-blue: #38bdf8;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* SIDEBAR CONTROLLI */
+        .sidebar {
+            width: 380px;
+            min-width: 380px;
+            background: var(--panel-bg);
+            border-right: 1px solid var(--panel-border);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            z-index: 10;
+        }
+
+        .header {
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--panel-border);
+            background: rgba(0,0,0,0.2);
+        }
+
+        .header h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.05rem;
+            color: var(--accent-gold);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .header p {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .content-scroll {
+            flex: 1;
+            padding: 18px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .section-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--accent-gold);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--panel-border);
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        label {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            font-weight: 500;
+        }
+
+        label span.val {
+            color: var(--accent-blue);
+            font-family: 'Fira Code', monospace;
+        }
+
+        input[type="text"], select {
+            width: 100%;
+            background: #090a0f;
+            border: 1px solid var(--panel-border);
+            color: var(--text-main);
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            outline: none;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent-blue);
+            cursor: pointer;
+        }
+
+        /* CHECKBOX GRID FOR LEGAL COMPLIANCE */
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .checkbox-item {
+            background: #0d0f17;
+            border: 1px solid var(--panel-border);
+            padding: 8px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.72rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .checkbox-item:hover {
+            border-color: var(--accent-blue);
+        }
+
+        .checkbox-item input {
+            accent-color: var(--accent-green);
+        }
+
+        /* WORKSPACE AREA */
+        .workspace {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #08090d;
+        }
+
+        .top-bar {
+            height: 50px;
+            background: var(--panel-bg);
+            border-bottom: 1px solid var(--panel-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 6px;
+            background: #0a0c12;
+            padding: 4px;
+            border-radius: 8px;
+            border: 1px solid var(--panel-border);
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 6px 14px;
+            font-size: 0.75rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: var(--panel-bg);
+            color: var(--accent-gold);
+            border: 1px solid var(--panel-border);
+        }
+
+        /* METRICS BAR */
+        .metrics-bar {
+            display: flex;
+            gap: 16px;
+        }
+
+        .metric-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            font-family: 'Fira Code', monospace;
+            background: rgba(255,255,255,0.03);
+            padding: 4px 10px;
+            border-radius: 20px;
+            border: 1px solid var(--panel-border);
+        }
+
+        .metric-badge .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        /* MAIN CONTENT VIEWS */
+        .view-container {
+            flex: 1;
+            padding: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* VIEW 1: PACK DESIGNER (FOP / BOP) */
+        .pack-stage {
+            display: flex;
+            gap: 40px;
+            align-items: center;
+        }
+
+        .pack-face {
+            width: 260px;
+            height: 380px;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+            position: relative;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: all 0.3s;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .face-label {
+            position: absolute;
+            top: -28px;
+            left: 0;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            font-weight: 700;
+        }
+
+        /* FRONT OF PACK (FOP) DESIGN ELEMENTS */
+        .fop-brand {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            text-transform: uppercase;
+            line-height: 1;
+            word-break: break-word;
+        }
+
+        .fop-category {
+            font-size: 0.75rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            opacity: 0.8;
+            margin-top: 4px;
+        }
+
+        .fop-hero-image {
+            width: 100%;
+            height: 120px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            margin: 12px 0;
+            backdrop-filter: blur(5px);
+        }
+
+        .fop-claim {
+            background: rgba(255,255,255,0.2);
+            padding: 6px 10px;
+            border-radius: 20px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-align: center;
+            align-self: center;
+            letter-spacing: 0.5px;
+        }
+
+        .fop-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            font-size: 0.68rem;
+            font-weight: 600;
+            border-top: 1px solid rgba(255,255,255,0.2);
+            padding-top: 8px;
+        }
+
+        /* BACK OF PACK (BOP) DESIGN ELEMENTS */
+        .bop-container {
+            font-size: 0.58rem;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            height: 100%;
+            justify-content: space-between;
+            color: #1e293b;
+            background: #ffffff;
+            padding: 14px;
+            border-radius: 8px;
+        }
+
+        .bop-title {
+            font-weight: 700;
+            font-size: 0.65rem;
+            border-bottom: 1px solid #cbd5e1;
+            padding-bottom: 3px;
+            text-transform: uppercase;
+        }
+
+        .nutrition-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.55rem;
+        }
+
+        .nutrition-table td, .nutrition-table th {
+            border-bottom: 1px solid #e2e8f0;
+            padding: 2px 0;
+            text-align: left;
+        }
+
+        .legal-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+            margin-top: 4px;
+        }
+
+        .badge-icon {
+            border: 1px solid #64748b;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-size: 0.52rem;
+            font-weight: 700;
+            font-family: 'Fira Code', monospace;
+        }
+
+        /* VIEW 2: SHELF SIMULATOR (GDO) */
+        .shelf-container {
+            width: 100%;
+            max-width: 900px;
+            height: 480px;
+            background: #11131a;
+            border: 2px solid var(--panel-border);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            padding: 20px 40px;
+            position: relative;
+        }
+
+        .shelf-row {
+            height: 110px;
+            border-bottom: 8px solid #334155;
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-around;
+            padding-bottom: 2px;
+            position: relative;
+        }
+
+        .shelf-label {
+            position: absolute;
+            left: -35px;
+            bottom: 10px;
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            transform: rotate(-90deg);
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .shelf-item {
+            width: 65px;
+            height: 95px;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 6px;
+            font-size: 0.45rem;
+            font-weight: 700;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            transition: transform 0.3s;
+        }
+
+        .shelf-item.target-pack {
+            transform: scale(1.15);
+            outline: 2px solid var(--accent-gold);
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.4);
+            z-index: 5;
+        }
+
+        .eye-level-zone {
+            position: absolute;
+            right: 10px;
+            top: 35%;
+            background: rgba(56, 189, 248, 0.15);
+            border: 1px dashed var(--accent-blue);
+            color: var(--accent-blue);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            pointer-events: none;
+        }
+
+        /* EDUCATIONAL THEORY FOOTER */
+        .theory-banner {
+            position: absolute;
+            bottom: 16px;
+            left: 24px;
+            right: 24px;
+            background: rgba(22, 25, 34, 0.9);
+            border: 1px solid var(--panel-border);
+            border-left: 4px solid var(--accent-gold);
+            padding: 12px 16px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            line-height: 1.4;
+            color: #cbd5e1;
+            backdrop-filter: blur(8px);
+        }
+
+        .theory-banner strong {
+            color: var(--accent-gold);
+            display: block;
+            margin-bottom: 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR CONTROLLI STRATEGICI -->
+    <div class="sidebar">
+        <div class="header">
+            <h1>Modulo 1: Brand & Packaging</h1>
+            <p>Simulatore di Architettura Visiva & Shelf Impact</p>
+        </div>
+
+        <div class="content-scroll">
+            
+            <!-- 1. IDENTITÀ E STILE VISIVO -->
+            <div class="section-title">1. Brand Identity & Color Strategy</div>
+            
+            <div class="control-group">
+                <label for="brandName">Nome Brand</label>
+                <input type="text" id="brandName" value="NÄTUR">
+            </div>
+
+            <div class="control-group">
+                <label for="categoryTitle">Categoria Prodotto</label>
+                <input type="text" id="categoryTitle" value="OAT MILK BIO">
+            </div>
+
+            <div class="control-group">
+                <label for="colorPalette">Palette CROMATICA (FOP)</label>
+                <select id="colorPalette">
+                    <option value="minimal">Minimal White & Forest Green</option>
+                    <option value="darkLuxury">Dark Luxury & Matt Gold</option>
+                    <option value="brightPop">Bright Pop Orange & Cyan</option>
+                    <option value="craftKraft">Eco Kraft & Charcoal</option>
+                </select>
+            </div>
+
+            <!-- 2. GERARCHIA VISIVA FOP -->
+            <div class="section-title">2. Gerarchia Visiva (Front of Pack)</div>
+
+            <div class="control-group">
+                <label for="logoScale">Dimensione Logo Brand <span class="val" id="valLogo">28px</span></label>
+                <input type="range" id="logoScale" min="16" max="42" value="28">
+            </div>
+
+            <div class="control-group">
+                <label for="claimText">Claim Promeza Principale</label>
+                <input type="text" id="claimText" value="100% VEGAN • SENZA ZUCCHERI">
+            </div>
+
+            <div class="control-group">
+                <label for="heroIcon">Visual Icon / Hero Graphic</label>
+                <select id="heroIcon">
+                    <option value="🌾">🌾 Spiga d'Avena (Botanica)</option>
+                    <option value="☕">☕ Tazza Cappuccino (Usage)</option>
+                    <option value="🌱">🌱 Foglia Bio (Sostenibilità)</option>
+                    <option value="✨">✨ Minimal Geometric Icon</option>
+                </select>
+            </div>
+
+            <!-- 3. NORMATIVA E CONFORMITÀ LEGALE (BOP) -->
+            <div class="section-title">3. Requisiti di Legge (Back of Pack)</div>
+
+            <div class="checkbox-grid">
+                <label class="checkbox-item">
+                    <input type="checkbox" id="chkNutrition" checked> Tabella Nutrizionale
+                </label>
+                <label class="checkbox-item">
+                    <input type="checkbox" id="chkBarcode" checked> Codice a Barre EAN
+                </label>
+                <label class="checkbox-item">
+                    <input type="checkbox" id="chkInci" checked> Lista Ingredienti (INCI)
+                </label>
+                <label class="checkbox-item">
+                    <input type="checkbox" id="chkAllergens" checked> Evidenziazione Allergeni
+                </label>
+                <label class="checkbox-item">
+                    <input type="checkbox" id="chkEco" checked> Simboli Riciclo / FSC
+                </label>
+                <label class="checkbox-item">
+                    <input type="checkbox" id="chkQuantity" checked> Peso Netto / Vol (e)
+                </label>
+            </div>
+
+            <!-- 4. POSIZIONAMENTO SCAFFALE GDO -->
+            <div class="section-title">4. Test Scaffale (GDO)</div>
+            <div class="control-group">
+                <label for="shelfLevel">Livello Posizionamento Scaffale</label>
+                <select id="shelfLevel">
+                    <option value="eye">Livello Occhi (Eye Level - Max Impatto)</option>
+                    <option value="touch">Livello Mani (Touch Level)</option>
+                    <option value="bottom">Livello Suolo (Bottom Level - Discount)</option>
+                </select>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- WORKSPACE PRINCIPALE -->
+    <div class="workspace">
+        <div class="top-bar">
+            <div class="nav-tabs">
+                <button class="tab-btn active" id="tabPack">Studio Grafico (FOP / BOP)</button>
+                <button class="tab-btn" id="tabShelf">Simulatore Scaffale Parlante</button>
+            </div>
+
+            <!-- AUDIT METRICS SCOREBOARD -->
+            <div class="metrics-bar">
+                <div class="metric-badge">
+                    <span class="dot" id="dotLegal" style="background:var(--accent-green);"></span>
+                    Conformità Legale: <span id="scoreLegal" style="color:var(--accent-green);">100%</span>
+                </div>
+                <div class="metric-badge">
+                    <span class="dot" id="dotImpact" style="background:var(--accent-blue);"></span>
+                    Shelf Impact Score: <span id="scoreImpact" style="color:var(--accent-blue);">85/100</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="view-container">
+            
+            <!-- VISTA 1: PACK DESIGNER (FRONT & BACK) -->
+            <div class="pack-stage" id="viewPack">
+                
+                <!-- FRONT OF PACK (FOP) -->
+                <div style="position:relative;">
+                    <span class="face-label">Front-of-Pack (FOP) • Branding</span>
+                    <div class="pack-face" id="fopFace">
+                        <div>
+                            <div class="fop-brand" id="fopBrandDisplay">NÄTUR</div>
+                            <div class="fop-category" id="fopCategoryDisplay">OAT MILK BIO</div>
+                        </div>
+
+                        <div class="fop-hero-image" id="fopIconDisplay">🌾</div>
+
+                        <div>
+                            <div class="fop-claim" id="fopClaimDisplay">100% VEGAN • SENZA ZUCCHERI</div>
+                        </div>
+
+                        <div class="fop-footer">
+                            <span>BEVANDA VEGETALE</span>
+                            <span id="fopNetWeight">1000 ml ℮</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BACK OF PACK (BOP) -->
+                <div style="position:relative;">
+                    <span class="face-label">Back-of-Pack (BOP) • Normativa</span>
+                    <div class="pack-face" style="background:#fff;">
+                        <div class="bop-container">
+                            <div class="bop-title">INFORMAZIONI NUTRIZIONALI & INGREDIENTI</div>
+                            
+                            <p id="bopInciText" style="line-height:1.2;">
+                                <strong>INGREDIENTI:</strong> Acqua, <span id="bopAllergenText" style="text-decoration:underline; font-weight:bold;">AVENA biologica (14%)</span>, olio di semi di girasole, sale marino.
+                            </p>
+
+                            <table class="nutrition-table" id="bopNutritionTable">
+                                <thead>
+                                    <tr><th>Valori Medi</th><th>100ml</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>Energia</td><td>198 kJ / 47 kcal</td></tr>
+                                    <tr><td>Grassi</td><td>1.3 g</td></tr>
+                                    <tr><td>Carboinati</td><td>8.1 g</td></tr>
+                                    <tr><td>Proteine</td><td>0.6 g</td></tr>
+                                </tbody>
+                            </table>
+
+                            <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:auto;">
+                                <div>
+                                    <div class="legal-badges" id="bopBadges">
+                                        <span class="badge-icon" id="badgeEco">FSC / RECYCLED</span>
+                                        <span class="badge-icon">BIO / CE</span>
+                                    </div>
+                                    <div style="margin-top:4px; font-size:0.5rem;" id="bopQuantityText">Vol. Netto: 1000 ml ℮</div>
+                                </div>
+
+                                <div id="bopBarcodeBox" style="text-align:center;">
+                                    <div style="font-family:'Fira Code'; font-size:1.1rem; letter-spacing:-2px; font-weight:bold;">||||||||||||||</div>
+                                    <div style="font-size:0.48rem;">800123456789</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- VISTA 2: SHELF SIMULATOR (GDO) -->
+            <div class="shelf-container" id="viewShelf" style="display:none;">
+                <div class="eye-level-zone">AREA HIGHLIGHT: ZONA OCCHI (EYE-LEVEL)</div>
+
+                <!-- SCAFFALE ALTO -->
+                <div class="shelf-row" id="rowTop">
+                    <span class="shelf-label">Alto</span>
+                    <div class="shelf-item" style="background:#334155; color:#94a3b8;">COMPETITOR A</div>
+                    <div class="shelf-item" style="background:#475569; color:#cbd5e1;">COMPETITOR B</div>
+                    <div class="shelf-item" style="background:#1e293b; color:#64748b;">COMPETITOR C</div>
+                    <div class="shelf-item" style="background:#334155; color:#94a3b8;">COMPETITOR D</div>
+                </div>
+
+                <!-- SCAFFALE MEDIO (EYE LEVEL) -->
+                <div class="shelf-row" id="rowMiddle">
+                    <span class="shelf-label">Occhi</span>
+                    <div class="shelf-item" style="background:#f1f5f9; color:#0f172a;">BRAND X</div>
+                    <!-- TARGET PACK DINAMICO -->
+                    <div class="shelf-item target-pack" id="shelfTargetPack">
+                        <span id="shelfBrandText">NÄTUR</span>
+                        <span id="shelfIconText" style="font-size:1.2rem; text-align:center;">🌾</span>
+                        <span id="shelfCategoryText" style="font-size:0.4rem;">BIO OAT</span>
+                    </div>
+                    <div class="shelf-item" style="background:#0284c7; color:#fff;">LEADER A</div>
+                    <div class="shelf-item" style="background:#dc2626; color:#fff;">LEADER B</div>
+                </div>
+
+                <!-- SCAFFALE BASSO -->
+                <div class="shelf-row" id="rowBottom">
+                    <span class="shelf-label">Basso</span>
+                    <div class="shelf-item" style="background:#78350f; color:#fef3c7;">PRIV. LABEL</div>
+                    <div class="shelf-item" style="background:#14532d; color:#dcfce7;">ECO PACK</div>
+                    <div class="shelf-item" style="background:#581c87; color:#f3e8ff;">DISCOUNT</div>
+                    <div class="shelf-item" style="background:#701a75; color:#fce7f3;">BASIC</div>
+                </div>
+            </div>
+
+            <!-- TEORIA DIDATTICA IN BASSO -->
+            <div class="theory-banner" id="theoryBanner">
+                <strong>Focus Modulo 1 - Gerarchia del Front-of-Pack:</strong>
+                Il FOP deve comunicare in meno di 3 secondi: Brand Name, Categoria e Differenziatore Principale (Claim). Evita il sovraccarico informativo per massimizzare la memorabilità a scaffale.
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // =================================================================
+        // STATE MANAGEMENT & DOM ELEMENTS
+        // =================================================================
+        const brandNameInput = document.getElementById('brandName');
+        const categoryTitleInput = document.getElementById('categoryTitle');
+        const colorPaletteSelect = document.getElementById('colorPalette');
+        const logoScaleInput = document.getElementById('logoScale');
+        const claimTextInput = document.getElementById('claimText');
+        const heroIconSelect = document.getElementById('heroIcon');
+        const shelfLevelSelect = document.getElementById('shelfLevel');
+
+        // Checkboxes
+        const chkNutrition = document.getElementById('chkNutrition');
+        const chkBarcode = document.getElementById('chkBarcode');
+        const chkInci = document.getElementById('chkInci');
+        const chkAllergens = document.getElementById('chkAllergens');
+        const chkEco = document.getElementById('chkEco');
+        const chkQuantity = document.getElementById('chkQuantity');
+
+        // Target Preview Elements (FOP)
+        const fopFace = document.getElementById('fopFace');
+        const fopBrandDisplay = document.getElementById('fopBrandDisplay');
+        const fopCategoryDisplay = document.getElementById('fopCategoryDisplay');
+        const fopIconDisplay = document.getElementById('fopIconDisplay');
+        const fopClaimDisplay = document.getElementById('fopClaimDisplay');
+        const valLogo = document.getElementById('valLogo');
+
+        // Target Preview Elements (BOP)
+        const bopNutritionTable = document.getElementById('bopNutritionTable');
+        const bopBarcodeBox = document.getElementById('bopBarcodeBox');
+        const bopInciText = document.getElementById('bopInciText');
+        const bopAllergenText = document.getElementById('bopAllergenText');
+        const badgeEco = document.getElementById('badgeEco');
+        const bopQuantityText = document.getElementById('bopQuantityText');
+
+        // Shelf Elements
+        const shelfTargetPack = document.getElementById('shelfTargetPack');
+        const shelfBrandText = document.getElementById('shelfBrandText');
+        const shelfIconText = document.getElementById('shelfIconText');
+        const shelfCategoryText = document.getElementById('shelfCategoryText');
+        const rowTop = document.getElementById('rowTop');
+        const rowMiddle = document.getElementById('rowMiddle');
+        const rowBottom = document.getElementById('rowBottom');
+
+        // Navigation Tabs
+        const tabPack = document.getElementById('tabPack');
+        const tabShelf = document.getElementById('tabShelf');
+        const viewPack = document.getElementById('viewPack');
+        const viewShelf = document.getElementById('viewShelf');
+
+        // Scores
+        const scoreLegal = document.getElementById('scoreLegal');
+        const scoreImpact = document.getElementById('scoreImpact');
+        const dotLegal = document.getElementById('dotLegal');
+        const dotImpact = document.getElementById('dotImpact');
+        const theoryBanner = document.getElementById('theoryBanner');
+
+        // PALETTE COLOR MAP
+        const palettes = {
+            minimal: { bg: '#f4f4f0', text: '#1b3b2b', claimBg: '#1b3b2b', claimColor: '#ffffff' },
+            darkLuxury: { bg: '#111318', text: '#e5b869', claimBg: '#e5b869', claimColor: '#000000' },
+            brightPop: { bg: '#ff5722', text: '#ffffff', claimBg: '#00bcd4', claimColor: '#000000' },
+            craftKraft: { bg: '#c8a882', text: '#26221f', claimBg: '#26221f', claimColor: '#c8a882' }
+        };
+
+        // =================================================================
+        // UPDATE LOGIC & RENDER
+        // =================================================================
+        function updatePackDesign() {
+            // Update Text
+            fopBrandDisplay.textContent = brandNameInput.value || 'BRAND';
+            fopCategoryDisplay.textContent = categoryTitleInput.value || 'CATEGORY';
+            fopClaimDisplay.textContent = claimTextInput.value || 'CLAIM PROMOTIONAL';
+            fopIconDisplay.textContent = heroIconSelect.value;
+            
+            // Logo Scale
+            fopBrandDisplay.style.fontSize = logoScaleInput.value + 'px';
+            valLogo.textContent = logoScaleInput.value + 'px';
+
+            // Apply Palette
+            const pal = palettes[colorPaletteSelect.value];
+            fopFace.style.backgroundColor = pal.bg;
+            fopFace.style.color = pal.text;
+            fopClaimDisplay.style.backgroundColor = pal.claimBg;
+            fopClaimDisplay.style.color = pal.claimColor;
+
+            // Sync Shelf Preview Pack
+            shelfBrandText.textContent = brandNameInput.value || 'BRAND';
+            shelfIconText.textContent = heroIconSelect.value;
+            shelfCategoryText.textContent = categoryTitleInput.value || 'CAT';
+            shelfTargetPack.style.backgroundColor = pal.bg;
+            shelfTargetPack.style.color = pal.text;
+
+            // Move Target Pack in Shelf View
+            positionPackOnShelf();
+
+            // Legal Toggles Update
+            bopNutritionTable.style.display = chkNutrition.checked ? 'table' : 'none';
+            bopBarcodeBox.style.display = chkBarcode.checked ? 'block' : 'none';
+            bopInciText.style.display = chkInci.checked ? 'block' : 'none';
+            bopAllergenText.style.fontWeight = chkAllergens.checked ? 'bold' : 'normal';
+            bopAllergenText.style.textDecoration = chkAllergens.checked ? 'underline' : 'none';
+            badgeEco.style.display = chkEco.checked ? 'inline-block' : 'none';
+            bopQuantityText.style.display = chkQuantity.checked ? 'block' : 'none';
+
+            // Calculate Audits
+            calculateScores();
+        }
+
+        function positionPackOnShelf() {
+            const level = shelfLevelSelect.value;
+            shelfTargetPack.remove();
+
+            if (level === 'eye') {
+                rowMiddle.appendChild(shelfTargetPack);
+            } else if (level === 'touch') {
+                rowTop.appendChild(shelfTargetPack);
+            } else {
+                rowBottom.appendChild(shelfTargetPack);
+            }
+        }
+
+        function calculateScores() {
+            // Legal Score Calculation
+            const checks = [chkNutrition, chkBarcode, chkInci, chkAllergens, chkEco, chkQuantity];
+            const checkedCount = checks.filter(c => c.checked).length;
+            const legalScorePercent = Math.round((checkedCount / checks.length) * 100);
+            
+            scoreLegal.textContent = legalScorePercent + '%';
+            dotLegal.style.background = legalScorePercent === 100 ? 'var(--accent-green)' : (legalScorePercent > 60 ? 'var(--accent-gold)' : 'var(--accent-red)');
+
+            // Impact Score Calculation
+            let impact = 50; // base
+            if (shelfLevelSelect.value === 'eye') impact += 30;
+            if (shelfLevelSelect.value === 'touch') impact += 15;
+            if (parseInt(logoScaleInput.value) > 25) impact += 10;
+            if (colorPaletteSelect.value === 'brightPop' || colorPaletteSelect.value === 'darkLuxury') impact += 10;
+
+            scoreImpact.textContent = impact + '/100';
+            dotImpact.style.background = impact > 75 ? 'var(--accent-blue)' : 'var(--accent-gold)';
+        }
+
+        // =================================================================
+        // EVENT LISTENERS & TABS
+        // =================================================================
+        const inputs = [
+            brandNameInput, categoryTitleInput, colorPaletteSelect, logoScaleInput,
+            claimTextInput, heroIconSelect, shelfLevelSelect, chkNutrition,
+            chkBarcode, chkInci, chkAllergens, chkEco, chkQuantity
+        ];
+
+        inputs.forEach(input => {
+            input.addEventListener('input', updatePackDesign);
+        });
+
+        tabPack.addEventListener('click', () => {
+            tabPack.classList.add('active');
+            tabShelf.classList.remove('active');
+            viewPack.style.display = 'flex';
+            viewShelf.style.display = 'none';
+            theoryBanner.innerHTML = '<strong>Focus Modulo 1 - Gerarchia del Front-of-Pack:</strong> Il FOP deve comunicare in meno di 3 secondi: Brand Name, Categoria e Differenziatore Principale (Claim). Evita il sovraccarico informativo per massimizzare la memorabilità a scaffale.';
+        });
+
+        tabShelf.addEventListener('click', () => {
+            tabShelf.classList.add('active');
+            tabPack.classList.remove('active');
+            viewPack.style.display = 'none';
+            viewShelf.style.display = 'flex';
+            theoryBanner.innerHTML = '<strong>Focus Modulo 1 - "Lo Scaffale Parlante" (GDO):</strong> Oltre l\'80% delle decisioni d\'acquisto avviene d\'impulso. La fascia "Livello Occhi" (Eye Level) garantisce fino al 35% di rotazione prodotto in più rispetto allo scaffale inferiore.';
+        });
+
+        // Initial Call
+        updatePackDesign();
+
+    </script>
+</body>
+</html>

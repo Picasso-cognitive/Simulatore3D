@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Valutatore Automatico Progetto Packaging - Capstone 2026</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@300;400;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-main: #06080d;
+            --panel-bg: #0d111a;
+            --panel-border: #1a2234;
+            --accent-gold: #f59e0b;
+            --accent-cyan: #06b6d4;
+            --accent-purple: #a855f7;
+            --accent-emerald: #10b981;
+            --accent-rose: #f43f5e;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* HEADER TOP BAR */
+        .top-bar {
+            height: 65px;
+            background: var(--panel-bg);
+            border-bottom: 1px solid var(--panel-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+        }
+
+        .top-bar h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.15rem;
+            color: var(--accent-gold);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .top-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--panel-border);
+            color: var(--text-main);
+            padding: 9px 16px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+
+        .btn-upload {
+            background: var(--accent-purple);
+            color: #fff;
+            border: none;
+            font-weight: 700;
+        }
+
+        .btn-upload:hover {
+            background: #9333ea;
+            color: #fff;
+            transform: translateY(-1px);
+        }
+
+        /* MAIN CONTAINER */
+        .container {
+            max-width: 1280px;
+            margin: 30px auto;
+            padding: 0 20px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* OVERVIEW DASHBOARD (SCORE CARDS) */
+        .score-dashboard {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 20px;
+        }
+
+        .total-score-card {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .total-score-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-rose), var(--accent-gold), var(--accent-emerald));
+        }
+
+        .score-big {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 4rem;
+            font-weight: 700;
+            line-height: 1;
+            margin: 12px 0 6px 0;
+            color: var(--accent-gold);
+        }
+
+        .score-badge {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            padding: 4px 12px;
+            border-radius: 20px;
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--accent-emerald);
+            border: 1px solid var(--accent-emerald);
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .rubric-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .summary-mini-card {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 10px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .summary-mini-card .header-mini {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .summary-mini-card .title-mini {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .summary-mini-card .weight-tag {
+            font-size: 0.7rem;
+            font-family: 'Fira Code', monospace;
+            color: var(--accent-cyan);
+            background: rgba(6, 182, 212, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .progress-bar-bg {
+            width: 100%;
+            height: 8px;
+            background: #1e293b;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: var(--accent-gold);
+            transition: width 0.6s ease;
+        }
+
+        /* DETAILED ANALYSIS SECTION */
+        .details-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .rubric-detail-card {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 20px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .rubric-detail-card .card-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--panel-border);
+            padding-bottom: 12px;
+        }
+
+        .rubric-detail-card .card-head h3 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.1rem;
+            color: var(--accent-gold);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .rubric-detail-card .score-points {
+            font-family: 'Fira Code', monospace;
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .criteria-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            list-style: none;
+        }
+
+        .criteria-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            font-size: 0.85rem;
+            background: rgba(255,255,255,0.02);
+            padding: 10px 14px;
+            border-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.04);
+        }
+
+        .criteria-icon {
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-top: 1px;
+        }
+
+        .criteria-icon.pass { color: var(--accent-emerald); }
+        .criteria-icon.warn { color: var(--accent-gold); }
+        .criteria-icon.fail { color: var(--accent-rose); }
+
+        .feedback-box {
+            background: rgba(6, 182, 212, 0.05);
+            border: 1px dashed var(--accent-cyan);
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 0.8rem;
+            color: #cbd5e1;
+            line-height: 1.5;
+        }
+
+        .feedback-box strong {
+            color: var(--accent-cyan);
+        }
+
+        /* RAW JSON INSPECTOR */
+        .json-preview-box {
+            background: #080a10;
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .json-preview-box h4 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+        }
+
+        pre {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.75rem;
+            color: #a7f3d0;
+            max-height: 250px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        /* PRINT / PDF OVERRIDES */
+        @media print {
+            .top-bar, .btn, .json-preview-box { display: none !important; }
+            body { background: #fff; color: #000; }
+            .container { max-width: 100%; margin: 0; padding: 0; }
+            .total-score-card, .summary-mini-card, .rubric-detail-card {
+                background: #fff;
+                border: 1px solid #ccc;
+                color: #000;
+            }
+            .score-big { color: #000; }
+            .rubric-detail-card .card-head h3 { color: #0284c7; }
+        }
+    </style>
+</head>
+<body>
+
+    <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
+
+    <!-- TOP NAVIGATION BAR -->
+    <div class="top-bar">
+        <h1>Valutatore Automatico Progetto Capstone</h1>
+        <div class="top-actions">
+            <button class="btn" id="btnLoadDemo">⚡ Carica Progetto Esempio (Modulo 1)</button>
+            <button class="btn btn-upload" id="btnUploadJson">📂 Carica JSON Progetto</button>
+            <button class="btn" onclick="window.print()">🖨️ Stampa Report PDF</button>
+        </div>
+    </div>
+
+    <!-- MAIN DASHBOARD CONTENT -->
+    <div class="container">
+        
+        <!-- SCORE OVERVIEW DASHBOARD -->
+        <div class="score-dashboard">
+            
+            <div class="total-score-card">
+                <span style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Valutazione Complessiva</span>
+                <div class="score-big" id="totalScoreVal">--</div>
+                <div class="score-badge" id="totalGradeBadge">In attesa del file JSON</div>
+                <p style="font-size:0.75rem; color:var(--text-muted); margin-top:14px; line-height:1.4;" id="totalSummaryText">
+                    Carica un file .json salvato per elaborare l'analisi automatica rispetto alla griglia d'esame.
+                </p>
+            </div>
+
+            <div class="rubric-summary-grid">
+                
+                <!-- MINI 1: CAD -->
+                <div class="summary-mini-card">
+                    <div class="header-mini">
+                        <span class="title-mini">1. Fustella CAD Esecutiva</span>
+                        <span class="weight-tag">PESO 25%</span>
+                    </div>
+                    <div style="font-size:1.2rem; font-weight:700; font-family:'Fira Code';" id="miniCadScore">-- / 25</div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="barCad"></div>
+                    </div>
+                </div>
+
+                <!-- MINI 2: MOCKUP & 3D -->
+                <div class="summary-mini-card">
+                    <div class="header-mini">
+                        <span class="title-mini">2. Mockup Fisico & Render 3D</span>
+                        <span class="weight-tag">PESO 35%</span>
+                    </div>
+                    <div style="font-size:1.2rem; font-weight:700; font-family:'Fira Code';" id="mini3dScore">-- / 35</div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="bar3d"></div>
+                    </div>
+                </div>
+
+                <!-- MINI 3: BRAND BOOK -->
+                <div class="summary-mini-card">
+                    <div class="header-mini">
+                        <span class="title-mini">3. Brand Guidelines Book</span>
+                        <span class="weight-tag">PESO 25%</span>
+                    </div>
+                    <div style="font-size:1.2rem; font-weight:700; font-family:'Fira Code';" id="miniBrandScore">-- / 25</div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="barBrand"></div>
+                    </div>
+                </div>
+
+                <!-- MINI 4: PITCH -->
+                <div class="summary-mini-card">
+                    <div class="header-mini">
+                        <span class="title-mini">4. Pitch di Presentazione</span>
+                        <span class="weight-tag">PESO 15%</span>
+                    </div>
+                    <div style="font-size:1.2rem; font-weight:700; font-family:'Fira Code';" id="miniPitchScore">-- / 15</div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="barPitch"></div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- DETAILED BREAKDOWN PER DELIVERABLE -->
+        <div class="details-section">
+            
+            <!-- DELIVERABLE 1 -->
+            <div class="rubric-detail-card">
+                <div class="card-head">
+                    <h3>📐 1. Fustella CAD Esecutiva (File Vettoriali e Livelli)</h3>
+                    <div class="score-points" id="headCadScore">0 / 25 Pti</div>
+                </div>
+                <ul class="criteria-list" id="listCadCriteria">
+                    <li class="criteria-item"><span class="criteria-icon fail">✗</span> In attesa di caricamento del file JSON...</li>
+                </ul>
+                <div class="feedback-box" id="feedbackCad">
+                    <strong>Raccomandazione Ingegneristica:</strong> Assicurarsi che le quote $L, P, H$ rispettino le proporzioni di piega e che il margine di Bleed sia $\ge 2.0\text{ mm}$.
+                </div>
+            </div>
+
+            <!-- DELIVERABLE 2 -->
+            <div class="rubric-detail-card">
+                <div class="card-head">
+                    <h3>📦 2. Mockup Fisico + Render 3D (Prototipo 1:1 e Finiture)</h3>
+                    <div class="score-points" id="head3dScore">0 / 35 Pti</div>
+                </div>
+                <ul class="criteria-list" id="list3dCriteria">
+                    <li class="criteria-item"><span class="criteria-icon fail">✗</span> In attesa di caricamento del file JSON...</li>
+                </ul>
+                <div class="feedback-box" id="feedback3d">
+                    <strong>Raccomandazione Nobilitazione:</strong> Applicare trattamenti di alta gamma (Foil, UV Selettiva, Embossing) pertinenti al segmento di mercato prescelto.
+                </div>
+            </div>
+
+            <!-- DELIVERABLE 3 -->
+            <div class="rubric-detail-card">
+                <div class="card-head">
+                    <h3>🎨 3. Brand Guidelines Book (Relazione & Identità Visiva)</h3>
+                    <div class="score-points" id="headBrandScore">0 / 25 Pti</div>
+                </div>
+                <ul class="criteria-list" id="listBrandCriteria">
+                    <li class="criteria-item"><span class="criteria-icon fail">✗</span> In attesa di caricamento del file JSON...</li>
+                </ul>
+                <div class="feedback-box" id="feedbackBrand">
+                    <strong>Raccomandazione Identitaria:</strong> La palette deve contenere 3 codici HEX distinti (Primario, Secondario, Accento) con sufficiente contrasto cromatico.
+                </div>
+            </div>
+
+            <!-- DELIVERABLE 4 -->
+            <div class="rubric-detail-card">
+                <div class="card-head">
+                    <h3>📊 4. Pitch di Presentazione (Argomentazione Commerciale)</h3>
+                    <div class="score-points" id="headPitchScore">0 / 15 Pti</div>
+                </div>
+                <ul class="criteria-list" id="listPitchCriteria">
+                    <li class="criteria-item"><span class="criteria-icon fail">✗</span> In attesa di caricamento del file JSON...</li>
+                </ul>
+                <div class="feedback-box" id="feedbackPitch">
+                    <strong>Raccomandazione Pitch:</strong> Definire chiaramente il Target Market e articulare una Proposta Unica di Valore (USP) incisiva (>15 caratteri).
+                </div>
+            </div>
+
+        </div>
+
+        <!-- RAW JSON DATA DISPLAY -->
+        <div class="json-preview-box">
+            <h4>Ispettore Dati JSON Analizzati</h4>
+            <pre id="jsonRawDisplay">// I dati del file .json caricato appariranno qui...</pre>
+        </div>
+
+    </div>
+
+    <script>
+        // PROGETTO DEMO PER TEST RAPIDO
+        const demoJsonObject = {
+            "metadata": {
+                "projectType": "Capstone Packaging Engineering",
+                "courseModule": "Modulo 1 - CAD & Brand Identity Primaria",
+                "version": "1.0",
+                "exportDate": "2026-09-04T18:00:00.000Z"
+            },
+            "cadDimensions": {
+                "fefcoType": "0427",
+                "boxLengthMm": 260,
+                "boxWidthMm": 160,
+                "boxHeightMm": 80,
+                "bleedMarginMm": 3.0
+            },
+            "brandIdentity": {
+                "brandName": "VERDE PURA COSMETICS",
+                "brandTagline": "Organic & Botanical Skin Therapy",
+                "palette": {
+                    "primary": "#064e3b",
+                    "secondary": "#d97706",
+                    "accent": "#10b981"
+                }
+            },
+            "finish3D": "foil_gold",
+            "pitchDeck": {
+                "targetMarket": "Cosmesi Organica di Alta Gamma & E-Commerce D2C",
+                "usp": "Involucro 100% Compostabile con Sigillo Foil Oro e Tracciabilità GS1"
+            }
+        };
+
+        // ELEMENTI DOM
+        const btnUploadJson = document.getElementById('btnUploadJson');
+        const jsonFileInput = document.getElementById('jsonFileInput');
+        const btnLoadDemo = document.getElementById('btnLoadDemo');
+        const jsonRawDisplay = document.getElementById('jsonRawDisplay');
+
+        // VALUTATORE ALGORITMICO BASATO SULLA GRIGLIA
+        function evaluateProjectJson(data) {
+            jsonRawDisplay.textContent = JSON.stringify(data, null, 2);
+
+            let cadScore = 0;
+            let cadCriteria = [];
+            let cadFeedback = "";
+
+            let score3d = 0;
+            let criteria3d = [];
+            let feedback3d = "";
+
+            let brandScore = 0;
+            let brandCriteria = [];
+            let brandFeedback = "";
+
+            let pitchScore = 0;
+            let pitchCriteria = [];
+            let pitchFeedback = "";
+
+            // -------------------------------------------------------------
+            // 1. EVALUATION: FUSTELLA CAD ESECUTIVA (MAX 25 PTI)
+            // -------------------------------------------------------------
+            const cad = data.cadDimensions || {};
+            
+            // Standard FEFCO definito (6 pti)
+            if (cad.fefcoType && ["0427", "0201", "0211"].includes(cad.fefcoType)) {
+                cadScore += 6;
+                cadCriteria.push({ pass: true, text: `Standard FEFCO ${cad.fefcoType} configurato e conforme ai codici industriali (+6 pti)` });
+            } else {
+                cadCriteria.push({ pass: false, text: "Standard FEFCO non identificato o non conforme (+0 pti)" });
+            }
+
+            // Proporzioni dimensionali coerenti (10 pti)
+            if (cad.boxLengthMm >= 150 && cad.boxWidthMm >= 100 && cad.boxHeightMm >= 50) {
+                cadScore += 10;
+                cadCriteria.push({ pass: true, text: `Dimensioni tridimensionali ($${cad.boxLengthMm} \\times ${cad.boxWidthMm} \\times ${cad.boxHeightMm}\\text{ mm}$) bilanciate (+10 pti)` });
+            } else {
+                cadScore += 4;
+                cadCriteria.push({ pass: false, text: "Dimensioni fuori scala standard o ridotte (+4 pti)" });
+            }
+
+            // Margine di Bleed / Abbondanza (9 pti)
+            if (cad.bleedMarginMm >= 2.0 && cad.bleedMarginMm <= 5.0) {
+                cadScore += 9;
+                cadCriteria.push({ pass: true, text: `Margine di abbondanza / Bleed esecutivo ottimale ($${cad.bleedMarginMm}\\text{ mm}$) (+9 pti)` });
+            } else if (cad.bleedMarginMm > 0) {
+                cadScore += 4;
+                cadCriteria.push({ pass: false, text: `Bleed presente ma sotto la soglia di tolleranza offset ($${cad.bleedMarginMm}\\text{ mm}$) (+4 pti)` });
+            } else {
+                cadCriteria.push({ pass: false, text: "Assenza di margine di abbondanza (Rischio filetto bianco) (+0 pti)" });
+            }
+
+            cadFeedback = cadScore === 25 ? 
+                "Fustella CAD esecutiva perfetta. Livelli di Taglio (Rosso), Cordonatura (Ciano) e Bleed (Verde) sincronizzati." : 
+                "Aumentare il margine di Bleed ad almeno 3.0 mm ed assicurarsi che le quote L, P, H rispettivo i limiti macchina.";
+
+            // -------------------------------------------------------------
+            // 2. EVALUATION: MOCKUP FISICO + RENDER 3D (MAX 35 PTI)
+            // -------------------------------------------------------------
+            const finish = data.finish3D || "";
+
+            // Trattamento di nobilitazione 3D selezionato (15 pti)
+            if (["foil_gold", "emboss", "soft_touch"].includes(finish)) {
+                score3d += 15;
+                criteria3d.push({ pass: true, text: `Finitura di nobilitazione 3D Premium applicata (${finish.toUpperCase()}) (+15 pti)` });
+            } else if (finish === "natural_kraft") {
+                score3d += 10;
+                criteria3d.push({ pass: true, text: "Finitura Kraft Eco-Sostenibile configurata (+10 pti)" });
+            } else {
+                criteria3d.push({ pass: false, text: "Nessuna nobilitazione o finitura superficiale specificata (+0 pti)" });
+            }
+
+            // Resa volume / Calcolo sviluppato (10 pti)
+            if (cad.boxLengthMm && cad.boxWidthMm && cad.boxHeightMm) {
+                const sheetArea = ((2*cad.boxLengthMm + 2*cad.boxWidthMm) * (2*cad.boxHeightMm + 2*cad.boxWidthMm)) / 1000000;
+                if (sheetArea > 0.1 && sheetArea < 0.8) {
+                    score3d += 10;
+                    criteria3d.push({ pass: true, text: `Resa resa foglio steso calcolata correttamente ($${sheetArea.toFixed(2)}\\text{ m}^2$) (+10 pti)` });
+                } else {
+                    score3d += 5;
+                    criteria3d.push({ pass: false, text: "Area foglio con elevato sfrido o ingombro atipico (+5 pti)" });
+                }
+            }
+
+            // Sincronizzazione Texture Map (10 pti)
+            if (data.brandIdentity && data.brandIdentity.brandName) {
+                score3d += 10;
+                criteria3d.push({ pass: true, text: "Texture UV e vettoriali pronti per il bake 3D ad alta risoluzione (+10 pti)" });
+            } else {
+                criteria3d.push({ pass: false, text: "Dati brand insufficienti per la generazione della texture 3D (+0 pti)" });
+            }
+
+            feedback3d = score3d >= 30 ? 
+                "Render 3D e Mock-up strutturale perfettamente integrati con finitura di pregio." : 
+                "Arricchire le nobilitazioni superficiali con trattamenti metallizzati foil o vernici UV selettive.";
+
+            // -------------------------------------------------------------
+            // 3. EVALUATION: BRAND GUIDELINES BOOK (MAX 25 PTI)
+            // -------------------------------------------------------------
+            const brand = data.brandIdentity || {};
+            const palette = brand.palette || {};
+
+            // Nome Brand & Tagline (10 pti)
+            if (brand.brandName && brand.brandName.length >= 3 && brand.brandTagline) {
+                brandScore += 10;
+                brandCriteria.push({ pass: true, text: `Brand Name ("${brand.brandName}") e Tagline formalizzati (+10 pti)` });
+            } else if (brand.brandName) {
+                brandScore += 5;
+                brandCriteria.push({ pass: false, text: "Nome brand presente ma payoff/tagline mancante (+5 pti)" });
+            } else {
+                brandCriteria.push({ pass: false, text: "Brand Identity non definita (+0 pti)" });
+            }
+
+            // Palette cromatica cromaticamente completa (15 pti)
+            const isValidHex = (hex) => /^#[0-9A-F]{6}$/i.test(hex);
+            if (isValidHex(palette.primary) && isValidHex(palette.secondary) && isValidHex(palette.accent)) {
+                brandScore += 15;
+                brandCriteria.push({ pass: true, text: `Palette 3 colori HEX completa (${palette.primary}, ${palette.secondary}, ${palette.accent}) (+15 pti)` });
+            } else if (isValidHex(palette.primary)) {
+                brandScore += 7;
+                brandCriteria.push({ pass: false, text: "Palette incompleta (solo colore primario valido) (+7 pti)" });
+            } else {
+                brandCriteria.push({ pass: false, text: "Palette cromatica assente o codici HEX errati (+0 pti)" });
+            }
+
+            brandFeedback = brandScore === 25 ? 
+                "Brand Guidelines Book ben strutturato con colori identitari armoniosi e tagline chiara." : 
+                "Verificare che tutti i 3 colori della palette abbiano codici HEX validi (es. #064e3b).";
+
+            // -------------------------------------------------------------
+            // 4. EVALUATION: PITCH DI PRESENTAZIONE (MAX 15 PTI)
+            // -------------------------------------------------------------
+            const pitch = data.pitchDeck || {};
+
+            // Target Market specificato (7 pti)
+            if (pitch.targetMarket && pitch.targetMarket.length >= 8) {
+                pitchScore += 7;
+                pitchCriteria.push({ pass: true, text: `Target Market ben articolato ("${pitch.targetMarket}") (+7 pti)` });
+            } else {
+                pitchCriteria.push({ pass: false, text: "Target Market generico o non specificato (+0 pti)" });
+            }
+
+            // Unique Selling Proposition / USP (8 pti)
+            if (pitch.usp && pitch.usp.length >= 15) {
+                pitchScore += 8;
+                pitchCriteria.push({ pass: true, text: `Proposta Unica di Valore (USP) incisiva ("${pitch.usp}") (+8 pti)` });
+            } else if (pitch.usp) {
+                pitchScore += 4;
+                pitchCriteria.push({ pass: false, text: "USP troppo breve o poco argomentata (+4 pti)" });
+            } else {
+                pitchCriteria.push({ pass: false, text: "USP commerciale assente (+0 pti)" });
+            }
+
+            pitchFeedback = pitchScore === 15 ? 
+                "Pitch commerciale eccellente, focalizzato sul target e con USP differenziante." : 
+                "Estendere la descrizione della Unique Selling Proposition nell'apposita sezione del Pitch.";
+
+            // -------------------------------------------------------------
+            // CALCOLO TOTALE E AGGIORNAMENTO DOM
+            // -------------------------------------------------------------
+            const totalScore = cadScore + score3d + brandScore + pitchScore;
+
+            // Update UI Score Numbers
+            document.getElementById('totalScoreVal').textContent = `${totalScore}/100`;
+            
+            document.getElementById('miniCadScore').textContent = `${cadScore} / 25`;
+            document.getElementById('mini3dScore').textContent = `${score3d} / 35`;
+            document.getElementById('miniBrandScore').textContent = `${brandScore} / 25`;
+            document.getElementById('miniPitchScore').textContent = `${pitchScore} / 15`;
+
+            document.getElementById('headCadScore').textContent = `${cadScore} / 25 Pti`;
+            document.getElementById('head3dScore').textContent = `${score3d} / 35 Pti`;
+            document.getElementById('headBrandScore').textContent = `${brandScore} / 25 Pti`;
+            document.getElementById('headPitchScore').textContent = `${pitchScore} / 15 Pti`;
+
+            // Update Progress Bars
+            document.getElementById('barCad').style.width = `${(cadScore / 25) * 100}%`;
+            document.getElementById('bar3d').style.width = `${(score3d / 35) * 100}%`;
+            document.getElementById('barBrand').style.width = `${(brandScore / 25) * 100}%`;
+            document.getElementById('barPitch').style.width = `${(pitchScore / 15) * 100}%`;
+
+            // Update Badge Grade
+            const badge = document.getElementById('totalGradeBadge');
+            const summaryText = document.getElementById('totalSummaryText');
+
+            if (totalScore >= 90) {
+                badge.textContent = "ECCELLENTE (30 / 30 Lode)";
+                badge.style.borderColor = "var(--accent-emerald)";
+                badge.style.color = "var(--accent-emerald)";
+                summaryText.textContent = "Il progetto soddisfa appieno tutti i criteri industriali, tecnici ed espositivi prescritti dal Capstone.";
+            } else if (totalScore >= 75) {
+                badge.textContent = "BUONO (27 - 29 / 30)";
+                badge.style.borderColor = "var(--accent-cyan)";
+                badge.style.color = "var(--accent-cyan)";
+                summaryText.textContent = "Ottimo lavoro complessivo. Alcune finiture o specifiche del pitch possono essere ulteriormente affinate.";
+            } else if (totalScore >= 60) {
+                badge.textContent = "SUFFICIENTE (18 - 24 / 30)";
+                badge.style.borderColor = "var(--accent-gold)";
+                badge.style.color = "var(--accent-gold)";
+                summaryText.textContent = "Progetto idoneo ma con lacune formali nei file CAD o nell'articolazione della Brand Identity.";
+            } else {
+                badge.textContent = "INSUFFICIENTE (Da Rivedere)";
+                badge.style.borderColor = "var(--accent-rose)";
+                badge.style.color = "var(--accent-rose)";
+                summaryText.textContent = "Il file JSON contiene campi incompleti o parametri tecnici al di fuori delle tolleranze di fustellatura.";
+            }
+
+            // Render Criteria Lists
+            renderCriteriaList('listCadCriteria', cadCriteria);
+            renderCriteriaList('list3dCriteria', criteria3d);
+            renderCriteriaList('listBrandCriteria', brandCriteria);
+            renderCriteriaList('listPitchCriteria', pitchCriteria);
+
+            // Set Feedbacks
+            document.getElementById('feedbackCad').innerHTML = `<strong>Raccomandazione CAD:</strong> ${cadFeedback}`;
+            document.getElementById('feedback3d').innerHTML = `<strong>Raccomandazione Render 3D:</strong> ${feedback3d}`;
+            document.getElementById('feedbackBrand').innerHTML = `<strong>Raccomandazione Brand Book:</strong> ${brandFeedback}`;
+            document.getElementById('feedbackPitch').innerHTML = `<strong>Raccomandazione Pitch:</strong> ${pitchFeedback}`;
+        }
+
+        function renderCriteriaList(elementId, criteriaArray) {
+            const list = document.getElementById(elementId);
+            list.innerHTML = "";
+            criteriaArray.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'criteria-item';
+                li.innerHTML = `
+                    <span class="criteria-icon ${item.pass ? 'pass' : 'fail'}">${item.pass ? '✓' : '✗'}</span>
+                    <span>${item.text}</span>
+                `;
+                list.appendChild(li);
+            });
+        }
+
+        // EVENT LISTENERS FOR FILE UPLOAD & DEMO
+        btnUploadJson.addEventListener('click', () => jsonFileInput.click());
+
+        jsonFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const parsedData = JSON.parse(event.target.result);
+                    evaluateProjectJson(parsedData);
+                } catch (err) {
+                    alert("Errore nel formato del file JSON caricato.");
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        btnLoadDemo.addEventListener('click', () => {
+            evaluateProjectJson(demoJsonObject);
+        });
+
+        // INIZIALIZZAZIONE CON PROGETTO DEMO
+        window.addEventListener('DOMContentLoaded', () => {
+            evaluateProjectJson(demoJsonObject);
+        });
+    </script>
+</body>
+</html>

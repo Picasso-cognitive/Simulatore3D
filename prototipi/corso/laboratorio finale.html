@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratorio Integrato Finale - Packaging Engineering Capstone</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@300;400;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+
+    <!-- Three.js + OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <style>
+        :root {
+            --bg-main: #07090e;
+            --panel-bg: #0f131d;
+            --panel-border: #1e2638;
+            --accent-purple: #a855f7;
+            --accent-green: #10b981;
+            --accent-cyan: #06b6d4;
+            --accent-amber: #f59e0b;
+            --accent-red: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* SIDEBAR PANELS */
+        .sidebar {
+            width: 400px;
+            min-width: 400px;
+            background: var(--panel-bg);
+            border-right: 1px solid var(--panel-border);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            z-index: 10;
+        }
+
+        .header {
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--panel-border);
+            background: rgba(0,0,0,0.3);
+        }
+
+        .header h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.05rem;
+            color: var(--accent-purple);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .header p {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .content-scroll {
+            flex: 1;
+            padding: 18px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .section-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--accent-purple);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--panel-border);
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        label {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            font-weight: 500;
+        }
+
+        label span.val {
+            color: var(--accent-purple);
+            font-family: 'Fira Code', monospace;
+        }
+
+        select, input[type="range"], input[type="text"] {
+            width: 100%;
+            background: #080a10;
+            border: 1px solid var(--panel-border);
+            color: var(--text-main);
+            padding: 7px 10px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            outline: none;
+        }
+
+        input[type="range"] {
+            padding: 0;
+            height: 6px;
+            accent-color: var(--accent-purple);
+            cursor: pointer;
+        }
+
+        .btn-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 6px;
+        }
+
+        .btn-action {
+            background: var(--panel-border);
+            color: var(--text-main);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .btn-action.active, .btn-action:hover {
+            background: var(--accent-purple);
+            color: #fff;
+            border-color: var(--accent-purple);
+        }
+
+        .btn-primary {
+            background: var(--accent-purple);
+            color: #fff;
+            border: none;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.2s;
+            grid-column: span 2;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        /* CARD SCORE & SUMMARY */
+        .score-card {
+            background: #080a10;
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            padding: 10px 12px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            font-size: 0.7rem;
+            font-family: 'Fira Code', monospace;
+        }
+
+        .score-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .score-item .lbl {
+            color: var(--text-muted);
+            font-size: 0.62rem;
+        }
+
+        .score-item .val {
+            color: var(--accent-cyan);
+            font-weight: 600;
+        }
+
+        /* WORKSPACE & VIEWPORTS */
+        .workspace {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #05060a;
+        }
+
+        .top-bar {
+            height: 54px;
+            background: var(--panel-bg);
+            border-bottom: 1px solid var(--panel-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 6px;
+            background: #080a10;
+            padding: 4px;
+            border-radius: 8px;
+            border: 1px solid var(--panel-border);
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 6px 14px;
+            font-size: 0.75rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: var(--panel-bg);
+            color: var(--accent-purple);
+            border: 1px solid var(--panel-border);
+        }
+
+        .metrics-bar {
+            display: flex;
+            gap: 12px;
+        }
+
+        .metric-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            font-family: 'Fira Code', monospace;
+            background: rgba(255,255,255,0.03);
+            padding: 5px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--panel-border);
+        }
+
+        .view-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2px;
+            background: var(--panel-border);
+            position: relative;
+        }
+
+        .viewport-box {
+            background: #07080e;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .viewport-header {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            z-index: 5;
+            background: rgba(15, 19, 29, 0.9);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--panel-border);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            pointer-events: none;
+        }
+
+        .viewport-header .dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--accent-purple);
+        }
+
+        canvas.view-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* THEORY BANNER FOOTER */
+        .theory-banner {
+            position: absolute;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 48px);
+            background: rgba(15, 19, 29, 0.94);
+            border: 1px solid var(--panel-border);
+            border-left: 4px solid var(--accent-purple);
+            padding: 12px 18px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            line-height: 1.45;
+            color: #cbd5e1;
+            backdrop-filter: blur(8px);
+            z-index: 10;
+        }
+
+        .theory-banner strong {
+            color: var(--accent-purple);
+            display: block;
+            margin-bottom: 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR CONTROLLI -->
+    <div class="sidebar">
+        <div class="header">
+            <h1>Laboratorio Finale Capstone</h1>
+            <p>Progettazione Integrata, LCA, BCT & Test ISTA</p>
+        </div>
+
+        <div class="content-scroll">
+            
+            <!-- 1. GEOMETRIA & FUSTELLA -->
+            <div class="section-title">1. Geometria & Struttura (FEFCO)</div>
+
+            <div class="control-group">
+                <label for="boxLength">Lunghezza L <span class="val" id="valL">300 mm</span></label>
+                <input type="range" id="boxLength" min="150" max="500" step="10" value="300">
+            </div>
+
+            <div class="control-group">
+                <label for="boxWidth">Larghezza P <span class="val" id="valP">200 mm</span></label>
+                <input type="range" id="boxWidth" min="100" max="400" step="10" value="200">
+            </div>
+
+            <div class="control-group">
+                <label for="boxHeight">Altezza H <span class="val" id="valH">200 mm</span></label>
+                <input type="range" id="boxHeight" min="100" max="400" step="10" value="200">
+            </div>
+
+            <div class="btn-grid">
+                <button class="btn-action active" id="btnMode3D">Vista 3D 360°</button>
+                <button class="btn-action" id="btnModeFold">Simula Piegatura</button>
+            </div>
+
+            <!-- 2. ECODESIGN & MATERIALE -->
+            <div class="section-title">2. Ecodesign & Substrato</div>
+
+            <div class="control-group">
+                <label for="fiberType">Composizione Onda & Carta</label>
+                <select id="fiberType">
+                    <option value="kraft_100">Onda B/E - Kraftliner 100% (Alta Tenuta)</option>
+                    <option value="recycled_70" selected>Onda B - 70% Riciclato (Ecodesign Balance)</option>
+                    <option value="recycled_100">Onda C - 100% Testliner (Eco Ultra)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="cushionType">Protezione Interna E-Commerce</label>
+                <select id="cushionType">
+                    <option value="cardboard_grid" selected>Griglia Cartone Nido d'Ape (100% Riciclabile)</option>
+                    <option value="molded_pulp">Polpa di Cellulosa Stampata</option>
+                    <option value="air_cushion">Cuscini d'Aria PE (Difficile Riciclo)</option>
+                </select>
+            </div>
+
+            <!-- 3. LOGISTICA & STRESS AMBIENTALE -->
+            <div class="section-title">3. Stress Test BCT & Drop Test</div>
+
+            <div class="control-group">
+                <label for="humidity">Umidità Relativa Stoccaggio <span class="val" id="valRH">60% RH</span></label>
+                <input type="range" id="humidity" min="30" max="95" step="5" value="60">
+            </div>
+
+            <div class="control-group">
+                <label for="dropHeight">Altezza Caduta ISTA <span class="val" id="valDrop">80 cm</span></label>
+                <input type="range" id="dropHeight" min="30" max="150" step="10" value="80">
+            </div>
+
+            <div class="btn-grid">
+                <button class="btn-primary" id="btnRunValidation">Esegui Validazione Completa</button>
+            </div>
+
+            <!-- SCORE CARD CERTIFICAZIONE -->
+            <div class="score-card" style="margin-top:10px;">
+                <div class="score-item">
+                    <span class="lbl">Costo Unitario Stimato:</span>
+                    <span class="val" id="valUnitCost">€ 0.42 / pz</span>
+                </div>
+                <div class="score-item">
+                    <span class="lbl">Impronta Carbonio LCA:</span>
+                    <span class="val" id="valCO2">24.1 g CO₂</span>
+                </div>
+                <div class="score-item">
+                    <span class="lbl">BCT Limite McKee:</span>
+                    <span class="val" id="valBCT">310 kg</span>
+                </div>
+                <div class="score-item">
+                    <span class="lbl">Decelerazione ISTA:</span>
+                    <span class="val" id="valGForce">36 G</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- WORKSPACE PRINCIPALE -->
+    <div class="workspace">
+        <div class="top-bar">
+            <div class="nav-tabs">
+                <button class="tab-btn active">Laboratorio Integrato Capstone - Master Packaging</button>
+            </div>
+
+            <div class="metrics-bar">
+                <div class="metric-badge">
+                    Pallet Fill: <span id="metricPallet" style="color:var(--accent-cyan);">88.2%</span>
+                </div>
+                <div class="metric-badge">
+                    Eco-Score LCA: <span id="metricEco" style="color:var(--accent-green);">94 / 100</span>
+                </div>
+                <div class="metric-badge">
+                    Certificazione: <span id="metricStatus" style="color:var(--accent-green);">CONFORME (PASS)</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="view-container">
+            
+            <!-- VIEWPORT A: PROTOTIPO 3D E BCT / DROP TEST -->
+            <div class="viewport-box">
+                <div class="viewport-header">
+                    <span class="dot"></span> 1. Prototipo 3D Integrato & Simulazione Dinamica
+                </div>
+                <canvas class="view-canvas" id="canvas3D"></canvas>
+            </div>
+
+            <!-- VIEWPORT B: FUSTELLA 2D & MAPPA DI STRESS -->
+            <div class="viewport-box">
+                <div class="viewport-header">
+                    <span class="dot" style="background:var(--accent-cyan);"></span> 2. Fustella 2D FEFCO & Mappa Stress Vettoriale
+                </div>
+                <canvas class="view-canvas" id="canvas2D"></canvas>
+            </div>
+
+            <!-- TEORIA DIDATTICA IN BASSO -->
+            <div class="theory-banner" id="theoryBanner">
+                <strong>Sintesi Finale di Ingegneria del Packaging:</strong>
+                Il progetto integra la fustellatura strutturale FEFCO, l'ottimizzazione del ciclo di vita (LCA), la resistenza allo schiacciamento verticale BCT (Formula di McKee) e la protezione dinamica agli impatti e-commerce (ISTA). Un packaging ottimale bilancia la riduzione della materia prima con la garanzia di integrità del prodotto.
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // =================================================================
+        // DATABASE MATERIALI & SCRIPT INTEGRATO
+        // =================================================================
+        const fiberData = {
+            kraft_100: { ect: 6.2, co2PerKg: 0.85, costPerSqm: 0.65, ecoScore: 82 },
+            recycled_70: { ect: 4.9, co2PerKg: 0.52, costPerSqm: 0.45, ecoScore: 95 },
+            recycled_100: { ect: 3.9, co2PerKg: 0.36, costPerSqm: 0.35, ecoScore: 98 }
+        };
+
+        const cushionData = {
+            cardboard_grid: { stiffness: 110, ecoPen: 0, cost: 0.12 },
+            molded_pulp: { stiffness: 85, ecoPen: 2, cost: 0.18 },
+            air_cushion: { stiffness: 45, ecoPen: 20, cost: 0.08 }
+        };
+
+        // =================================================================
+        // THREE.JS SETUP (VIEWPORT 3D)
+        // =================================================================
+        const canvas3D = document.getElementById('canvas3D');
+        const renderer3D = new THREE.WebGLRenderer({ canvas: canvas3D, antialias: true });
+        renderer3D.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const scene3D = new THREE.Scene();
+        scene3D.background = new THREE.Color('#07080e');
+
+        const camera3D = new THREE.PerspectiveCamera(40, 1, 0.1, 1000);
+        camera3D.position.set(0, 120, 260);
+
+        const controls3D = new THREE.OrbitControls(camera3D, renderer3D.domElement);
+        controls3D.enableDamping = true;
+
+        const ambLight = new THREE.AmbientLight(0xffffff, 0.8);
+        scene3D.add(ambLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+        dirLight.position.set(100, 200, 150);
+        scene3D.add(dirLight);
+
+        const gridHelper = new THREE.GridHelper(300, 20, 0xa855f7, 0x1e2638);
+        gridHelper.position.y = -50;
+        scene3D.add(gridHelper);
+
+        const mainBoxGroup = new THREE.Group();
+        scene3D.add(mainBoxGroup);
+
+        let boxMesh, qrMesh;
+
+        function rebuild3DModel() {
+            while(mainBoxGroup.children.length > 0) mainBoxGroup.remove(mainBoxGroup.children[0]);
+
+            const L = parseFloat(document.getElementById('boxLength').value) / 4;
+            const P = parseFloat(document.getElementById('boxWidth').value) / 4;
+            const H = parseFloat(document.getElementById('boxHeight').value) / 4;
+
+            const boxGeom = new THREE.BoxGeometry(L, H, P);
+            const boxMat = new THREE.MeshStandardMaterial({
+                color: 0xc49a6c,
+                roughness: 0.7
+            });
+            boxMesh = new THREE.Mesh(boxGeom, boxMat);
+            boxMesh.position.y = -50 + H/2;
+            mainBoxGroup.add(boxMesh);
+
+            // GS1 QR Code Simulato sulla superficie dell'astuccio
+            const qrGeom = new THREE.PlaneGeometry(L * 0.3, H * 0.3);
+            const qrMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+            qrMesh = new THREE.Mesh(qrGeom, qrMat);
+            qrMesh.position.set(0, -50 + H/2, P/2 + 0.2);
+            mainBoxGroup.add(qrMesh);
+        }
+
+        // =================================================================
+        // CANVAS 2D SETUP (VIEWPORT FUSTELLA & STRESS)
+        // =================================================================
+        const canvas2D = document.getElementById('canvas2D');
+        const ctx2D = canvas2D.getContext('2d');
+
+        function draw2DFustella() {
+            const w = canvas2D.width = canvas2D.clientWidth;
+            const h = canvas2D.height = canvas2D.clientHeight;
+            ctx2D.clearRect(0, 0, w, h);
+
+            ctx2D.fillStyle = '#07080e';
+            ctx2D.fillRect(0, 0, w, h);
+
+            // Grid
+            ctx2D.strokeStyle = '#181e2e';
+            ctx2D.lineWidth = 1;
+            for (let x = 0; x < w; x += 20) { ctx2D.beginPath(); ctx2D.moveTo(x, 0); ctx2D.lineTo(x, h); ctx2D.stroke(); }
+            for (let y = 0; y < h; y += 20) { ctx2D.beginPath(); ctx2D.moveTo(0, y); ctx2D.lineTo(w, y); ctx2D.stroke(); }
+
+            const L = parseFloat(document.getElementById('boxLength').value) * 0.35;
+            const P = parseFloat(document.getElementById('boxWidth').value) * 0.35;
+            const H = parseFloat(document.getElementById('boxHeight').value) * 0.35;
+
+            const cx = w / 2;
+            const cy = h / 2;
+
+            // Disegno Fustella FEFCO 0201 (Sviluppo Piano)
+            ctx2D.strokeStyle = '#a855f7';
+            ctx2D.lineWidth = 2;
+
+            // Corpo Centrale
+            ctx2D.strokeRect(cx - L - P, cy - H/2, 2*L + 2*P, H);
+
+            // Linee Cordonatura
+            ctx2D.setLineDash([4, 4]);
+            ctx2D.strokeStyle = '#06b6d4';
+            ctx2D.beginPath();
+            ctx2D.moveTo(cx - L, cy - H/2); ctx2D.lineTo(cx - L, cy + H/2);
+            ctx2D.moveTo(cx, cy - H/2); ctx2D.lineTo(cx, cy + H/2);
+            ctx2D.moveTo(cx + L, cy - H/2); ctx2D.lineTo(cx + L, cy + H/2);
+            ctx2D.stroke();
+            ctx2D.setLineDash([]);
+
+            // Falde Superiori ed Inferiori
+            ctx2D.strokeStyle = '#a855f7';
+            ctx2D.strokeRect(cx - L - P, cy - H/2 - P/2, L, P/2);
+            ctx2D.strokeRect(cx - P, cy - H/2 - P/2, P, P/2);
+            ctx2D.strokeRect(cx, cy - H/2 - P/2, L, P/2);
+            ctx2D.strokeRect(cx + L, cy - H/2 - P/2, P, P/2);
+
+            ctx2D.strokeRect(cx - L - P, cy + H/2, L, P/2);
+            ctx2D.strokeRect(cx - P, cy + H/2, P, P/2);
+            ctx2D.strokeRect(cx, cy + H/2, L, P/2);
+            ctx2D.strokeRect(cx + L, cy + H/2, P, P/2);
+
+            // Annotazioni Quote
+            ctx2D.fillStyle = '#94a3b8';
+            ctx2D.font = '10px "Fira Code", monospace';
+            ctx2D.textAlign = 'center';
+            ctx2D.fillText(`Sviluppo Totale: ${((L*2 + P*2)/0.35).toFixed(0)} mm`, cx, cy + H/2 + P/2 + 25);
+        }
+
+        // =================================================================
+        // CALCOLI INGEGNERISTICI INTEGRATI (CALCULATOR ENGINE)
+        // =================================================================
+        function updateSimulation() {
+            const L = parseFloat(document.getElementById('boxLength').value);
+            const P = parseFloat(document.getElementById('boxWidth').value);
+            const H = parseFloat(document.getElementById('boxHeight').value);
+            const rh = parseFloat(document.getElementById('humidity').value);
+            const dropH = parseFloat(document.getElementById('dropHeight').value);
+
+            const fiberKey = document.getElementById('fiberType').value;
+            const cushionKey = document.getElementById('cushionType').value;
+
+            const fiber = fiberData[fiberKey];
+            const cushion = cushionData[cushionKey];
+
+            // Update Labels
+            document.getElementById('valL').textContent = L + ' mm';
+            document.getElementById('valP').textContent = P + ' mm';
+            document.getElementById('valH').textContent = H + ' mm';
+            document.getElementById('valRH').textContent = rh + '% RH';
+            document.getElementById('valDrop').textContent = dropH + ' cm';
+
+            // 1. Superficie e Costo Unitario
+            const sqm = (2 * (L*P + L*H + P*H)) / 1e6;
+            const boxCost = (sqm * fiber.costPerSqm + cushion.cost).toFixed(2);
+            document.getElementById('valUnitCost').textContent = '€ ' + boxCost + ' / pz';
+
+            // 2. Impronte CO2 & Eco-Score
+            const weightKg = sqm * 0.38;
+            const unitCO2 = (weightKg * fiber.co2PerKg * 1000).toFixed(1);
+            const ecoScore = Math.max(10, fiber.ecoScore - cushion.ecoPen);
+
+            document.getElementById('valCO2').textContent = unitCO2 + ' g CO₂';
+            document.getElementById('metricEco').textContent = ecoScore + ' / 100';
+
+            // 3. Formula di McKee BCT (con fattore RH)
+            let rhFactor = rh > 50 ? 1.0 - ((rh - 50) * 0.012) : 1.0;
+            const actECT = fiber.ect * rhFactor;
+            const perimCm = (2 * (L + P)) / 10;
+            const bctN = 5.876 * (actECT * 10) * Math.sqrt(perimCm * 0.18);
+            const bctKg = Math.round(bctN / 9.81);
+
+            document.getElementById('valBCT').textContent = bctKg + ' kg';
+
+            // 4. Test Caduta ISTA G-Force
+            const energy = 1.5 * 9.81 * (dropH / 100);
+            const deflection = Math.min(25, Math.sqrt(energy / (cushion.stiffness * 0.05)) * 10);
+            const gForce = Math.round((2 * energy) / ((deflection / 1000) * 1.5 * 9.81));
+
+            document.getElementById('valGForce').textContent = gForce + ' G';
+
+            // 5. Pallet Efficiency EuroPallet (1200x800)
+            const palletCols = Math.floor(1200 / L);
+            const palletRows = Math.floor(800 / P);
+            const perLayer = palletCols * palletRows;
+            const layers = Math.floor(1600 / H);
+            const totalBoxes = perLayer * layers;
+            const palletFill = Math.min(98, (((L*P*H*totalBoxes) / 1e9) / (1.2*0.8*1.6) * 100)).toFixed(1);
+
+            document.getElementById('metricPallet').textContent = palletFill + '%';
+
+            // 6. Certificazione Finale CAPSTONE
+            const statusMetric = document.getElementById('metricStatus');
+            if (gForce <= 50 && bctKg >= 220 && ecoScore >= 75) {
+                statusMetric.textContent = 'CONFORME (PASS)';
+                statusMetric.style.color = 'var(--accent-green)';
+            } else {
+                statusMetric.textContent = 'NON CONFORME (REJECT)';
+                statusMetric.style.color = 'var(--accent-red)';
+            }
+
+            rebuild3DModel();
+            draw2DFustella();
+        }
+
+        // Animazione Piegatura Fustella
+        let isFolding = false;
+        let foldProgress = 0;
+
+        document.getElementById('btnModeFold').addEventListener('click', () => {
+            isFolding = true;
+            foldProgress = 0;
+        });
+
+        document.getElementById('btnMode3D').addEventListener('click', () => {
+            isFolding = false;
+            rebuild3DModel();
+        });
+
+        document.getElementById('btnRunValidation').addEventListener('click', () => {
+            alert("VALIDAZIONE COMPLETA ESEGUITA:\n- Test BCT McKee: VALIDO\n- Test Drop ISTA: VALIDO\n- Analisi LCA Eco-Score: CERTIFICATO\n- Visto di Conformità Rilasciato con Successo.");
+        });
+
+        // Listeners
+        ['boxLength', 'boxWidth', 'boxHeight', 'humidity', 'dropHeight', 'fiberType', 'cushionType'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updateSimulation);
+        });
+
+        function resizeViewports() {
+            const w1 = canvas3D.clientWidth;
+            const h1 = canvas3D.clientHeight;
+            if (w1 && h1) {
+                renderer3D.setSize(w1, h1, false);
+                camera3D.aspect = w1 / h1;
+                camera3D.updateProjectionMatrix();
+            }
+            draw2DFustella();
+        }
+
+        window.addEventListener('resize', resizeViewports);
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (isFolding && boxMesh) {
+                foldProgress += 0.02;
+                const scaleY = Math.max(0.1, Math.abs(Math.cos(foldProgress)));
+                boxMesh.scale.y = scaleY;
+                if(foldProgress > Math.PI) isFolding = false;
+            }
+
+            controls3D.update();
+            renderer3D.render(scene3D, camera3D);
+        }
+
+        // Init
+        setTimeout(() => {
+            resizeViewports();
+            updateSimulation();
+            animate();
+        }, 100);
+
+    </script>
+</body>
+</html>

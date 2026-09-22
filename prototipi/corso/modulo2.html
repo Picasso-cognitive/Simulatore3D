@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulatore Modulo 2 - Paper Engineering & Structural CAD</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@300;400;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+
+    <!-- Three.js + OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <style>
+        :root {
+            --bg-main: #0a0c10;
+            --panel-bg: #131722;
+            --panel-border: #23293a;
+            --accent-cyan: #06b6d4;
+            --accent-orange: #f97316;
+            --accent-green: #10b981;
+            --cut-red: #ef4444;
+            --crease-blue: #3b82f6;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* SIDEBAR PANELS */
+        .sidebar {
+            width: 380px;
+            min-width: 380px;
+            background: var(--panel-bg);
+            border-right: 1px solid var(--panel-border);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            z-index: 10;
+        }
+
+        .header {
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--panel-border);
+            background: rgba(0,0,0,0.25);
+        }
+
+        .header h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.05rem;
+            color: var(--accent-cyan);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .header p {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .content-scroll {
+            flex: 1;
+            padding: 18px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .section-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--accent-cyan);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--panel-border);
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        label {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            font-weight: 500;
+        }
+
+        label span.val {
+            color: var(--accent-cyan);
+            font-family: 'Fira Code', monospace;
+        }
+
+        select, input[type="range"], input[type="number"] {
+            width: 100%;
+            background: #090b10;
+            border: 1px solid var(--panel-border);
+            color: var(--text-main);
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            outline: none;
+        }
+
+        input[type="range"] {
+            padding: 0;
+            height: 6px;
+            accent-color: var(--accent-cyan);
+            cursor: pointer;
+        }
+
+        /* MATERIAL SPECS DISPLAY CARD */
+        .spec-card {
+            background: #0a0d14;
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            padding: 10px 12px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            font-size: 0.7rem;
+            font-family: 'Fira Code', monospace;
+        }
+
+        .spec-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .spec-item .lbl {
+            color: var(--text-muted);
+            font-size: 0.62rem;
+        }
+
+        .spec-item .val {
+            color: var(--accent-orange);
+            font-weight: 600;
+        }
+
+        /* LEGEND ISO/ECMA CAD */
+        .cad-legend {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            background: #090b10;
+            border: 1px solid var(--panel-border);
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+        }
+
+        .legend-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .line-sample {
+            width: 35px;
+            height: 3px;
+            border-radius: 2px;
+        }
+
+        /* WORKSPACE & CANVAS */
+        .workspace {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #07080c;
+        }
+
+        .top-bar {
+            height: 50px;
+            background: var(--panel-bg);
+            border-bottom: 1px solid var(--panel-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 6px;
+            background: #090b10;
+            padding: 4px;
+            border-radius: 8px;
+            border: 1px solid var(--panel-border);
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 6px 14px;
+            font-size: 0.75rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: var(--panel-bg);
+            color: var(--accent-cyan);
+            border: 1px solid var(--panel-border);
+        }
+
+        .metrics-bar {
+            display: flex;
+            gap: 14px;
+        }
+
+        .metric-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            font-family: 'Fira Code', monospace;
+            background: rgba(255,255,255,0.03);
+            padding: 4px 10px;
+            border-radius: 20px;
+            border: 1px solid var(--panel-border);
+        }
+
+        /* CANVAS CONTAINER GRID */
+        .view-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2px;
+            background: var(--panel-border);
+            position: relative;
+        }
+
+        .viewport-box {
+            background: #08090d;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .viewport-header {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            z-index: 5;
+            background: rgba(19, 23, 34, 0.85);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--panel-border);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            pointer-events: none;
+        }
+
+        .viewport-header .dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--accent-cyan);
+        }
+
+        canvas.view-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* THEORY BANNER FOOTER */
+        .theory-banner {
+            position: absolute;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 48px);
+            background: rgba(19, 23, 34, 0.92);
+            border: 1px solid var(--panel-border);
+            border-left: 4px solid var(--accent-cyan);
+            padding: 12px 18px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            line-height: 1.45;
+            color: #cbd5e1;
+            backdrop-filter: blur(8px);
+            z-index: 10;
+        }
+
+        .theory-banner strong {
+            color: var(--accent-cyan);
+            display: block;
+            margin-bottom: 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR CONTROLLI -->
+    <div class="sidebar">
+        <div class="header">
+            <h1>Modulo 2: Paper Engineering</h1>
+            <p>Laboratorio Fustella CAD & Meccanica della Piega</p>
+        </div>
+
+        <div class="content-scroll">
+            
+            <!-- 1. ANATOMIA DEL MATERIALE -->
+            <div class="section-title">1. Materiale & Caliper</div>
+
+            <div class="control-group">
+                <label for="materialSelect">Tipologia di Substrato</label>
+                <select id="materialSelect">
+                    <option value="GC1_300">Cartoncino Teso GC1 (300 g/m²)</option>
+                    <option value="GC2_350" selected>Cartoncino Teso GC2 (350 g/m²)</option>
+                    <option value="MICRO_E">Microonda Onda E (E-Flute 1.5mm)</option>
+                    <option value="MICRO_B">Onda Singola Onda B (B-Flute 3.0mm)</option>
+                </select>
+            </div>
+
+            <!-- SCHEDA TECNICA DINAMICA MATERIALE -->
+            <div class="spec-card">
+                <div class="spec-item">
+                    <span class="lbl">Spessore (Caliper):</span>
+                    <span class="val" id="specCaliper">0.48 mm</span>
+                </div>
+                <div class="spec-item">
+                    <span class="lbl">Raggio Piega Min:</span>
+                    <span class="val" id="specRadius">1.20 mm</span>
+                </div>
+                <div class="spec-item">
+                    <span class="lbl">Clearance Cordonatura:</span>
+                    <span class="val" id="specClearance">0.72 mm</span>
+                </div>
+                <div class="spec-item">
+                    <span class="lbl">Fibra (Grain Dir.):</span>
+                    <span class="val" style="color:var(--accent-green);">Parallela H</span>
+                </div>
+            </div>
+
+            <!-- 2. PARAMETRI DI FUSTELLATURA CAD -->
+            <div class="section-title">2. Geometria Fustella CAD</div>
+
+            <div class="control-group">
+                <label for="glueFlapWidth">Aletta di Incollo (Glue Flap) <span class="val" id="valGlue">15 mm</span></label>
+                <input type="range" id="glueFlapWidth" min="10" max="25" value="15">
+            </div>
+
+            <div class="control-group">
+                <label for="bleedMargin">Abbondanza di Stampa (Bleed) <span class="val" id="valBleed">3.0 mm</span></label>
+                <input type="range" id="bleedMargin" min="1" max="5" step="0.5" value="3.0">
+            </div>
+
+            <div class="control-group">
+                <label for="foldAngle">Angolo di Piegatura Dinamica <span class="val" id="valAngle">0°</span></label>
+                <input type="range" id="foldAngle" min="0" max="180" value="0">
+            </div>
+
+            <!-- 3. CODICE COLORE STANDARDS ISO/ECMA -->
+            <div class="section-title">3. Standard Vettoriali ISO/ECMA</div>
+            <div class="cad-legend">
+                <div class="legend-row">
+                    <span>Linee di Taglio (Cut Line)</span>
+                    <div class="line-sample" style="background:var(--cut-red);"></div>
+                </div>
+                <div class="legend-row">
+                    <span>Cordonatura (Crease/Score)</span>
+                    <div class="line-sample" style="background:var(--crease-blue);"></div>
+                </div>
+                <div class="legend-row">
+                    <span>Abbondanza (Bleed Line)</span>
+                    <div class="line-sample" style="background:#94a3b8; border:1px dashed #64748b;"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- WORKSPACE PRINCIPALE -->
+    <div class="workspace">
+        <div class="top-bar">
+            <div class="nav-tabs">
+                <button class="tab-btn active" id="btnDualView">Vista Integrata 2D CAD / 3D Kinematics</button>
+            </div>
+
+            <div class="metrics-bar">
+                <div class="metric-badge">
+                    Tolleranza Tollerata: <span id="metricTolerance" style="color:var(--accent-green);">OTTIMALE</span>
+                </div>
+                <div class="metric-badge">
+                    Resistenza Piega: <span id="metricStiffness" style="color:var(--accent-cyan);">1.8 N·m</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="view-container">
+            
+            <!-- VIEWPORT A: 2D CAD DIELINE INSPECTOR -->
+            <div class="viewport-box">
+                <div class="viewport-header">
+                    <span class="dot" style="background:var(--cut-red);"></span> 1. Fustella Vettoriale CAD 2D (Sviluppo in Piano)
+                </div>
+                <canvas class="view-canvas" id="canvas2D"></canvas>
+            </div>
+
+            <!-- VIEWPORT B: 3D KINEMATICS & TENSION SIMULATOR -->
+            <div class="viewport-box">
+                <div class="viewport-header">
+                    <span class="dot" style="background:var(--accent-cyan);"></span> 2. Simulatore 3D di Cordonatura & Tensione
+                </div>
+                <canvas class="view-canvas" id="canvas3D"></canvas>
+            </div>
+
+            <!-- TEORIA DIDATTICA IN BASSO -->
+            <div class="theory-banner" id="theoryBanner">
+                <strong>Principî di Paper Engineering:</strong>
+                La cordonatura pre-frattura in modo controllato la struttura interna della carta lungo l'asse della piega, prevenendo la screpolatura della fibra esterna e dell'inchiostro durante la rotazione 2D➔3D.
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // =================================================================
+        // DATABASE MATERIALI & PROPRIETÀ MECCANICHE
+        // =================================================================
+        const materials = {
+            GC1_300: { name: 'GC1 300g', caliper: 0.40, minRadius: 0.95, clearance: 0.60, stiffness: '1.2 N·m' },
+            GC2_350: { name: 'GC2 350g', caliper: 0.48, minRadius: 1.20, clearance: 0.72, stiffness: '1.8 N·m' },
+            MICRO_E: { name: 'Onda E 1.5mm', caliper: 1.50, minRadius: 2.80, clearance: 2.25, stiffness: '4.5 N·m' },
+            MICRO_B: { name: 'Onda B 3.0mm', caliper: 3.00, minRadius: 5.20, clearance: 4.50, stiffness: '9.2 N·m' }
+        };
+
+        // =================================================================
+        // SETUP THREE.JS (SCENA 3D PER LA PIEGATURA MECCANICA)
+        // =================================================================
+        const canvas3D = document.getElementById('canvas3D');
+        const renderer3D = new THREE.WebGLRenderer({ canvas: canvas3D, antialias: true });
+        renderer3D.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const scene3D = new THREE.Scene();
+        scene3D.background = new THREE.Color('#08090d');
+
+        const camera3D = new THREE.PerspectiveCamera(40, 1, 0.1, 1000);
+        camera3D.position.set(0, 60, 120);
+
+        const controls3D = new THREE.OrbitControls(camera3D, renderer3D.domElement);
+        controls3D.enableDamping = true;
+
+        // Luci
+        const ambLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene3D.add(ambLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(50, 100, 50);
+        scene3D.add(dirLight);
+
+        const grid = new THREE.GridHelper(300, 20, 0x23293a, 0x131722);
+        grid.position.y = -10;
+        scene3D.add(grid);
+
+        // Nodi 3D per simulazione cerniera
+        const foldRootGroup = new THREE.Group();
+        scene3D.add(foldRootGroup);
+
+        let panelFixedMesh, panelHingeMesh, creaseJointLine;
+
+        function init3DSimulator() {
+            while(foldRootGroup.children.length > 0) foldRootGroup.remove(foldRootGroup.children[0]);
+
+            const matKey = document.getElementById('materialSelect').value;
+            const matProps = materials[matKey];
+            const thick = matProps.caliper * 2; // scala visiva per render 3D
+
+            // Materiale Pannello Carta
+            const paperMat = new THREE.MeshStandardMaterial({
+                color: 0xdcd6cd,
+                roughness: 0.6,
+                metalness: 0.1,
+                side: THREE.DoubleSide
+            });
+
+            // Pannello Fisso (Base)
+            const geomFixed = new THREE.BoxGeometry(40, thick, 50);
+            geomFixed.translate(-20, 0, 0);
+            panelFixedMesh = new THREE.Mesh(geomFixed, paperMat);
+            foldRootGroup.add(panelFixedMesh);
+
+            // Pannello Mobile (Incernierato)
+            const geomHinge = new THREE.BoxGeometry(40, thick, 50);
+            geomHinge.translate(20, 0, 0);
+            panelHingeMesh = new THREE.Mesh(geomHinge, paperMat);
+            foldRootGroup.add(panelHingeMesh);
+
+            // Cordonatura Cerniera (Linea di Tensione)
+            const creaseGeom = new THREE.CylinderGeometry(matProps.clearance, matProps.clearance, 50, 16);
+            creaseGeom.rotateX(Math.PI / 2);
+            const creaseMat = new THREE.MeshBasicMaterial({ color: 0x06b6d4, wireframe: true });
+            creaseJointLine = new THREE.Mesh(creaseGeom, creaseMat);
+            foldRootGroup.add(creaseJointLine);
+        }
+
+        function update3DFold() {
+            const angleDeg = parseFloat(document.getElementById('foldAngle').value);
+            const angleRad = (angleDeg * Math.PI) / 180;
+
+            if (panelHingeMesh) {
+                panelHingeMesh.rotation.z = angleRad;
+                
+                // Mappa il colore della cerniera in base alla tensione meccanica
+                const tensionRatio = angleDeg / 180;
+                if (creaseJointLine) {
+                    creaseJointLine.material.color.setHSL(0.5 - tensionRatio * 0.5, 1, 0.5);
+                }
+            }
+        }
+
+        // =================================================================
+        // SETUP CANVAS 2D (FUSTELLA VETTORIALE CAD)
+        // =================================================================
+        const canvas2D = document.getElementById('canvas2D');
+        const ctx2D = canvas2D.getContext('2d');
+
+        function drawCAD2D() {
+            const w = canvas2D.width = canvas2D.clientWidth;
+            const h = canvas2D.height = canvas2D.clientHeight;
+            ctx2D.clearRect(0, 0, w, h);
+
+            const glueW = parseFloat(document.getElementById('glueFlapWidth').value) * 2;
+            const bleed = parseFloat(document.getElementById('bleedMargin').value) * 2;
+            const matKey = document.getElementById('materialSelect').value;
+            const matProps = materials[matKey];
+
+            const panelW = 90;
+            const panelH = 120;
+            const cx = w / 2 - panelW;
+            const cy = h / 2 - panelH / 2;
+
+            ctx2D.save();
+
+            // 1. Griglia CAD di Sfondo
+            ctx2D.strokeStyle = '#131722';
+            ctx2D.lineWidth = 1;
+            for (let x = 0; x < w; x += 20) { ctx2D.beginPath(); ctx2D.moveTo(x, 0); ctx2D.lineTo(x, h); ctx2D.stroke(); }
+            for (let y = 0; y < h; y += 20) { ctx2D.beginPath(); ctx2D.moveTo(0, y); ctx2D.lineTo(w, y); ctx2D.stroke(); }
+
+            // 2. Linea di Abbondanza (Bleed Line - Grigio Tratteggiato)
+            ctx2D.strokeStyle = '#64748b';
+            ctx2D.lineWidth = 1;
+            ctx2D.setLineDash([4, 4]);
+            ctx2D.strokeRect(cx - glueW - bleed, cy - bleed, (panelW * 2) + glueW + (bleed * 2), panelH + (bleed * 2));
+
+            // 3. Linea di Cordonatura / Piega (Crease Line - Blu)
+            ctx2D.strokeStyle = '#3b82f6';
+            ctx2D.lineWidth = 2;
+            ctx2D.setLineDash([6, 4]);
+
+            // Asse Cordonatura Principale
+            ctx2D.beginPath();
+            ctx2D.moveTo(cx, cy);
+            ctx2D.lineTo(cx, cy + panelH);
+            ctx2D.moveTo(cx + panelW, cy);
+            ctx2D.lineTo(cx + panelW, cy + panelH);
+            ctx2D.stroke();
+
+            // Visualizzazione Spessore Clearance attorno alla Cordonatura
+            ctx2D.fillStyle = 'rgba(59, 130, 246, 0.15)';
+            const clr = matProps.clearance * 3;
+            ctx2D.fillRect(cx - clr / 2, cy, clr, panelH);
+
+            // 4. Perimetro di Taglio (Cut Line - Rosso Continuo)
+            ctx2D.strokeStyle = '#ef4444';
+            ctx2D.lineWidth = 2.2;
+            ctx2D.setLineDash([]);
+
+            ctx2D.beginPath();
+            // Aletta Incollo Trapezoidale
+            ctx2D.moveTo(cx - glueW, cy + 10);
+            ctx2D.lineTo(cx, cy);
+            ctx2D.lineTo(cx + panelW * 2, cy);
+            ctx2D.lineTo(cx + panelW * 2, cy + panelH);
+            ctx2D.lineTo(cx, cy + panelH);
+            ctx2D.lineTo(cx - glueW, cy + panelH - 10);
+            ctx2D.closePath();
+            ctx2D.stroke();
+
+            // Quote e Annotazioni CAD
+            ctx2D.fillStyle = '#06b6d4';
+            ctx2D.font = '10px "Fira Code", monospace';
+            ctx2D.fillText(`Glue Flap: ${glueW/2}mm`, cx - glueW, cy - 8);
+            ctx2D.fillText(`Clearance Piega: ${matProps.clearance}mm`, cx + 10, cy + panelH + 18);
+
+            ctx2D.restore();
+        }
+
+        // =================================================================
+        // CONTROLLI & UPDATE AGGIORNAMENTO DINAMICO
+        // =================================================================
+        function updateAllControls() {
+            const matKey = document.getElementById('materialSelect').value;
+            const matProps = materials[matKey];
+
+            // Aggiorna Scheda Tecnica
+            document.getElementById('specCaliper').textContent = matProps.caliper.toFixed(2) + ' mm';
+            document.getElementById('specRadius').textContent = matProps.minRadius.toFixed(2) + ' mm';
+            document.getElementById('specClearance').textContent = matProps.clearance.toFixed(2) + ' mm';
+
+            // Aggiorna Label Sliders
+            document.getElementById('valGlue').textContent = document.getElementById('glueFlapWidth').value + ' mm';
+            document.getElementById('valBleed').textContent = document.getElementById('bleedMargin').value + ' mm';
+            document.getElementById('valAngle').textContent = document.getElementById('foldAngle').value + '°';
+
+            // Metrics Update
+            document.getElementById('metricStiffness').textContent = matProps.stiffness;
+
+            init3DSimulator();
+            update3DFold();
+            drawCAD2D();
+        }
+
+        // Event Listeners
+        ['materialSelect', 'glueFlapWidth', 'bleedMargin', 'foldAngle'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updateAllControls);
+        });
+
+        function resizeViewports() {
+            const w = canvas3D.clientWidth;
+            const h = canvas3D.clientHeight;
+            if (w && h) {
+                renderer3D.setSize(w, h, false);
+                camera3D.aspect = w / h;
+                camera3D.updateProjectionMatrix();
+            }
+            drawCAD2D();
+        }
+
+        window.addEventListener('resize', resizeViewports);
+
+        // Loop di Rendering 3D
+        function animate() {
+            requestAnimationFrame(animate);
+            controls3D.update();
+            renderer3D.render(scene3D, camera3D);
+        }
+
+        // Inizializzazione iniziale
+        setTimeout(() => {
+            resizeViewports();
+            updateAllControls();
+            animate();
+        }, 100);
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulatore & Editor Dispensa PDF</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Space+Grotesk:wght@600;700&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #0f172a;
+            --accent: #0284c7;
+            --text-dark: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --bg-light: #f8fafc;
+            --sidebar-width: 420px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+
+        body {
+            background-color: #cbd5e1;
+            color: var(--text-dark);
+            min-height: 100vh;
+        }
+
+        /* LAYOUT PRINCIPALE A DUE COLONNE */
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* PANNELLO DI CONTROLLO (EDITOR) */
+        .editor-sidebar {
+            width: var(--sidebar-width);
+            background: #0f172a;
+            color: #f8fafc;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            box-shadow: 4px 0 15px rgba(0,0,0,0.2);
+            z-index: 100;
+        }
+
+        .editor-sidebar h2 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.2rem;
+            color: #38bdf8;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 8px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .control-group label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #94a3b8;
+        }
+
+        .control-group input[type="text"],
+        .control-group textarea {
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .control-group input[type="text"]:focus,
+        .control-group textarea:focus {
+            outline: none;
+            border-color: #38bdf8;
+            background: #0f172a;
+        }
+
+        .control-group textarea {
+            min-height: 80px;
+            resize: vertical;
+            line-height: 1.4;
+        }
+
+        /* PULSANTI E AZIONI */
+        .btn {
+            background: #0284c7;
+            color: #fff;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            background: #0369a1;
+        }
+
+        .btn-success {
+            background: #10b981;
+        }
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid #334155;
+            color: #cbd5e1;
+        }
+        .btn-outline:hover {
+            background: #1e293b;
+            color: #fff;
+        }
+
+        .btn-danger {
+            background: #f43f5e;
+            padding: 4px 8px;
+            font-size: 0.75rem;
+        }
+        .btn-danger:hover {
+            background: #e11d48;
+        }
+
+        .file-upload-box {
+            border: 2px dashed #334155;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            background: #1e293b;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        .file-upload-box:hover {
+            border-color: #38bdf8;
+        }
+
+        /* SEZIONI DINAMICHE EDITOR */
+        .sections-container {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .section-item {
+            background: #1e293b;
+            border: 1px solid #334155;
+            padding: 12px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .section-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* AREA DI ANTEPRIMA A4 */
+        .preview-area {
+            margin-left: var(--sidebar-width);
+            flex: 1;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* FOGLIO A4 PER ANTEPRIMA E STAMPA */
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 20mm;
+            background: #fff;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            position: relative;
+            color: var(--text-dark);
+            line-height: 1.6;
+            font-size: 11pt;
+        }
+
+        /* STILI DOCUMENTO INTERNO */
+        .doc-header {
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 12px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .doc-header h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.6rem;
+            color: var(--primary);
+            line-height: 1.2;
+        }
+
+        .doc-header .meta {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-align: right;
+            font-weight: 500;
+            white-space: pre-line;
+        }
+
+        .section-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.1rem;
+            color: var(--accent);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 4px;
+            margin: 20px 0 12px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        p {
+            margin-bottom: 10px;
+            text-align: justify;
+        }
+
+        ul, ol {
+            margin-left: 20px;
+            margin-bottom: 12px;
+        }
+
+        li {
+            margin-bottom: 4px;
+        }
+
+        /* STILI DI STAMPA PDF */
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+
+            body {
+                background: #fff;
+            }
+
+            .app-container {
+                display: block;
+            }
+
+            .preview-area {
+                margin-left: 0;
+                padding: 0;
+            }
+
+            .page {
+                width: 100%;
+                margin: 0;
+                padding: 0;
+                box-shadow: none;
+            }
+
+            @page {
+                size: A4;
+                margin: 15mm;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <input type="file" id="txtFileInput" accept=".txt" style="display: none;">
+
+    <div class="app-container">
+        
+        <!-- SIDEBAR EDITOR DI TESTI (NO PRINT) -->
+        <div class="editor-sidebar no-print">
+            <h2>📝 Editor Dispensa</h2>
+            
+            <button class="btn btn-success" onclick="window.print()">
+                🖨️ SCARICA / STAMPA PDF
+            </button>
+
+            <!-- IMPORT TXT -->
+            <div class="file-upload-box" onclick="document.getElementById('txtFileInput').click()">
+                <div style="font-size: 0.85rem; font-weight: 600; color: #38bdf8;">📂 Carica File TXT</div>
+                <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 4px;">Popola automaticamente i campi dal testo</div>
+            </div>
+
+            <!-- INTESTAZIONE DOCUMENTO -->
+            <div class="control-group">
+                <label>Titolo Principale</label>
+                <input type="text" id="inputTitle" value="Modulo 1 — Progettazione Strutturale CAD 2D & Identity">
+            </div>
+
+            <div class="control-group">
+                <label>Sottotitolo / Corso</label>
+                <input type="text" id="inputSubtitle" value="Ingegneria del Packaging & Simulatore Interattivo">
+            </div>
+
+            <div class="control-group">
+                <label>Dati Meta (In alto a destra)</label>
+                <textarea id="inputMeta">Corso Capstone 2026&#10;Documentazione Ufficiale</textarea>
+            </div>
+
+            <hr style="border-color: #334155; margin: 10px 0;">
+
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="font-size: 0.95rem; color: #cbd5e1;">Sezioni Documento</h3>
+                <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem;" onclick="addSection()">+ Aggiungi</button>
+            </div>
+
+            <!-- CONTENITORE SEZIONI DINAMICHE -->
+            <div class="sections-container" id="sectionsEditorContainer"></div>
+
+            <button class="btn btn-outline" onclick="resetDefaultContent()">
+                🔄 Ripristina Testo Esempio
+            </button>
+        </div>
+
+        <!-- AREA DI ANTEPRIMA FOGLIO A4 -->
+        <div class="preview-area">
+            <div class="page" id="printableDocument">
+                
+                <div class="doc-header">
+                    <div>
+                        <h1 id="viewTitle">Modulo 1 — Progettazione Strutturale CAD 2D & Identity</h1>
+                        <div id="viewSubtitle" style="font-size:0.85rem; color: var(--accent); font-weight:600; margin-top:4px;">Ingegneria del Packaging & Simulatore Interattivo</div>
+                    </div>
+                    <div class="meta" id="viewMeta">Corso Capstone 2026<br>Documentazione Ufficiale</div>
+                </div>
+
+                <!-- CONTENUTO DINAMICO SEZIONI -->
+                <div id="viewSectionsContainer"></div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // STRUTTURA DATI INIZIALE
+        let documentState = {
+            title: "Modulo 1 — Progettazione Strutturale CAD 2D & Identity",
+            subtitle: "Ingegneria del Packaging & Simulatore Interattivo",
+            meta: "Corso Capstone 2026\nDocumentazione Ufficiale",
+            sections: [
+                {
+                    title: "Obiettivi Formativi del Modulo",
+                    content: "- Comprendere e applicare i codici internazionali dello standard FEFCO.\n- Padroneggiare le convenzioni grafiche CAD 2D di fustellatura: linee di taglio, cordonatura e abbondanza.\n- Analizzare la relazione tra dimensioni tridimensionali e resa industriale su foglio macchina."
+                },
+                {
+                    title: "1. Fondamenti di Ingegneria della Fustella CAD",
+                    content: "La fustella è la matrice meccanica composta da lame d'acciaio inserite in un supporto di legno multistrato. In ambito CAD e nella prestampa esecutiva, ogni linea ha un significato funzionale univoco codificato dai colori standard di settore.\n\nLe tre tipologie principali sono:\n- Taglio Esecutivo (Rosso Magenta): Separa fisicamente il cartone dallo sfrido.\n- Cordonatura (Blu Ciano): Incide parzialmente le fibre per facilitare la piega.\n- Abbondanza / Bleed (Verde Smeraldo): Margine di sicurezza grafico anti-filetto bianco."
+                },
+                {
+                    title: "2. Standard Industriali FEFCO",
+                    content: "Gli standard FEFCO (European Federation of Corrugated Board Manufacturers) codificano univocamente le geometrie di packaging industriale:\n- FEFCO 0427: Scatola avvolgente automontante ideale per e-commerce.\n- FEFCO 0211: Astuccio pieghevole ad incastro classico per cosmesi.\n- FEFCO 0201: Cassa americana standard da spedizione."
+                }
+            ]
+        };
+
+        // ELEMENTI DOM
+        const inputTitle = document.getElementById('inputTitle');
+        const inputSubtitle = document.getElementById('inputSubtitle');
+        const inputMeta = document.getElementById('inputMeta');
+        const sectionsEditorContainer = document.getElementById('sectionsEditorContainer');
+
+        const viewTitle = document.getElementById('viewTitle');
+        const viewSubtitle = document.getElementById('viewSubtitle');
+        const viewMeta = document.getElementById('viewMeta');
+        const viewSectionsContainer = document.getElementById('viewSectionsContainer');
+
+        // INIZIALIZZAZIONE
+        function init() {
+            inputTitle.value = documentState.title;
+            inputSubtitle.value = documentState.subtitle;
+            inputMeta.value = documentState.meta;
+
+            inputTitle.addEventListener('input', (e) => { documentState.title = e.target.value; renderView(); });
+            inputSubtitle.addEventListener('input', (e) => { documentState.subtitle = e.target.value; renderView(); });
+            inputMeta.addEventListener('input', (e) => { documentState.meta = e.target.value; renderView(); });
+
+            renderEditorSections();
+            renderView();
+        }
+
+        // RENDERING PANNELLO DI CONTROLLO SEZIONI
+        function renderEditorSections() {
+            sectionsEditorContainer.innerHTML = '';
+            documentState.sections.forEach((sec, index) => {
+                const secDiv = document.createElement('div');
+                secDiv.className = 'section-item';
+                secDiv.innerHTML = `
+                    <div class="section-item-header">
+                        <span style="font-size:0.75rem; color:#38bdf8; font-weight:600;">SEZIONE ${index + 1}</span>
+                        <button class="btn btn-danger" onclick="removeSection(${index})">Elimina</button>
+                    </div>
+                    <div class="control-group">
+                        <input type="text" value="${escapeHtml(sec.title)}" placeholder="Titolo Sezione" oninput="updateSectionTitle(${index}, this.value)">
+                    </div>
+                    <div class="control-group">
+                        <textarea placeholder="Contenuto della sezione (usa '-' per gli elenchi puntati)..." oninput="updateSectionContent(${index}, this.value)">${escapeHtml(sec.content)}</textarea>
+                    </div>
+                `;
+                sectionsEditorContainer.appendChild(secDiv);
+            });
+        }
+
+        // RENDERING ANTEPRIMA A4
+        function renderView() {
+            viewTitle.textContent = documentState.title || "Titolo Documento";
+            viewSubtitle.textContent = documentState.subtitle || "";
+            viewMeta.innerHTML = escapeHtml(documentState.meta).replace(/\n/g, '<br>');
+
+            viewSectionsContainer.innerHTML = '';
+            documentState.sections.forEach(sec => {
+                if (!sec.title && !sec.content) return;
+
+                const secElement = document.createElement('div');
+                
+                if (sec.title) {
+                    const titleEl = document.createElement('div');
+                    titleEl.className = 'section-title';
+                    titleEl.textContent = sec.title;
+                    secElement.appendChild(titleEl);
+                }
+
+                if (sec.content) {
+                    const parsedContent = parseFormattedText(sec.content);
+                    secElement.appendChild(parsedContent);
+                }
+
+                viewSectionsContainer.appendChild(secElement);
+            });
+        }
+
+        // PARSER DA TESTO A HTML (PARAGRAFI ED ELENCHI)
+        function parseFormattedText(text) {
+            const container = document.createElement('div');
+            const lines = text.split('\n');
+            let currentList = null;
+
+            lines.forEach(line => {
+                const trimmed = line.trim();
+                if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+                    if (!currentList) {
+                        currentList = document.createElement('ul');
+                        container.appendChild(currentList);
+                    }
+                    const li = document.createElement('li');
+                    li.textContent = trimmed.substring(2);
+                    currentList.appendChild(li);
+                } else if (trimmed.length > 0) {
+                    currentList = null;
+                    const p = document.createElement('p');
+                    p.textContent = trimmed;
+                    container.appendChild(p);
+                } else {
+                    currentList = null;
+                }
+            });
+
+            return container;
+        }
+
+        // GESTIONE SEZIONI
+        function updateSectionTitle(index, val) {
+            documentState.sections[index].title = val;
+            renderView();
+        }
+
+        function updateSectionContent(index, val) {
+            documentState.sections[index].content = val;
+            renderView();
+        }
+
+        function addSection() {
+            documentState.sections.push({ title: "Nuova Sezione", content: "Inserisci qui il testo o l'elenco puntato..." });
+            renderEditorSections();
+            renderView();
+        }
+
+        function removeSection(index) {
+            documentState.sections.splice(index, 1);
+            renderEditorSections();
+            renderView();
+        }
+
+        function resetDefaultContent() {
+            location.reload();
+        }
+
+        // PARSER DEL FILE .TXT CARICATO
+        document.getElementById('txtFileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const text = event.target.result;
+                parseTxtToState(text);
+            };
+            reader.readAsText(file);
+        });
+
+        function parseTxtToState(text) {
+            const lines = text.split('\n');
+            let newSections = [];
+            let currentSec = null;
+
+            documentState.sections = [];
+
+            lines.forEach((line) => {
+                const trimmed = line.trim();
+
+                // Sintassi speciale per Titolo e Sottotitolo se presenti
+                if (trimmed.startsWith('# TITOLO:')) {
+                    documentState.title = trimmed.replace('# TITOLO:', '').trim();
+                    inputTitle.value = documentState.title;
+                } else if (trimmed.startsWith('# SOTTOTITOLO:')) {
+                    documentState.subtitle = trimmed.replace('# SOTTOTITOLO:', '').trim();
+                    inputSubtitle.value = documentState.subtitle;
+                } else if (trimmed.startsWith('# META:')) {
+                    documentState.meta = trimmed.replace('# META:', '').trim();
+                    inputMeta.value = documentState.meta;
+                } 
+                // Sezione con intestazione (es: === Titolo === oppure # Titolo)
+                else if (trimmed.startsWith('===') || trimmed.startsWith('##')) {
+                    if (currentSec) newSections.push(currentSec);
+                    const cleanTitle = trimmed.replace(/^(=+)\s*|\s*(=+)$|^#+\s*/g, '');
+                    currentSec = { title: cleanTitle, content: "" };
+                } 
+                else {
+                    if (!currentSec) {
+                        currentSec = { title: "Introduzione", content: "" };
+                    }
+                    currentSec.content += line + "\n";
+                }
+            });
+
+            if (currentSec) newSections.push(currentSec);
+
+            if (newSections.length > 0) {
+                documentState.sections = newSections;
+            }
+
+            renderEditorSections();
+            renderView();
+        }
+
+        function escapeHtml(str) {
+            return str ? str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;") : "";
+        }
+
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

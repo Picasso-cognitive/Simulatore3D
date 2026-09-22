@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulatore Modulo 4 - Ecodesign, Logistica & BCT Stress Test</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@300;400;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+
+    <!-- Three.js + OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <style>
+        :root {
+            --bg-main: #0a0c10;
+            --panel-bg: #131722;
+            --panel-border: #23293a;
+            --accent-green: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-cyan: #06b6d4;
+            --accent-red: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* SIDEBAR PANELS */
+        .sidebar {
+            width: 380px;
+            min-width: 380px;
+            background: var(--panel-bg);
+            border-right: 1px solid var(--panel-border);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            z-index: 10;
+        }
+
+        .header {
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--panel-border);
+            background: rgba(0,0,0,0.25);
+        }
+
+        .header h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.05rem;
+            color: var(--accent-green);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .header p {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .content-scroll {
+            flex: 1;
+            padding: 18px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .section-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--accent-green);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--panel-border);
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        label {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            font-weight: 500;
+        }
+
+        label span.val {
+            color: var(--accent-green);
+            font-family: 'Fira Code', monospace;
+        }
+
+        select, input[type="range"], input[type="number"] {
+            width: 100%;
+            background: #090b10;
+            border: 1px solid var(--panel-border);
+            color: var(--text-main);
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            outline: none;
+        }
+
+        input[type="range"] {
+            padding: 0;
+            height: 6px;
+            accent-color: var(--accent-green);
+            cursor: pointer;
+        }
+
+        /* CARD ANALISI LCA */
+        .lca-card {
+            background: #090b10;
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            padding: 10px 12px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            font-size: 0.7rem;
+            font-family: 'Fira Code', monospace;
+        }
+
+        .lca-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .lca-item .lbl {
+            color: var(--text-muted);
+            font-size: 0.62rem;
+        }
+
+        .lca-item .val {
+            color: var(--accent-amber);
+            font-weight: 600;
+        }
+
+        /* WORKSPACE & VIEWPORTS */
+        .workspace {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #07080c;
+        }
+
+        .top-bar {
+            height: 50px;
+            background: var(--panel-bg);
+            border-bottom: 1px solid var(--panel-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 6px;
+            background: #090b10;
+            padding: 4px;
+            border-radius: 8px;
+            border: 1px solid var(--panel-border);
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 6px 14px;
+            font-size: 0.75rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: var(--panel-bg);
+            color: var(--accent-green);
+            border: 1px solid var(--panel-border);
+        }
+
+        .metrics-bar {
+            display: flex;
+            gap: 14px;
+        }
+
+        .metric-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            font-family: 'Fira Code', monospace;
+            background: rgba(255,255,255,0.03);
+            padding: 4px 10px;
+            border-radius: 20px;
+            border: 1px solid var(--panel-border);
+        }
+
+        .view-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2px;
+            background: var(--panel-border);
+            position: relative;
+        }
+
+        .viewport-box {
+            background: #08090d;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .viewport-header {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            z-index: 5;
+            background: rgba(19, 23, 34, 0.88);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--panel-border);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            pointer-events: none;
+        }
+
+        .viewport-header .dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--accent-green);
+        }
+
+        canvas.view-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* THEORY BANNER FOOTER */
+        .theory-banner {
+            position: absolute;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 48px);
+            background: rgba(19, 23, 34, 0.94);
+            border: 1px solid var(--panel-border);
+            border-left: 4px solid var(--accent-green);
+            padding: 12px 18px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            line-height: 1.45;
+            color: #cbd5e1;
+            backdrop-filter: blur(8px);
+            z-index: 10;
+        }
+
+        .theory-banner strong {
+            color: var(--accent-green);
+            display: block;
+            margin-bottom: 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR CONTROLLI -->
+    <div class="sidebar">
+        <div class="header">
+            <h1>Modulo 4: Logistica & Ecodesign</h1>
+            <p>Laboratorio 3D Pallettizzazione, LCA & Stress BCT</p>
+        </div>
+
+        <div class="content-scroll">
+            
+            <!-- 1. ECODESIGN & MATERIA PRIMA -->
+            <div class="section-title">1. Ecodesign & Substrato</div>
+
+            <div class="control-group">
+                <label for="fiberType">Composizione Fibra</label>
+                <select id="fiberType">
+                    <option value="kraft_100">100% Fibra Vergine Kraftliner (Elevata Resistenza)</option>
+                    <option value="recycled_70" selected>70% Fibra Riciclata / 30% Kraft (Ecodesign Standard)</option>
+                    <option value="recycled_100">100% Testliner Riciclato (Basso Impatto)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="lamination">Trattamento Barriera Barcode</label>
+                <select id="lamination">
+                    <option value="none" selected>Senza Plastificazione (100% Riciclabile Aticelca A+)</option>
+                    <option value="bio_film">Bio-Film Idrosolubile (Riciclabile Classe A)</option>
+                    <option value="pe_film">Laminazione PE Standard (Difficile Riciclo Classe C)</option>
+                </select>
+            </div>
+
+            <!-- SCHEDA TECNICA LCA -->
+            <div class="lca-card">
+                <div class="lca-item">
+                    <span class="lbl">Impronta Carbonio:</span>
+                    <span class="val" id="valCO2">28.4 g CO₂/pz</span>
+                </div>
+                <div class="lca-item">
+                    <span class="lbl">Indice Riciclo:</span>
+                    <span class="val" id="valRecycleGrade" style="color:var(--accent-green);">Aticelca A+</span>
+                </div>
+                <div class="lca-item">
+                    <span class="lbl">Resistenza ECT:</span>
+                    <span class="val" id="valECT">4.8 kN/m</span>
+                </div>
+                <div class="lca-item">
+                    <span class="lbl">Eco-Score Totale:</span>
+                    <span class="val" id="valEcoScore" style="color:var(--accent-green);">92 / 100</span>
+                </div>
+            </div>
+
+            <!-- 2. PARAMETRI LOGISTICI & PALLETTIZZAZIONE -->
+            <div class="section-title">2. Geometria Scatola & Pallet</div>
+
+            <div class="control-group">
+                <label for="boxLength">Lunghezza Scatola L <span class="val" id="valL">300 mm</span></label>
+                <input type="range" id="boxLength" min="150" max="600" step="10" value="300">
+            </div>
+
+            <div class="control-group">
+                <label for="boxWidth">Larghezza Scatola P <span class="val" id="valP">200 mm</span></label>
+                <input type="range" id="boxWidth" min="100" max="400" step="10" value="200">
+            </div>
+
+            <div class="control-group">
+                <label for="boxHeight">Altezza Scatola H <span class="val" id="valH">200 mm</span></label>
+                <input type="range" id="boxHeight" min="100" max="500" step="10" value="200">
+            </div>
+
+            <div class="control-group">
+                <label for="palletHeightMax">Altezza Max Pallet <span class="val" id="valMaxPallet">1600 mm</span></label>
+                <input type="range" id="palletHeightMax" min="1000" max="2200" step="100" value="1600">
+            </div>
+
+            <!-- 3. CONDIZIONI AMBIENTALI & BCT -->
+            <div class="section-title">3. Stress Test BCT & Ambiente</div>
+
+            <div class="control-group">
+                <label for="humidity">Umidità Relativa (RH%) <span class="val" id="valRH">50% RH</span></label>
+                <input type="range" id="humidity" min="30" max="95" step="5" value="50">
+            </div>
+
+            <div class="control-group">
+                <label for="stackLoad">Carico Sovrapposto Simulato <span class="val" id="valLoad">250 kg</span></label>
+                <input type="range" id="stackLoad" min="50" max="800" step="25" value="250">
+            </div>
+
+        </div>
+    </div>
+
+    <!-- WORKSPACE PRINCIPALE -->
+    <div class="workspace">
+        <div class="top-bar">
+            <div class="nav-tabs">
+                <button class="tab-btn active">Laboratorio Integrato Pallettizzazione 3D & Stress Test McKee</button>
+            </div>
+
+            <div class="metrics-bar">
+                <div class="metric-badge">
+                    Saturazione Pallet: <span id="metricPalletEff" style="color:var(--accent-green);">87.5%</span>
+                </div>
+                <div class="metric-badge">
+                    Limite BCT Calcolato: <span id="metricBCT" style="color:var(--accent-cyan);">340 kg</span>
+                </div>
+                <div class="metric-badge">
+                    Stato Struttura: <span id="metricStatus" style="color:var(--accent-green);">SICURO</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="view-container">
+            
+            <!-- VIEWPORT A: PALLETTIZZAZIONE 3D EURO-PALLET -->
+            <div class="viewport-box">
+                <div class="viewport-header">
+                    <span class="dot" style="background:var(--accent-green);"></span> 1. Simulazione Logistica Euro-Pallet (1200x800 mm)
+                </div>
+                <canvas class="view-canvas" id="canvasPallet"></canvas>
+            </div>
+
+            <!-- VIEWPORT B: STRESS TEST SIMULATOR (BCT) -->
+            <div class="viewport-box">
+                <div class="viewport-header">
+                    <span class="dot" style="background:var(--accent-amber);"></span> 2. Deformazione & Mappa di Tensione BCT (Formula di McKee)
+                </div>
+                <canvas class="view-canvas" id="canvasBCT"></canvas>
+            </div>
+
+            <!-- TEORIA DIDATTICA IN BASSO -->
+            <div class="theory-banner" id="theoryBanner">
+                <strong>Principî di Ecodesign & Logistica:</strong>
+                L'algoritmo calcola la resistenza allo schiacciamento verticale (BCT) mediante la formula di McKee $BCT = 5.876 \cdot ECT \cdot \sqrt{P \cdot d}$. Un incremento dell'Umidità Relativa dal 50% al 90% riduce la tenuta meccanica della fibra fino al 50%.
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // =================================================================
+        // DATABASE MATERIALI & FORMULE BCT / LCA
+        // =================================================================
+        const fiberData = {
+            kraft_100: { ectBase: 6.0, co2PerKg: 0.85, ecoBase: 80, name: 'Kraftliner 100%' },
+            recycled_70: { ectBase: 4.8, co2PerKg: 0.55, ecoBase: 95, name: 'Riciclato 70%' },
+            recycled_100: { ectBase: 3.8, co2PerKg: 0.38, ecoBase: 98, name: 'Riciclato 100%' }
+        };
+
+        const laminationData = {
+            none: { ecoPen: 0, grade: 'Aticelca A+', co2Add: 0 },
+            bio_film: { ecoPen: 5, grade: 'Aticelca A', co2Add: 0.05 },
+            pe_film: { ecoPen: 25, grade: 'Aticelca C', co2Add: 0.20 }
+        };
+
+        // =================================================================
+        // SETUP THREE.JS - SCENA 1: PALLET 3D
+        // =================================================================
+        const canvasPallet = document.getElementById('canvasPallet');
+        const rendererPallet = new THREE.WebGLRenderer({ canvas: canvasPallet, antialias: true });
+        rendererPallet.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const scenePallet = new THREE.Scene();
+        scenePallet.background = new THREE.Color('#08090d');
+
+        const cameraPallet = new THREE.PerspectiveCamera(40, 1, 0.1, 5000);
+        cameraPallet.position.set(1800, 1400, 1800);
+
+        const controlsPallet = new THREE.OrbitControls(cameraPallet, rendererPallet.domElement);
+        controlsPallet.enableDamping = true;
+
+        const ambLight1 = new THREE.AmbientLight(0xffffff, 0.7);
+        scenePallet.add(ambLight1);
+        const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight1.position.set(1000, 2000, 1000);
+        scenePallet.add(dirLight1);
+
+        const palletGroup = new THREE.Group();
+        scenePallet.add(palletGroup);
+
+        function buildEuroPalletMesh() {
+            const group = new THREE.Group();
+            const woodMat = new THREE.MeshStandardMaterial({ color: 0x8d5b28, roughness: 0.8 });
+
+            // Base EuroPallet (1200 x 800 x 144 mm)
+            const boardGeom = new THREE.BoxGeometry(1200, 20, 800);
+            const board = new THREE.Mesh(boardGeom, woodMat);
+            board.position.y = 134;
+            group.add(board);
+
+            // Blocchetti piedi
+            for (let x of [-500, 0, 500]) {
+                for (let z of [-350, 0, 350]) {
+                    const blockGeom = new THREE.BoxGeometry(100, 100, 100);
+                    const block = new THREE.Mesh(blockGeom, woodMat);
+                    block.position.set(x, 50, z);
+                    group.add(block);
+                }
+            }
+            return group;
+        }
+
+        // =================================================================
+        // SETUP THREE.JS - SCENA 2: STRESS TEST BCT (DEFORMAZIONE)
+        // =================================================================
+        const canvasBCT = document.getElementById('canvasBCT');
+        const rendererBCT = new THREE.WebGLRenderer({ canvas: canvasBCT, antialias: true });
+        rendererBCT.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const sceneBCT = new THREE.Scene();
+        sceneBCT.background = new THREE.Color('#08090d');
+
+        const cameraBCT = new THREE.PerspectiveCamera(40, 1, 0.1, 1000);
+        cameraBCT.position.set(0, 150, 400);
+
+        const controlsBCT = new THREE.OrbitControls(cameraBCT, rendererBCT.domElement);
+        controlsBCT.enableDamping = true;
+
+        const ambLight2 = new THREE.AmbientLight(0xffffff, 0.8);
+        sceneBCT.add(ambLight2);
+        const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.9);
+        dirLight2.position.set(200, 400, 200);
+        sceneBCT.add(dirLight2);
+
+        let boxStressMesh, pressPlateMesh;
+
+        function initStressScene() {
+            while(sceneBCT.children.length > 0) sceneBCT.remove(sceneBCT.children[0]);
+            sceneBCT.add(ambLight2);
+            sceneBCT.add(dirLight2);
+
+            const grid = new THREE.GridHelper(500, 10, 0x23293a, 0x131722);
+            grid.position.y = -80;
+            sceneBCT.add(grid);
+
+            // Box Mesh sotto test
+            const boxGeom = new THREE.BoxGeometry(120, 120, 120, 8, 8, 8);
+            const boxMat = new THREE.MeshStandardMaterial({
+                color: 0x10b981,
+                wireframe: false,
+                roughness: 0.5
+            });
+            boxStressMesh = new THREE.Mesh(boxGeom, boxMat);
+            boxStressMesh.position.y = -20;
+            sceneBCT.add(boxStressMesh);
+
+            // Piastra pressa superiore
+            const plateGeom = new THREE.BoxGeometry(160, 10, 160);
+            const plateMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.8, roughness: 0.2 });
+            pressPlateMesh = new THREE.Mesh(plateGeom, plateMat);
+            pressPlateMesh.position.y = 45;
+            sceneBCT.add(pressPlateMesh);
+        }
+
+        // =================================================================
+        // LOGICA DI CALCOLO LOGISTICO & BCT
+        // =================================================================
+        function updateSimulation() {
+            const L = parseFloat(document.getElementById('boxLength').value);
+            const P = parseFloat(document.getElementById('boxWidth').value);
+            const H = parseFloat(document.getElementById('boxHeight').value);
+            const maxPalletH = parseFloat(document.getElementById('palletHeightMax').value);
+            const rh = parseFloat(document.getElementById('humidity').value);
+            const load = parseFloat(document.getElementById('stackLoad').value);
+
+            const fiberKey = document.getElementById('fiberType').value;
+            const lamKey = document.getElementById('lamination').value;
+
+            const fiber = fiberData[fiberKey];
+            const lam = laminationData[lamKey];
+
+            // Update Dynamic UI Labels
+            document.getElementById('valL').textContent = L + ' mm';
+            document.getElementById('valP').textContent = P + ' mm';
+            document.getElementById('valH').textContent = H + ' mm';
+            document.getElementById('valMaxPallet').textContent = maxPalletH + ' mm';
+            document.getElementById('valRH').textContent = rh + '% RH';
+            document.getElementById('valLoad').textContent = load + ' kg';
+
+            // 1. PALLETTIZZAZIONE ISO (EuroPallet 1200x800)
+            const palletL = 1200;
+            const palletP = 800;
+            const usableH = maxPalletH - 144; // meno altezza legno
+
+            const cols1 = Math.floor(palletL / L);
+            const rows1 = Math.floor(palletP / P);
+            const perLayer1 = cols1 * rows1;
+
+            const cols2 = Math.floor(palletL / P);
+            const rows2 = Math.floor(palletP / L);
+            const perLayer2 = cols2 * rows2;
+
+            let bestPerLayer = perLayer1;
+            let boxDimX = L, boxDimZ = P;
+            if (perLayer2 > perLayer1) {
+                bestPerLayer = perLayer2;
+                boxDimX = P; boxDimZ = L;
+            }
+
+            const numLayers = Math.floor(usableH / H);
+            const totalBoxes = bestPerLayer * numLayers;
+            const usedVol = (L * P * H * totalBoxes) / 1e9;
+            const totalPalletVol = (1.2 * 0.8 * maxPalletH / 1000);
+            const efficiency = Math.min(100, ((usedVol / totalPalletVol) * 100)).toFixed(1);
+
+            document.getElementById('metricPalletEff').textContent = efficiency + '%';
+
+            // Rebuild 3D Pallet
+            while(palletGroup.children.length > 0) palletGroup.remove(palletGroup.children[0]);
+            palletGroup.add(buildEuroPalletMesh());
+
+            const boxGap = 4;
+            const boxMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.7 });
+
+            const startX = -palletL / 2 + boxDimX / 2;
+            const startZ = -palletP / 2 + boxDimZ / 2;
+
+            const nx = Math.floor(palletL / boxDimX);
+            const nz = Math.floor(palletP / boxDimZ);
+
+            for (let ly = 0; ly < numLayers; ly++) {
+                for (let ix = 0; ix < nx; ix++) {
+                    for (let iz = 0; iz < nz; iz++) {
+                        const geom = new THREE.BoxGeometry(boxDimX - boxGap, H - boxGap, boxDimZ - boxGap);
+                        const mesh = new THREE.Mesh(geom, boxMat);
+                        mesh.position.set(
+                            startX + ix * boxDimX,
+                            144 + H/2 + ly * H,
+                            startZ + iz * boxDimZ
+                        );
+                        palletGroup.add(mesh);
+                    }
+                }
+            }
+
+            // 2. CALCOLO FORMULA DI MCKEE (BCT) CON UMIDITÀ
+            // ECT base adattato per umidità: RH > 50% degrada la fibra
+            let rhFactor = 1.0;
+            if (rh > 50) {
+                rhFactor = 1.0 - ((rh - 50) * 0.012); // -1.2% per ogni % RH sopra il 50%
+            }
+            const actECT = fiber.ectBase * rhFactor;
+            
+            // Perimeter P = 2*(L+P) in cm, Thickness d = 0.15 cm
+            const perimeterCm = (2 * (L + P)) / 10;
+            const caliperCm = 0.18; // mm -> cm
+            
+            // McKee Formula: BCT (N) = 5.876 * ECT * sqrt(Perimeter * Caliper)
+            const bctNewton = 5.876 * (actECT * 10) * Math.sqrt(perimeterCm * caliperCm);
+            const bctKg = Math.round(bctNewton / 9.81);
+
+            document.getElementById('valECT').textContent = actECT.toFixed(1) + ' kN/m';
+            document.getElementById('metricBCT').textContent = bctKg + ' kg';
+
+            // Ratio tra Carico Effettivo e Limite BCT
+            const stressRatio = load / bctKg;
+            const statusBadge = document.getElementById('metricStatus');
+
+            if (stressRatio < 0.75) {
+                statusBadge.textContent = 'SICURO (OTTIMALE)';
+                statusBadge.style.color = 'var(--accent-green)';
+                if(boxStressMesh) boxStressMesh.material.color.setHex(0x10b981);
+            } else if (stressRatio <= 1.0) {
+                statusBadge.textContent = 'A RISCHIO CRITICO';
+                statusBadge.style.color = 'var(--accent-amber)';
+                if(boxStressMesh) boxStressMesh.material.color.setHex(0xf59e0b);
+            } else {
+                statusBadge.textContent = 'CEDIMENTO STRUTTURALE';
+                statusBadge.style.color = 'var(--accent-red)';
+                if(boxStressMesh) boxStressMesh.material.color.setHex(0xef4444);
+            }
+
+            // Animazione Deformazione Schiacciamento BCT
+            if (boxStressMesh && pressPlateMesh) {
+                const deflect = Math.min(30, stressRatio * 15);
+                boxStressMesh.scale.set(1 + (deflect*0.005), 1 - (deflect*0.015), 1 + (deflect*0.005));
+                pressPlateMesh.position.y = 40 - (deflect * 0.8);
+            }
+
+            // 3. CALCOLO ECODESIGN & LCA
+            const boxWeightKg = ((2 * (L*P + L*H + P*H)) / 1e6) * 0.35; // stima peso scatola in kg
+            const unitCO2 = (boxWeightKg * fiber.co2PerKg + lam.co2Add).toFixed(1);
+            const ecoScore = Math.max(10, fiber.ecoBase - lam.ecoPen);
+
+            document.getElementById('valCO2').textContent = unitCO2 + ' g CO₂/pz';
+            document.getElementById('valRecycleGrade').textContent = lam.grade;
+            document.getElementById('valEcoScore').textContent = ecoScore + ' / 100';
+        }
+
+        // =================================================================
+        // CONTROLLI & RESIZE EVENT LISTENERS
+        // =================================================================
+        const inputIds = ['fiberType', 'lamination', 'boxLength', 'boxWidth', 'boxHeight', 'palletHeightMax', 'humidity', 'stackLoad'];
+        inputIds.forEach(id => {
+            document.getElementById(id).addEventListener('input', updateSimulation);
+        });
+
+        function resizeViewports() {
+            // Pallet Viewport
+            const w1 = canvasPallet.clientWidth;
+            const h1 = canvasPallet.clientHeight;
+            if (w1 && h1) {
+                rendererPallet.setSize(w1, h1, false);
+                cameraPallet.aspect = w1 / h1;
+                cameraPallet.updateProjectionMatrix();
+            }
+
+            // BCT Viewport
+            const w2 = canvasBCT.clientWidth;
+            const h2 = canvasBCT.clientHeight;
+            if (w2 && h2) {
+                rendererBCT.setSize(w2, h2, false);
+                cameraBCT.aspect = w2 / h2;
+                cameraBCT.updateProjectionMatrix();
+            }
+        }
+
+        window.addEventListener('resize', resizeViewports);
+
+        // Loop di Rendering 3D
+        function animate() {
+            requestAnimationFrame(animate);
+            controlsPallet.update();
+            controlsBCT.update();
+            rendererPallet.render(scenePallet, cameraPallet);
+            rendererBCT.render(sceneBCT, cameraBCT);
+        }
+
+        // Inizializzazione
+        setTimeout(() => {
+            initStressScene();
+            resizeViewports();
+            updateSimulation();
+            animate();
+        }, 100);
+
+    </script>
+</body>
+</html>
