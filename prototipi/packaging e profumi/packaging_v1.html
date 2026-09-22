@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Polyhedral Studio - Custom Typography & Text</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Montserrat:wght@300;600&family=Oswald:wght@500&family=Playfair+Display:ital,wght@0,600;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    
+    <style>
+        :root {
+            --bg-color: #0d0d0d;
+            --panel-bg: #181818;
+            --accent-color: #d4af37;
+            --text-color: #f0f0f0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar Controlli */
+        .sidebar {
+            width: 380px;
+            background-color: var(--panel-bg);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            box-shadow: 5px 0 15px rgba(0,0,0,0.5);
+            overflow-y: auto;
+            z-index: 10;
+        }
+
+        .sidebar h1 {
+            font-size: 1.1rem;
+            color: var(--accent-color);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 8px;
+        }
+
+        .section-title {
+            font-size: 0.8rem;
+            color: var(--accent-color);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 5px;
+            opacity: 0.8;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .control-row .control-group {
+            flex: 1;
+        }
+
+        .control-group label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #aaa;
+        }
+
+        select, input[type="text"], input[type="color"] {
+            width: 100%;
+            padding: 8px 10px;
+            background: #252525;
+            border: 1px solid #444;
+            color: #fff;
+            border-radius: 4px;
+            outline: none;
+            font-size: 0.85rem;
+        }
+
+        input[type="color"] {
+            height: 36px;
+            padding: 2px;
+            cursor: pointer;
+        }
+
+        select:focus, input:focus {
+            border-color: var(--accent-color);
+        }
+
+        /* Viewport Canvas 3D */
+        .viewport {
+            flex-grow: 1;
+            position: relative;
+            background: radial-gradient(circle at center, #222 0%, #050505 100%);
+        }
+
+        #webgl-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .canvas-hint {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.6);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            color: #ccc;
+            pointer-events: none;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* Score Dashboard */
+        .evaluation-panel {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(20, 20, 20, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid #333;
+            padding: 20px;
+            border-radius: 8px;
+            width: 300px;
+        }
+
+        .evaluation-panel h3 {
+            font-size: 0.95rem;
+            color: var(--accent-color);
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .metric {
+            margin-bottom: 8px;
+        }
+
+        .metric-title {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            margin-bottom: 3px;
+        }
+
+        .progress-bar {
+            height: 5px;
+            background: #333;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent-color);
+            width: 50%;
+            transition: width 0.4s ease;
+        }
+
+        .feedback-text {
+            font-size: 0.75rem;
+            margin-top: 10px;
+            color: #bbb;
+            font-style: italic;
+            line-height: 1.3;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h1>Advanced 3D Studio</h1>
+        
+        <div class="section-title">1. Struttura & Materiali</div>
+        
+        <div class="control-group">
+            <label for="polyhedron">Poliedro</label>
+            <select id="polyhedron">
+                <option value="cube">Esaedro (Cubo / Scatola)</option>
+                <option value="tetrahedron">Tetraedro (Piramide 4 Facce)</option>
+                <option value="octahedron">Ottaedro (8 Facce)</option>
+                <option value="dodecahedron">Dodecaedro (12 Facce)</option>
+                <option value="icosahedron">Icosaedro (20 Facce)</option>
+                <option value="hexagonalPrisma">Prisma Esagonale</option>
+            </select>
+        </div>
+
+        <div class="control-row">
+            <div class="control-group">
+                <label for="material">Materiale</label>
+                <select id="material">
+                    <option value="cardboard">Cartone Opaco</option>
+                    <option value="kraft">Carta Kraft</option>
+                    <option value="glass">Vetro Satinato</option>
+                    <option value="metal">Alluminio</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="finish">Finitura</label>
+                <select id="finish">
+                    <option value="matte">Matte</option>
+                    <option value="gloss">Glossy Lucido</option>
+                    <option value="metalFoil">Lamina Foil</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label for="bgColor">Colore Sfondo Packaging</label>
+            <input type="color" id="bgColor" value="#122a28">
+        </div>
+
+        <div class="section-title">2. Titolo Principale (Brand)</div>
+        
+        <div class="control-group">
+            <label for="brandName">Testo Brand</label>
+            <input type="text" id="brandName" value="AURA" placeholder="Nome del Brand">
+        </div>
+
+        <div class="control-row">
+            <div class="control-group">
+                <label for="titleFont">Font Titolo</label>
+                <select id="titleFont">
+                    <option value="'Cinzel', serif">Cinzel (Lusso / Classico)</option>
+                    <option value="'Playfair Display', serif">Playfair (Serif Elegante)</option>
+                    <option value="'Montserrat', sans-serif">Montserrat (Moderno)</option>
+                    <option value="'Oswald', sans-serif">Oswald (Bold Impact)</option>
+                    <option value="'Space Mono', monospace">Space Mono (Tech / Lab)</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="titleColor">Colore Titolo</label>
+                <input type="color" id="titleColor" value="#d4af37">
+            </div>
+        </div>
+
+        <div class="section-title">3. Sottotitolo & Dettagli</div>
+        
+        <div class="control-group">
+            <label for="brandSubtitle">Sottotitolo</label>
+            <input type="text" id="brandSubtitle" value="EAU DE PARFUM" placeholder="Sottotitolo">
+        </div>
+
+        <div class="control-group">
+            <label for="brandInfo">Info Piè di Pagina / Volume</label>
+            <input type="text" id="brandInfo" value="50 ML / 1.7 FL. OZ." placeholder="Info secondaria">
+        </div>
+
+        <div class="control-row">
+            <div class="control-group">
+                <label for="subFont">Font Dettagli</label>
+                <select id="subFont">
+                    <option value="'Montserrat', sans-serif">Montserrat (Clean)</option>
+                    <option value="'Playfair Display', serif">Playfair (Editoriale)</option>
+                    <option value="'Cinzel', serif">Cinzel (Classico)</option>
+                    <option value="'Space Mono', monospace">Space Mono (Tech)</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="subColor">Colore Dettagli</label>
+                <input type="color" id="subColor" value="#e0e0e0">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label for="frameColor">Colore Cornice / Bordo</label>
+            <input type="color" id="frameColor" value="#d4af37">
+        </div>
+    </div>
+
+    <div class="viewport">
+        <div class="canvas-hint">🖱️ Trascina per ruotare | Scroll per Zoom</div>
+        <canvas id="webgl-canvas"></canvas>
+
+        <div class="evaluation-panel">
+            <h3>Pentawards Score <span id="scoreTotal">0/100</span></h3>
+            
+            <div class="metric">
+                <div class="metric-title">
+                    <span>Shelf Impact (3D Visual)</span>
+                    <span id="scoreVisual">0%</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill" id="barVisual"></div></div>
+            </div>
+
+            <div class="metric">
+                <div class="metric-title">
+                    <span>Sostenibilità Strutturale</span>
+                    <span id="scoreEco">0%</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill" id="barEco"></div></div>
+            </div>
+
+            <div class="metric">
+                <div class="metric-title">
+                    <span>Leggibilità & Tipografia</span>
+                    <span id="scoreCoherence">0%</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill" id="barCoherence"></div></div>
+            </div>
+
+            <div class="feedback-text" id="feedbackText">
+                Inizializzazione rendering 3D...
+            </div>
+        </div>
+    </div>
+
+    <canvas id="texture-canvas" width="1024" height="1024" style="display:none;"></canvas>
+
+    <script>
+        // --- INIZIALIZZAZIONE SCENA THREE.JS ---
+        const canvas3D = document.getElementById('webgl-canvas');
+        const renderer = new THREE.WebGLRenderer({ canvas: canvas3D, antialias: true, alpha: true });
+        renderer.setSize(canvas3D.clientWidth, canvas3D.clientHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(45, canvas3D.clientWidth / canvas3D.clientHeight, 0.1, 100);
+        camera.position.set(0, 2, 5);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        // ILLUMINAZIONE STUDIO
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        dirLight.position.set(5, 8, 5);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+
+        const fillLight = new THREE.DirectionalLight(0xd4af37, 0.4);
+        fillLight.position.set(-5, -2, -5);
+        scene.add(fillLight);
+
+        let currentPackageMesh = null;
+
+        // --- CANVAS TEXTURE GENERATOR ---
+        const texCanvas = document.getElementById('texture-canvas');
+        const ctx = texCanvas.getContext('2d');
+
+        function generateTexture() {
+            const brand = document.getElementById('brandName').value || '';
+            const subtitle = document.getElementById('brandSubtitle').value || '';
+            const info = document.getElementById('brandInfo').value || '';
+
+            const titleFont = document.getElementById('titleFont').value;
+            const subFont = document.getElementById('subFont').value;
+
+            const bgCol = document.getElementById('bgColor').value;
+            const titleCol = document.getElementById('titleColor').value;
+            const subCol = document.getElementById('subColor').value;
+            const frameCol = document.getElementById('frameColor').value;
+
+            // Sfondo
+            ctx.fillStyle = bgCol;
+            ctx.fillRect(0, 0, 1024, 1024);
+
+            // Cornice Decorativa
+            ctx.strokeStyle = frameCol;
+            ctx.lineWidth = 12;
+            ctx.strokeRect(60, 60, 904, 904);
+            ctx.lineWidth = 4;
+            ctx.strokeRect(80, 80, 864, 864);
+
+            // Titolo Principale (Brand)
+            ctx.fillStyle = titleCol;
+            ctx.textAlign = 'center';
+            ctx.font = `80px ${titleFont}`;
+            ctx.fillText(brand.toUpperCase(), 512, 460);
+
+            // Sottotitolo
+            ctx.fillStyle = subCol;
+            ctx.font = `30px ${subFont}`;
+            ctx.fillText(subtitle.toUpperCase(), 512, 550);
+
+            // Info Piè di pagina
+            ctx.font = `22px ${subFont}`;
+            ctx.fillText(info.toUpperCase(), 512, 870);
+
+            const texture = new THREE.CanvasTexture(texCanvas);
+            texture.needsUpdate = true;
+            return texture;
+        }
+
+        // --- GEOMETRIE POLIEDRICHE ---
+        function getPolyhedronGeometry(type) {
+            switch(type) {
+                case 'tetrahedron': return new THREE.TetrahedronGeometry(1.5);
+                case 'octahedron': return new THREE.OctahedronGeometry(1.4);
+                case 'dodecahedron': return new THREE.DodecahedronGeometry(1.3);
+                case 'icosahedron': return new THREE.IcosahedronGeometry(1.3);
+                case 'hexagonalPrisma': return new THREE.CylinderGeometry(1.2, 1.2, 2.2, 6);
+                case 'cube':
+                default: return new THREE.BoxGeometry(1.8, 2.2, 1.8);
+            }
+        }
+
+        // --- AGGIORNAMENTO MODELLO 3D ---
+        function update3DModel() {
+            if (currentPackageMesh) scene.remove(currentPackageMesh);
+
+            const polyType = document.getElementById('polyhedron').value;
+            const matType = document.getElementById('material').value;
+            const finish = document.getElementById('finish').value;
+
+            const geometry = getPolyhedronGeometry(polyType);
+            const texture = generateTexture();
+
+            let roughness = 0.5;
+            let metalness = 0.1;
+            let clearcoat = 0.0;
+
+            if (matType === 'kraft') { roughness = 0.9; metalness = 0.0; }
+            if (matType === 'metal') { roughness = 0.2; metalness = 0.8; }
+            if (matType === 'glass') { roughness = 0.1; metalness = 0.1; }
+
+            if (finish === 'gloss') { roughness = 0.1; clearcoat = 1.0; }
+            if (finish === 'metalFoil') { metalness = 0.5; }
+
+            const material = new THREE.MeshPhysicalMaterial({
+                map: texture,
+                roughness: roughness,
+                metalness: metalness,
+                clearcoat: clearcoat,
+                clearcoatRoughness: 0.1
+            });
+
+            currentPackageMesh = new THREE.Mesh(geometry, material);
+            currentPackageMesh.castShadow = true;
+            currentPackageMesh.receiveShadow = true;
+            scene.add(currentPackageMesh);
+
+            evaluateDesign();
+        }
+
+        // --- VALUTAZIONE SCORE ---
+        function evaluateDesign() {
+            const poly = document.getElementById('polyhedron').value;
+            const mat = document.getElementById('material').value;
+            const titleColor = document.getElementById('titleColor').value;
+            const bgColor = document.getElementById('bgColor').value;
+
+            let visual = 65;
+            let eco = 50;
+            let typographyScore = 75;
+            let feedback = "Buon bilanciamento cromatico e tipografico.";
+
+            if (poly === 'dodecahedron' || poly === 'icosahedron') {
+                visual += 25;
+                eco -= 20;
+                feedback = "Forma complessa ad alto impatto per lo scaffale, con maggior ingombro di stoccaggio.";
+            } else if (poly === 'cube' || poly === 'hexagonalPrisma') {
+                eco += 30;
+                feedback = "Geometria altamente efficiente per la logistica e la sostenibilità.";
+            }
+
+            if (titleColor === bgColor) {
+                typographyScore -= 40;
+                feedback = "Attenzione: Il colore del testo coincide con lo sfondo, riducendo la leggibilità!";
+            }
+
+            if (mat === 'kraft') eco += 20;
+
+            visual = Math.min(100, visual);
+            eco = Math.max(10, Math.min(100, eco));
+            typographyScore = Math.max(10, Math.min(100, typographyScore));
+            const total = Math.round((visual + eco + typographyScore) / 3);
+
+            document.getElementById('scoreVisual').textContent = visual + '%';
+            document.getElementById('barVisual').style.width = visual + '%';
+            document.getElementById('scoreEco').textContent = eco + '%';
+            document.getElementById('barEco').style.width = eco + '%';
+            document.getElementById('scoreCoherence').textContent = typographyScore + '%';
+            document.getElementById('barCoherence').style.width = typographyScore + '%';
+            document.getElementById('scoreTotal').textContent = total + '/100';
+            document.getElementById('feedbackText').textContent = feedback;
+        }
+
+        // Attach listeners a tutti i controlli
+        const controlIds = [
+            'polyhedron', 'material', 'finish', 'bgColor', 
+            'brandName', 'titleFont', 'titleColor',
+            'brandSubtitle', 'brandInfo', 'subFont', 'subColor', 'frameColor'
+        ];
+
+        controlIds.forEach(id => {
+            const elem = document.getElementById(id);
+            if (elem) {
+                elem.addEventListener('input', update3DModel);
+                elem.addEventListener('change', update3DModel);
+            }
+        });
+
+        // Loop di rendering 3D
+        function animate() {
+            requestAnimationFrame(animate);
+            if (currentPackageMesh) {
+                currentPackageMesh.rotation.y += 0.005;
+            }
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = canvas3D.clientWidth / canvas3D.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(canvas3D.clientWidth, canvas3D.clientHeight);
+        });
+
+        // Garantisce il caricamento completo dei Google Fonts prima del primo rendering
+        document.fonts.ready.then(() => {
+            update3DModel();
+            animate();
+        });
+    </script>
+</body>
+</html>

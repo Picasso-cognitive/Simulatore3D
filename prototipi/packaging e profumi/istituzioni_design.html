@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulatore Rete Mondiale del Design (Top 200 Istituzioni)</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #0b0f19; color: #f8fafc; overflow: hidden; }
+        #canvas-container { width: 100vw; height: 100vh; position: relative; }
+        canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+        canvas:active { cursor: grabbing; }
+        
+        /* UI Panel */
+        .ui-panel { position: absolute; top: 16px; left: 16px; background: rgba(15, 23, 42, 0.88); backdrop-filter: blur(12px); border: 1px solid #1e293b; padding: 18px; border-radius: 12px; width: 330px; box-shadow: 0 12px 30px rgba(0,0,0,0.6); z-index: 10; }
+        .ui-panel h1 { font-size: 1.15rem; font-weight: 700; margin-bottom: 4px; color: #38bdf8; letter-spacing: -0.02em; }
+        .ui-panel p { font-size: 0.78rem; color: #94a3b8; margin-bottom: 14px; line-height: 1.3; }
+        .control-group { margin-bottom: 12px; }
+        .control-group label { display: block; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; margin-bottom: 4px; font-weight: 600; }
+        input[type="text"], select { width: 100%; padding: 9px 12px; background: #090d16; border: 1px solid #334155; border-radius: 6px; color: #fff; font-size: 0.82rem; outline: none; transition: border-color 0.2s; }
+        input[type="text"]:focus, select:focus { border-color: #38bdf8; }
+        select { cursor: pointer; }
+        input[type="range"] { width: 100%; accent-color: #38bdf8; cursor: pointer; }
+        
+        /* Legend */
+        .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 12px 0; padding: 8px; background: rgba(2, 6, 23, 0.5); border-radius: 6px; border: 1px solid #1e293b; }
+        .legend-item { display: flex; align-items: center; font-size: 0.7rem; color: #cbd5e1; }
+        .legend-color { width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; flex-shrink: 0; }
+
+        .stats { display: flex; justify-content: space-between; font-size: 0.72rem; color: #94a3b8; padding-top: 10px; border-top: 1px solid #1e293b; }
+        
+        /* Info Card */
+        #info-card { position: absolute; bottom: 20px; right: 20px; background: rgba(15, 23, 42, 0.94); backdrop-filter: blur(12px); border: 1px solid #334155; padding: 18px; border-radius: 12px; width: 310px; display: none; z-index: 10; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        #info-card h2 { font-size: 1.05rem; color: #f8fafc; margin-bottom: 4px; line-height: 1.2; }
+        #info-card .category-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.68rem; font-weight: 600; margin-bottom: 8px; text-transform: uppercase; }
+        #info-card .location { font-size: 0.8rem; color: #38bdf8; font-weight: 500; margin-bottom: 10px; }
+        #info-card .details { font-size: 0.76rem; color: #cbd5e1; line-height: 1.5; }
+        #info-card .partners { margin-top: 8px; padding-top: 8px; border-top: 1px solid #334155; font-size: 0.72rem; color: #94a3b8; }
+    </style>
+</head>
+<body>
+
+<div id="canvas-container">
+    <canvas id="networkCanvas"></canvas>
+    
+    <div class="ui-panel">
+        <h1>Global Design Network</h1>
+        <p>Mappa di influenza delle 200 principali istituzioni, accademie e musei del design globale.</p>
+
+        <div class="control-group">
+            <label for="countrySelect">Filtra per Nazione</label>
+            <select id="countrySelect">
+                <option value="ALL">Tutte le Nazioni</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="categorySelect">Filtra per Tipologia</label>
+            <select id="categorySelect">
+                <option value="ALL">Tutte le Tipologie</option>
+                <option value="MUSEUM">Musei & Archivi</option>
+                <option value="ACADEMY">Universit&agrave; & Accademie</option>
+                <option value="EVENT">Fiere & Triennali</option>
+                <option value="GALLERY">Gallerie & Fondazioni</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="searchInput">Cerca Istituzione, Citt&agrave; o Paese</label>
+            <input type="text" id="searchInput" placeholder="es. Triennale, RCA, Politecnico...">
+        </div>
+
+        <div class="legend">
+            <div class="legend-item"><div class="legend-color" style="background:#f43f5e"></div>Museo/Archivio</div>
+            <div class="legend-item"><div class="legend-color" style="background:#38bdf8"></div>Accademia/Uni</div>
+            <div class="legend-item"><div class="legend-color" style="background:#facc15"></div>Fiera/Evento</div>
+            <div class="legend-item"><div class="legend-color" style="background:#a855f7"></div>Galleria/Fond.</div>
+        </div>
+        
+        <div class="control-group">
+            <label for="repulsionSlider">Forza di Repulsione Fisica</label>
+            <input type="range" id="repulsionSlider" min="50" max="600" value="260">
+        </div>
+
+        <div class="stats">
+            <span>Istituzioni: <strong id="stat-nodes">0</strong></span>
+            <span>Relazioni: <strong id="stat-edges">0</strong></span>
+            <span>FPS: <strong id="stat-fps">60</strong></span>
+        </div>
+    </div>
+
+    <div id="info-card">
+        <h2 id="card-title">-</h2>
+        <span id="card-badge" class="category-badge">-</span>
+        <div id="card-location" class="location">-</div>
+        <div id="card-details" class="details"></div>
+        <div id="card-partners" class="partners"></div>
+    </div>
+</div>
+
+<script>
+// --- CATEGORIE E COLORI DEL DESIGN ---
+const CATEGORIES = {
+    MUSEUM: { name: 'Museo / Archivio', color: '#f43f5e' },
+    ACADEMY: { name: 'Università / Accademia', color: '#38bdf8' },
+    EVENT: { name: 'Fiera / Biennale / Triennale', color: '#facc15' },
+    GALLERY: { name: 'Galleria / Fondazione', color: '#a855f7' }
+};
+
+// --- DATASET SEED: LE 30 PIÙ INFLUENTI ISTITUZIONI DEL DESIGN MONDIALE ---
+const SEED_DESIGN_INSTITUTIONS = [
+    { name: "Triennale di Milano", city: "Milano", country: "Italia", category: "MUSEUM", rank: 1, connections: ["Politecnico di Milano - Scuola del Design", "Salone del Mobile.Milano", "Vitra Design Museum", "Victoria and Albert Museum", "Centre Pompidou - Design"] },
+    { name: "Victoria and Albert Museum (V&A)", city: "Londra", country: "Regno Unito", category: "MUSEUM", rank: 2, connections: ["Royal College of Art (RCA)", "Design Museum London", "Cooper Hewitt Museum", "Triennale di Milano"] },
+    { name: "Vitra Design Museum", city: "Weil am Rhein", country: "Germania", category: "MUSEUM", rank: 3, connections: ["Design Academy Eindhoven", "ECAL", "Triennale di Milano", "Bauhaus Archiv"] },
+    { name: "Royal College of Art (RCA)", city: "Londra", country: "Regno Unito", category: "ACADEMY", rank: 4, connections: ["Central Saint Martins", "Design Museum London", "Victoria and Albert Museum (V&A)", "Imperial College Design"] },
+    { name: "Politecnico di Milano - Scuola del Design", city: "Milano", country: "Italia", category: "ACADEMY", rank: 5, connections: ["Triennale di Milano", "Salone del Mobile.Milano", "Domus Academy", "ADI Design Museum"] },
+    { name: "Design Museum London", city: "Londra", country: "Regno Unito", category: "MUSEUM", rank: 6, connections: ["Royal College of Art (RCA)", "London Design Festival", "Victoria and Albert Museum (V&A)"] },
+    { name: "Design Academy Eindhoven", city: "Eindhoven", country: "Paesi Bassi", category: "ACADEMY", rank: 7, connections: ["Dutch Design Week", "Vitra Design Museum", "Stedelijk Museum - Design"] },
+    { name: "Salone del Mobile.Milano", city: "Milano", country: "Italia", category: "EVENT", rank: 8, connections: ["Triennale di Milano", "Politecnico di Milano - Scuola del Design", "Nilufar Gallery", "Memphis Milano Collection"] },
+    { name: "Cooper Hewitt, Smithsonian Design Museum", city: "New York", country: "Stati Uniti", category: "MUSEUM", rank: 9, connections: ["RISD", "Parsons School of Design", "Victoria and Albert Museum (V&A)", "Museum of Arts and Design"] },
+    { name: "ECAL – École cantonale d'art de Lausanne", city: "Losanna", country: "Svizzera", category: "ACADEMY", rank: 10, connections: ["Vitra Design Museum", "Galerie kreo", "Design Miami/"] },
+    { name: "Rhode Island School of Design (RISD)", city: "Providence", country: "Stati Uniti", category: "ACADEMY", rank: 11, connections: ["MIT Media Lab", "Cooper Hewitt, Smithsonian Design Museum", "Parsons School of Design"] },
+    { name: "Bauhaus Archiv / Museum für Gestaltung", city: "Berlino", country: "Germania", category: "MUSEUM", rank: 12, connections: ["Vitra Design Museum", "Die Neue Sammlung", "HfG Ulm Archive"] },
+    { name: "Centre Pompidou - Dept. Design", city: "Parigi", country: "Francia", category: "MUSEUM", rank: 13, connections: ["Musée des Arts Décoratifs (MAD)", "Galerie kreo", "Triennale di Milano"] },
+    { name: "MIT Media Lab", city: "Cambridge", country: "Stati Uniti", category: "ACADEMY", rank: 14, connections: ["Rhode Island School of Design (RISD)", "Parsons School of Design", "Aalto University Design"] },
+    { name: "Parsons School of Design", city: "New York", country: "Stati Uniti", category: "ACADEMY", rank: 15, connections: ["Cooper Hewitt, Smithsonian Design Museum", "Pratt Institute", "Friedman Benda Gallery"] },
+    { name: "Musée des Arts Décoratifs (MAD)", city: "Parigi", country: "Francia", category: "MUSEUM", rank: 16, connections: ["Centre Pompidou - Dept. Design", "ENSCI - Les Ateliers", "Carpenters Workshop Gallery"] },
+    { name: "ADI Design Museum (Compasso d'Oro)", city: "Milano", country: "Italia", category: "MUSEUM", rank: 17, connections: ["Politecnico di Milano - Scuola del Design", "Triennale di Milano"] },
+    { name: "Galerie kreo", city: "Parigi", country: "Francia", category: "GALLERY", rank: 18, connections: ["ECAL", "Design Miami/", "Centre Pompidou - Dept. Design"] },
+    { name: "Central Saint Martins (CSM)", city: "Londra", country: "Regno Unito", category: "ACADEMY", rank: 19, connections: ["Royal College of Art (RCA)", "London Design Festival"] },
+    { name: "Stedelijk Museum - Design Dept.", city: "Amsterdam", country: "Paesi Bassi", category: "MUSEUM", rank: 20, connections: ["Design Academy Eindhoven", "Dutch Design Week"] },
+    { name: "Dutch Design Week", city: "Eindhoven", country: "Paesi Bassi", category: "EVENT", rank: 21, connections: ["Design Academy Eindhoven", "Stedelijk Museum - Design Dept."] },
+    { name: "Design Miami/", city: "Miami / Basilea", country: "Stati Uniti", category: "EVENT", rank: 22, connections: ["Galerie kreo", "Carpenters Workshop Gallery", "Friedman Benda Gallery", "Nilufar Gallery"] },
+    { name: "M+ Museum - Design & Architecture", city: "Hong Kong", country: "Cina", category: "MUSEUM", rank: 23, connections: ["Victoria and Albert Museum (V&A)", "Tsinghua Design Institute", "Kyoto Institute of Technology"] },
+    { name: "Designmuseum Danmark", city: "Copenaghen", country: "Danimarca", category: "MUSEUM", rank: 24, connections: ["Royal Danish Academy - Design", "Aalto University Design"] },
+    { name: "Aalto University School of Arts, Design & Arch.", city: "Espoo", country: "Finlandia", category: "ACADEMY", rank: 25, connections: ["Designmuseum Danmark", "MIT Media Lab"] },
+    { name: "Carpenters Workshop Gallery", city: "Londra", country: "Regno Unito", category: "GALLERY", rank: 26, connections: ["Design Miami/", "Musée des Arts Décoratifs (MAD)"] },
+    { name: "Nilufar Gallery", city: "Milano", country: "Italia", category: "GALLERY", rank: 27, connections: ["Salone del Mobile.Milano", "Design Miami/"] },
+    { name: "Friedman Benda Gallery", city: "New York", country: "Stati Uniti", category: "GALLERY", rank: 28, connections: ["Design Miami/", "Parsons School of Design"] },
+    { name: "Tsinghua University Academy of Arts & Design", city: "Pechino", country: "Cina", category: "ACADEMY", rank: 29, connections: ["M+ Museum - Design & Architecture", "Tongji College of Design"] },
+    { name: "Musashino Art University - Design Dept.", city: "Tokyo", country: "Giappone", category: "ACADEMY", rank: 30, connections: ["21_21 DESIGN SIGHT", "Tokyo MidTown Design Hub"] }
+];
+
+// CITTÀ E PAESI PER GENERAZIONE ESTESA FINO A 200 NODI
+const EXTENDED_CITIES = [
+    { city: "Milano", country: "Italia" }, { city: "Londra", country: "Regno Unito" }, { city: "New York", country: "Stati Uniti" },
+    { city: "Berlino", country: "Germania" }, { city: "Parigi", country: "Francia" }, { city: "Eindhoven", country: "Paesi Bassi" },
+    { city: "Tokyo", country: "Giappone" }, { city: "Copenaghen", country: "Danimarca" }, { city: "Stoccolma", country: "Svezia" },
+    { city: "Helsinki", country: "Finlandia" }, { city: "Basilea", country: "Svizzera" }, { city: "Zurigo", country: "Svizzera" },
+    { city: "Shanghai", country: "Cina" }, { city: "Seul", country: "Corea del Sud" }, { city: "San Francisco", country: "Stati Uniti" },
+    { city: "Vienna", country: "Austria" }, { city: "Barcellona", country: "Spagna" }, { city: "San Paolo", country: "Brasile" },
+    { city: "Singapore", country: "Singapore" }, { city: "Melbourne", country: "Australia" }
+];
+
+const INSTITUTION_TYPES = [
+    { prefix: "Centro di Ricerca e Design", category: "ACADEMY" },
+    { prefix: "Museo del Design Industriale", category: "MUSEUM" },
+    { prefix: "Galleria d'Innovazione & Design", category: "GALLERY" },
+    { prefix: "Biennale del Design & Grafica", category: "EVENT" },
+    { prefix: "Istituto Superiore di Interior Design", category: "ACADEMY" },
+    { prefix: "Fondazione Architettura & Design", category: "GALLERY" },
+    { prefix: "Triennale del Design Contemporaneo", category: "EVENT" },
+    { prefix: "Archivio Storico del Compasso d'Oro", category: "MUSEUM" }
+];
+
+// Generazione completa 200 nodi del design
+function generateDesignDataset(targetCount = 200) {
+    const nodes = [];
+    const nodeMap = new Map();
+
+    // 1. Inserisci i Nodi Seed (Top 30 Reali)
+    SEED_DESIGN_INSTITUTIONS.forEach((inst, idx) => {
+        const node = {
+            id: idx,
+            name: inst.name,
+            city: inst.city,
+            country: inst.country,
+            category: inst.category,
+            rank: inst.rank,
+            radius: Math.max(15 - inst.rank * 0.35, 7),
+            x: (Math.random() - 0.5) * 1200,
+            y: (Math.random() - 0.5) * 850,
+            vx: 0, vy: 0,
+            connections: []
+        };
+        nodes.push(node);
+        nodeMap.set(inst.name, node);
+    });
+
+    // 2. Genera nodi fino a 200
+    const catKeys = Object.keys(CATEGORIES);
+    for (let i = nodes.length; i < targetCount; i++) {
+        const loc = EXTENDED_CITIES[i % EXTENDED_CITIES.length];
+        const typeObj = INSTITUTION_TYPES[i % INSTITUTION_TYPES.length];
+        
+        const node = {
+            id: i,
+            name: `${typeObj.prefix} ${loc.city} #${i + 1}`,
+            city: loc.city,
+            country: loc.country,
+            category: typeObj.category,
+            rank: i + 1,
+            radius: Math.max(8 - (i * 0.025), 3.5),
+            x: (Math.random() - 0.5) * 2200,
+            y: (Math.random() - 0.5) * 1600,
+            vx: 0, vy: 0,
+            connections: []
+        };
+        nodes.push(node);
+    }
+
+    // 3. Archi e Connessioni (Edges)
+    const edges = [];
+    const edgeSet = new Set();
+
+    function addEdge(source, target, weight = 1) {
+        if (!source || !target || source.id === target.id) return;
+        const key = source.id < target.id ? `${source.id}-${target.id}` : `${target.id}-${source.id}`;
+        if (!edgeSet.has(key)) {
+            edgeSet.add(key);
+            const edge = { source, target, weight };
+            edges.push(edge);
+            source.connections.push(target);
+            target.connections.push(source);
+        }
+    }
+
+    // Connessioni dai dati SEED
+    SEED_DESIGN_INSTITUTIONS.forEach(inst => {
+        const src = nodeMap.get(inst.name);
+        inst.connections.forEach(targetName => {
+            const tgt = nodeMap.get(targetName);
+            if (tgt) addEdge(src, tgt, 2.2);
+        });
+    });
+
+    // Connessioni di rete per affinità geografica o di tipologia
+    for (let i = 0; i < nodes.length; i++) {
+        const nodeA = nodes[i];
+        const count = Math.floor(Math.random() * 2) + 1;
+        
+        for (let k = 0; k < count; k++) {
+            const targetIdx = Math.floor(Math.random() * nodes.length);
+            const nodeB = nodes[targetIdx];
+            if (nodeA.country === nodeB.country || nodeA.category === nodeB.category || Math.random() < 0.2) {
+                addEdge(nodeA, nodeB, 0.6);
+            }
+        }
+    }
+
+    return { nodes, edges };
+}
+
+// --- ENGINE CANVAS & FISICA ---
+const canvas = document.getElementById('networkCanvas');
+const ctx = canvas.getContext('2d');
+
+let width, height;
+let graphData = generateDesignDataset(200);
+let nodes = graphData.nodes;
+let edges = graphData.edges;
+
+// Viewport Camera State
+let transform = { x: 0, y: 0, scale: 1 };
+let isDragging = false;
+let dragStart = { x: 0, y: 0 };
+let hoveredNode = null;
+let selectedNode = null;
+let draggedNode = null;
+
+// Filtri attivi
+let searchQuery = "";
+let selectedCountry = "ALL";
+let selectedCategory = "ALL";
+
+// Parametri Fisica
+let repulsionStrength = 260;
+const damping = 0.85;
+const springLength = 85;
+const springStiffness = 0.032;
+
+// Inizializzazione Dropdown Nazioni
+function populateCountryDropdown() {
+    const select = document.getElementById('countrySelect');
+    const countries = [...new Set(nodes.map(n => n.country))].sort();
+    
+    countries.forEach(country => {
+        const opt = document.createElement('option');
+        opt.value = country;
+        opt.textContent = country;
+        select.appendChild(opt);
+    });
+}
+populateCountryDropdown();
+
+// UI Stats
+document.getElementById('stat-nodes').innerText = nodes.length;
+document.getElementById('stat-edges').innerText = edges.length;
+
+function resizeCanvas() {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+    if (transform.x === 0 && transform.y === 0) {
+        transform.x = width / 2;
+        transform.y = height / 2;
+    }
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// --- SIMULAZIONE FISICA (Force-Directed Graph) ---
+function updatePhysics() {
+    // 1. Repulsione Nodi (Coulomb)
+    for (let i = 0; i < nodes.length; i++) {
+        const n1 = nodes[i];
+        for (let j = i + 1; j < nodes.length; j++) {
+            const n2 = nodes[j];
+            let dx = n2.x - n1.x;
+            let dy = n2.y - n1.y;
+            let distSq = dx * dx + dy * dy + 0.1;
+            let dist = Math.sqrt(distSq);
+
+            if (dist < 420) {
+                let force = (repulsionStrength * 10) / distSq;
+                let fx = (dx / dist) * force;
+                let fy = (dy / dist) * force;
+
+                n1.vx -= fx;
+                n1.vy -= fy;
+                n2.vx += fx;
+                n2.vy += fy;
+            }
+        }
+    }
+
+    // 2. Attrazione Archi (Hooke)
+    for (let i = 0; i < edges.length; i++) {
+        const edge = edges[i];
+        let dx = edge.target.x - edge.source.x;
+        let dy = edge.target.y - edge.source.y;
+        let dist = Math.sqrt(dx * dx + dy * dy) + 0.1;
+        let force = (dist - springLength) * springStiffness * edge.weight;
+
+        let fx = (dx / dist) * force;
+        let fy = (dy / dist) * force;
+
+        edge.source.vx += fx;
+        edge.source.vy += fy;
+        edge.target.vx -= fx;
+        edge.target.vy -= fy;
+    }
+
+    // 3. Gravità Centrale & Damping
+    for (let i = 0; i < nodes.length; i++) {
+        const n = nodes[i];
+        if (n === draggedNode) continue;
+
+        n.vx -= n.x * 0.00045;
+        n.vy -= n.y * 0.00045;
+
+        n.vx *= damping;
+        n.vy *= damping;
+
+        n.x += n.vx;
+        n.y += n.vy;
+    }
+}
+
+// --- RENDERER CANVAS ---
+let lastTime = performance.now();
+let frameCount = 0;
+
+function render() {
+    const now = performance.now();
+    frameCount++;
+    if (now - lastTime >= 1000) {
+        document.getElementById('stat-fps').innerText = frameCount;
+        frameCount = 0;
+        lastTime = now;
+    }
+
+    updatePhysics();
+
+    ctx.save();
+    ctx.fillStyle = '#0b0f19';
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.translate(transform.x, transform.y);
+    ctx.scale(transform.scale, transform.scale);
+
+    const isFilterActive = selectedCountry !== "ALL" || selectedCategory !== "ALL" || searchQuery !== "";
+
+    // Render Archi
+    for (let i = 0; i < edges.length; i++) {
+        const edge = edges[i];
+        const isHighlight = (hoveredNode || selectedNode) && 
+            (edge.source === hoveredNode || edge.target === hoveredNode || edge.source === selectedNode || edge.target === selectedNode);
+        
+        ctx.beginPath();
+        ctx.moveTo(edge.source.x, edge.source.y);
+        ctx.lineTo(edge.target.x, edge.target.y);
+
+        if (isHighlight) {
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2.2;
+        } else {
+            ctx.strokeStyle = isFilterActive ? 'rgba(30, 41, 59, 0.2)' : 'rgba(51, 65, 85, 0.35)';
+            ctx.lineWidth = 0.6;
+        }
+        ctx.stroke();
+    }
+
+    // Render Nodi
+    for (let i = 0; i < nodes.length; i++) {
+        const n = nodes[i];
+        const catColor = CATEGORIES[n.category]?.color || '#94a3b8';
+        
+        const matchesCountry = (selectedCountry === "ALL" || n.country === selectedCountry);
+        const matchesCategory = (selectedCategory === "ALL" || n.category === selectedCategory);
+        const matchesSearch = searchQuery === "" || 
+            n.name.toLowerCase().includes(searchQuery) || 
+            n.city.toLowerCase().includes(searchQuery) || 
+            n.country.toLowerCase().includes(searchQuery);
+
+        const isMatch = matchesCountry && matchesCategory && matchesSearch;
+        const isSelected = n === selectedNode;
+        const isHovered = n === hoveredNode;
+
+        ctx.save();
+        
+        // Dimming per filtri non attivi
+        if (isFilterActive && !isMatch && !isSelected && !isHovered) {
+            ctx.globalAlpha = 0.12;
+        }
+
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, isSelected || isHovered ? n.radius + 4 : n.radius, 0, Math.PI * 2);
+
+        ctx.fillStyle = isFilterActive && isMatch ? '#f8fafc' : catColor;
+        ctx.fill();
+
+        // Glow & Bordi
+        if (isSelected || isHovered || (isFilterActive && isMatch)) {
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+        }
+
+        // Etichette di testo
+        if (transform.scale > 0.75 || n.rank <= 20 || isHovered || isSelected || (isFilterActive && isMatch)) {
+            ctx.fillStyle = isSelected || isHovered ? '#ffffff' : '#e2e8f0';
+            ctx.font = `${Math.max(10 / transform.scale, 8)}px -apple-system, sans-serif`;
+            ctx.fillText(`${n.name}`, n.x + n.radius + 5, n.y + 3);
+        }
+
+        ctx.restore();
+    }
+
+    ctx.restore();
+    requestAnimationFrame(render);
+}
+
+// --- INTERAZIONI EVENTI MOUSE ---
+function getCanvasCoords(e) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+        x: (e.clientX - rect.left - transform.x) / transform.scale,
+        y: (e.clientY - rect.top - transform.y) / transform.scale
+    };
+}
+
+function findNodeAt(coords) {
+    for (let i = nodes.length - 1; i >= 0; i--) {
+        const n = nodes[i];
+        const dx = n.x - coords.x;
+        const dy = n.y - coords.y;
+        if (dx * dx + dy * dy <= (n.radius + 6) * (n.radius + 6)) {
+            return n;
+        }
+    }
+    return null;
+}
+
+canvas.addEventListener('mousedown', (e) => {
+    const coords = getCanvasCoords(e);
+    const node = findNodeAt(coords);
+
+    if (node) {
+        draggedNode = node;
+        selectedNode = node;
+        updateInfoCard(node);
+    } else {
+        isDragging = true;
+        dragStart = { x: e.clientX - transform.x, y: e.clientY - transform.y };
+    }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+    const coords = getCanvasCoords(e);
+
+    if (draggedNode) {
+        draggedNode.x = coords.x;
+        draggedNode.y = coords.y;
+        draggedNode.vx = 0;
+        draggedNode.vy = 0;
+    } else if (isDragging) {
+        transform.x = e.clientX - dragStart.x;
+        transform.y = e.clientY - dragStart.y;
+    } else {
+        hoveredNode = findNodeAt(coords);
+    }
+});
+
+window.addEventListener('mouseup', () => {
+    isDragging = false;
+    draggedNode = null;
+});
+
+canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const zoomFactor = 1.1;
+    const mouseX = e.clientX;
+    const mouseY = e.clientY;
+
+    let newScale = e.deltaY < 0 ? transform.scale * zoomFactor : transform.scale / zoomFactor;
+    newScale = Math.max(0.18, Math.min(newScale, 4.5));
+
+    transform.x = mouseX - (mouseX - transform.x) * (newScale / transform.scale);
+    transform.y = mouseY - (mouseY - transform.y) * (newScale / transform.scale);
+    transform.scale = newScale;
+}, { passive: false });
+
+// Controlli Input UI
+document.getElementById('countrySelect').addEventListener('change', (e) => selectedCountry = e.target.value);
+document.getElementById('categorySelect').addEventListener('change', (e) => selectedCategory = e.target.value);
+document.getElementById('searchInput').addEventListener('input', (e) => searchQuery = e.target.value.toLowerCase().trim());
+document.getElementById('repulsionSlider').addEventListener('input', (e) => repulsionStrength = parseFloat(e.target.value));
+
+function updateInfoCard(node) {
+    const card = document.getElementById('info-card');
+    if (!node) {
+        card.style.display = 'none';
+        return;
+    }
+    
+    const catObj = CATEGORIES[node.category] || { name: 'Istituzione Design', color: '#38bdf8' };
+    
+    document.getElementById('card-title').innerText = node.name;
+    const badge = document.getElementById('card-badge');
+    badge.innerText = catObj.name;
+    badge.style.backgroundColor = catObj.color;
+    badge.style.color = '#0b0f19';
+
+    document.getElementById('card-location').innerText = `📍 ${node.city}, ${node.country}`;
+    
+    const partnersList = node.connections.map(c => `• ${c.name} [${c.country}]`).slice(0, 5).join('<br>');
+    
+    document.getElementById('card-details').innerHTML = `
+        <strong>Ranking Globale Design:</strong> #${node.rank}<br>
+        <strong>Interconnessioni di Rete:</strong> ${node.connections.length}
+    `;
+    
+    document.getElementById('card-partners').innerHTML = `
+        <strong>Istituzioni Partner Collegate:</strong><br>${partnersList || 'Nessuna connessione diretta registrata'}
+    `;
+    
+    card.style.display = 'block';
+}
+
+// Avvio Loop di Rendering
+requestAnimationFrame(render);
+</script>
+</body>
+</html>

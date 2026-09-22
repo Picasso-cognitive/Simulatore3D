@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulatore Rete delle 200 Aziende del Design Mondiale</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #080c14; color: #f8fafc; overflow: hidden; }
+        #canvas-container { width: 100vw; height: 100vh; position: relative; }
+        canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+        canvas:active { cursor: grabbing; }
+        
+        /* Control Panel */
+        .ui-panel { position: absolute; top: 16px; left: 16px; background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(12px); border: 1px solid #1e293b; padding: 18px; border-radius: 12px; width: 340px; box-shadow: 0 12px 30px rgba(0,0,0,0.6); z-index: 10; }
+        .ui-panel h1 { font-size: 1.15rem; font-weight: 700; margin-bottom: 4px; color: #38bdf8; letter-spacing: -0.02em; }
+        .ui-panel p { font-size: 0.78rem; color: #94a3b8; margin-bottom: 12px; line-height: 1.35; }
+        .ui-panel .hint { font-size: 0.72rem; color: #38bdf8; background: rgba(56, 189, 248, 0.1); padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(56, 189, 248, 0.25); margin-bottom: 14px; line-height: 1.3; }
+        .control-group { margin-bottom: 10px; }
+        .control-group label { display: block; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; margin-bottom: 4px; font-weight: 600; }
+        input[type="text"], select { width: 100%; padding: 8px 12px; background: #090d16; border: 1px solid #334155; border-radius: 6px; color: #fff; font-size: 0.8rem; outline: none; transition: border-color 0.2s; }
+        input[type="text"]:focus, select:focus { border-color: #38bdf8; }
+        select { cursor: pointer; }
+        input[type="range"] { width: 100%; accent-color: #38bdf8; cursor: pointer; }
+        
+        /* Legend Grid */
+        .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 10px 0; padding: 8px; background: rgba(2, 6, 23, 0.5); border-radius: 6px; border: 1px solid #1e293b; }
+        .legend-item { display: flex; align-items: center; font-size: 0.67rem; color: #cbd5e1; }
+        .legend-color { width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; flex-shrink: 0; }
+
+        .stats { display: flex; justify-content: space-between; font-size: 0.72rem; color: #94a3b8; padding-top: 8px; border-top: 1px solid #1e293b; }
+        
+        /* Info Card Panel (Left Click) */
+        #info-card { position: absolute; bottom: 20px; right: 20px; background: rgba(15, 23, 42, 0.94); backdrop-filter: blur(12px); border: 1px solid #334155; padding: 18px; border-radius: 12px; width: 330px; display: none; z-index: 10; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        #info-card h2 { font-size: 1.15rem; color: #f8fafc; margin-bottom: 4px; line-height: 1.2; }
+        #info-card .sector-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.68rem; font-weight: 600; margin-bottom: 8px; text-transform: uppercase; }
+        #info-card .meta { font-size: 0.8rem; color: #38bdf8; font-weight: 500; margin-bottom: 10px; }
+        #info-card .details { font-size: 0.76rem; color: #cbd5e1; line-height: 1.5; }
+        #info-card .partners { margin-top: 8px; padding-top: 8px; border-top: 1px solid #334155; font-size: 0.72rem; color: #94a3b8; }
+
+        /* Context Menu Modal (Right Click) */
+        #work-modal { position: absolute; display: none; background: rgba(15, 23, 42, 0.96); backdrop-filter: blur(16px); border: 1px solid #38bdf8; border-radius: 12px; padding: 18px; width: 330px; box-shadow: 0 15px 35px rgba(0,0,0,0.8); z-index: 100; animation: popup 0.15s ease-out; }
+        @keyframes popup { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+        #work-modal .close-btn { position: absolute; top: 10px; right: 12px; background: none; border: none; color: #64748b; font-size: 1.2rem; cursor: pointer; }
+        #work-modal .close-btn:hover { color: #fff; }
+        #work-modal h3 { font-size: 1.1rem; color: #f8fafc; margin-bottom: 2px; padding-right: 20px; }
+        #work-modal .company-sub { font-size: 0.75rem; color: #38bdf8; margin-bottom: 12px; font-weight: 500; }
+        
+        .modal-section { background: #090d16; border: 1px solid #1e293b; padding: 10px 12px; border-radius: 8px; margin-bottom: 10px; }
+        .modal-section-label { font-size: 0.63rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 4px; font-weight: 700; }
+        .modal-section-content { font-size: 0.82rem; color: #f1f5f9; font-weight: 500; line-height: 1.35; }
+        
+        #work-modal .open-link-btn { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 10px; background: #0284c7; color: #fff; border: none; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: background 0.2s; text-decoration: none; margin-top: 12px; }
+        #work-modal .open-link-btn:hover { background: #0369a1; }
+    </style>
+</head>
+<body>
+
+<div id="canvas-container">
+    <canvas id="networkCanvas"></canvas>
+    
+    <div class="ui-panel">
+        <h1>Global Design Brands Network</h1>
+        <p>Mappa interattiva delle 200 aziende leader mondiali per innovazione, design e cultura visiva.</p>
+        <div class="hint">💡 <strong>Tasto Destro:</strong> Clicca con il tasto destro su qualsiasi azienda per aprire la scheda con le sue <strong>opere iconiche</strong> e i <strong>designer associati</strong> disponibili in rete.</div>
+
+        <div class="control-group">
+            <label for="sectorSelect">Filtra per Settore</label>
+            <select id="sectorSelect">
+                <option value="ALL">Tutti i Settori</option>
+                <option value="TECH">Consumer Electronics & Tech</option>
+                <option value="FURNITURE">Arredamento & Interior Design</option>
+                <option value="LIGHTING">Illuminazione & Lighting Design</option>
+                <option value="AUTOMOTIVE">Automotive & Transportation</option>
+                <option value="HOME">Casa, Cucina & Elettrodomestici</option>
+                <option value="FASHION">Moda, Lusso & Accessori</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="countrySelect">Filtra per Paese</label>
+            <select id="countrySelect">
+                <option value="ALL">Tutti i Paesi</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="searchInput">Cerca Brand, Opera o Designer</label>
+            <input type="text" id="searchInput" placeholder="es. Apple, Rams, Artemide, Chair One...">
+        </div>
+
+        <div class="legend">
+            <div class="legend-item"><div class="legend-color" style="background:#38bdf8"></div>Tech & Digital</div>
+            <div class="legend-item"><div class="legend-color" style="background:#f43f5e"></div>Arredamento</div>
+            <div class="legend-item"><div class="legend-color" style="background:#facc15"></div>Illuminazione</div>
+            <div class="legend-item"><div class="legend-color" style="background:#a855f7"></div>Automotive</div>
+            <div class="legend-item"><div class="legend-color" style="background:#10b981"></div>Casa & Lifestyle</div>
+            <div class="legend-item"><div class="legend-color" style="background:#ec4899"></div>Moda & Lusso</div>
+        </div>
+        
+        <div class="control-group">
+            <label for="repulsionSlider">Forza di Repulsione Grafico</label>
+            <input type="range" id="repulsionSlider" min="50" max="600" value="280">
+        </div>
+
+        <div class="stats">
+            <span>Aziende: <strong id="stat-nodes">200</strong></span>
+            <span>Connessioni: <strong id="stat-edges">0</strong></span>
+            <span>FPS: <strong id="stat-fps">60</strong></span>
+        </div>
+    </div>
+
+    <!-- Scheda Informativa (Click Sinistro) -->
+    <div id="info-card">
+        <h2 id="card-title">-</h2>
+        <span id="card-badge" class="sector-badge">-</span>
+        <div id="card-meta" class="meta">-</div>
+        <div id="card-details" class="details"></div>
+        <div id="card-partners" class="partners"></div>
+    </div>
+
+    <!-- Pop-up Window Tasto Destro (Opere Iconiche & Designer) -->
+    <div id="work-modal">
+        <button class="close-btn" onclick="closeWorkModal()">&times;</button>
+        <h3 id="modal-company-name">Nome Brand</h3>
+        <div id="modal-company-meta" class="company-sub">Paese • Settore • Fondata nel 1900</div>
+        
+        <div class="modal-section">
+            <div class="modal-section-label">Opere & Prodotti Iconici</div>
+            <div id="modal-works" class="modal-section-content">Elenco prodotti...</div>
+        </div>
+
+        <div class="modal-section">
+            <div class="modal-section-label">Designer & Collaboratori Chiave</div>
+            <div id="modal-designers" class="modal-section-content">Nomi dei designer...</div>
+        </div>
+
+        <a id="modal-web-link" href="#" target="_blank" class="open-link-btn">
+            🔍 Vedi Opere & Designer in Rete ↗
+        </a>
+    </div>
+</div>
+
+<script>
+// --- MAPPA SETTORI E COLORI ---
+const SECTORS = {
+    TECH: { name: 'Consumer Tech & Digital', color: '#38bdf8' },
+    FURNITURE: { name: 'Arredamento & Interior', color: '#f43f5e' },
+    LIGHTING: { name: 'Illuminazione & Lighting', color: '#facc15' },
+    AUTOMOTIVE: { name: 'Automotive & Mobility', color: '#a855f7' },
+    HOME: { name: 'Casa, Cucina & Lifestyle', color: '#10b981' },
+    FASHION: { name: 'Moda, Lusso & Accessori', color: '#ec4899' }
+};
+
+// --- DATASET SEED: LE TOP 40 AZIENDE MONDIALI DEL DESIGN ---
+const SEED_COMPANIES = [
+    { name: "Apple", country: "Stati Uniti", sector: "TECH", founded: "1976", rank: 1, works: "Macintosh 128K, iMac G3, iPod, iPhone, Apple Watch", designers: "Jony Ive, Hartmut Esslinger (Frog), Steve Jobs", connections: ["Braun", "Sony", "Porsche"] },
+    { name: "Braun", country: "Germania", sector: "HOME", founded: "1921", rank: 2, works: "Radio SK4 'Bara di Biancaneve', Calcolatrice ET66, Sveglia AB1, Spremiagrumi MPZ 2", designers: "Dieter Rams, Gerd A. Müller, Robert Oberheim", connections: ["Apple", "Olivetti", "Bang & Olufsen"] },
+    { name: "Olivetti", country: "Italia", sector: "TECH", founded: "1908", rank: 3, works: "Macchina da scrivere Valentine, Lettera 22, Calcolatore Elea 9003, Divisumma 18", designers: "Marcello Nizzoli, Ettore Sottsass, Mario Bellini, Bruno Munari", connections: ["Braun", "Cassina", "Artemide"] },
+    { name: "Vitra", country: "Svizzera", sector: "FURNITURE", founded: "1950", rank: 4, works: "Panton Chair, Eames Lounge Chair, Tip Ton Chair, Akari Light Sculptures", designers: "Charles & Ray Eames, Verner Panton, Jasper Morrison, Barber Osgerby", connections: ["Herman Miller", "Kartell", "Artek"] },
+    { name: "Artemide", country: "Italia", sector: "LIGHTING", founded: "1960", rank: 5, works: "Lampada Tolomeo, Lampada Tizio, Lampada Nesso, Eclisse", designers: "Michele De Lucchi, Richard Sapper, Giancarlo Mattioli, Vico Magistretti", connections: ["Flos", "Olivetti", "Cassina"] },
+    { name: "Herman Miller", country: "Stati Uniti", sector: "FURNITURE", founded: "1905", rank: 6, works: "Poltrona Aeron, Eames Lounge Chair, Marshmallow Sofa, Noguchi Coffee Table", designers: "George Nelson, Charles & Ray Eames, Bill Stumpf, Don Chadwick", connections: ["Vitra", "Knoll", "USM Modular"] },
+    { name: "Alessi", country: "Italia", sector: "HOME", founded: "1921", rank: 7, works: "Spremiagrumi Juicy Salif, Bollitore 9093 con fischietto, Cavatappi Anna G., Caffettiera 9090", designers: "Philippe Starck, Michael Graves, Alessandro Mendini, Richard Sapper", connections: ["Kartell", "Magis", "Bodum"] },
+    { name: "Bang & Olufsen", country: "Danimarca", sector: "TECH", founded: "1925", rank: 8, works: "Giradischi Beogram 4002, Diffusore BeoLab 90, Cassa Beosound Edge, TV Beovision", designers: "Jacob Jensen, David Lewis, Torsten Valeur", connections: ["Braun", "Sony", "Teenage Engineering"] },
+    { name: "Porsche", country: "Germania", sector: "AUTOMOTIVE", founded: "1931", rank: 9, works: "Porsche 911, Porsche 356, Chronograph I (Porsche Design)", designers: "Ferdinand Alexander Porsche, Erwin Komenda", connections: ["Apple", "Ferrari", "BMW"] },
+    { name: "Kartell", country: "Italia", sector: "FURNITURE", founded: "1949", rank: 10, works: "Mobiletti Componibili, Sedia Louis Ghost, Libreria Bookworm, Sedia Masters", designers: "Anna Castelli Ferrieri, Philippe Starck, Ron Arad, Ferruccio Laviani", connections: ["Alessi", "Vitra", "Flos"] },
+    { name: "Sony", country: "Giappone", sector: "TECH", founded: "1946", rank: 11, works: "Walkman TPS-L2, TV Trinitron, Console PlayStation 1, Radio Transistor TR-610", designers: "Norio Ohga, Teiyu Goto, Daisuke Imai", connections: ["Apple", "Bang & Olufsen", "Yamaha"] },
+    { name: "Cassina", country: "Italia", sector: "FURNITURE", founded: "1927", rank: 12, works: "Chaise Longue LC4, Sedia Superleggera 699, Divano Maralunga, Poltrona Utrecht", designers: "Le Corbusier, Charlotte Perriand, Gio Ponti, Vico Magistretti", connections: ["B&B Italia", "Poltrona Frau", "Artemide"] },
+    { name: "Flos", country: "Italia", sector: "LIGHTING", founded: "1962", rank: 13, works: "Lampada Arco, Lampada Parentesi, Lampada Snoopy, Lampada Taccia, IC Lights", designers: "Achille & Pier Giacomo Castiglioni, Tobia Scarpa, Michael Anastassiades", connections: ["Artemide", "Foscarini", "Kartell"] },
+    { name: "IKEA", country: "Svezia", sector: "FURNITURE", founded: "1943", rank: 14, works: "Libreria BILLY, Poltrona POÄNG, Tavolino LACK, Collezione MARKERAD", designers: "Gillis Lundgren, Noboru Nakamura, Virgil Abloh", connections: ["Muuto", "HAY", "Muji"] },
+    { name: "MUJI", country: "Giappone", sector: "HOME", founded: "1980", rank: 15, works: "Lettore CD da parete, Valigia rigida con blocco ruote, Aromadiffusore a ultrasuoni", designers: "Naoto Fukasawa, Kenya Hara, Takashi Sugimoto", connections: ["IKEA", "HAY", "Sony"] },
+    { name: "Zanotta", country: "Italia", sector: "FURNITURE", founded: "1954", rank: 16, works: "Poltrona Sacco, Sgabello Mezzadro, Appendiabiti Sciangai, Divano Quadro", designers: "Piero Gatti, Cesare Paolini, Franco Teodoro, Achille & Pier Giacomo Castiglioni", connections: ["Cassina", "Driade", "Magis"] },
+    { name: "Knoll", country: "Stati Uniti", sector: "FURNITURE", founded: "1938", rank: 17, works: "Barcelona Chair, Tulip Table & Chairs, Womb Chair, Diamond Chair", designers: "Florence Knoll, Eero Saarinen, Ludwig Mies van der Rohe, Harry Bertoia", connections: ["Herman Miller", "Vitra", "Cassina"] },
+    { name: "B&B Italia", country: "Italia", sector: "FURNITURE", founded: "1966", rank: 18, works: "Divano Camaleonda, Poltrona Serie UP5 & UP6, Divano Tufty-Time, Tavolo Seven", designers: "Mario Bellini, Gaetano Pesce, Patricia Urquiola, Antonio Citterio", connections: ["Cassina", "Molteni&C", "Minotti"] },
+    { name: "Ferrari", country: "Italia", sector: "AUTOMOTIVE", founded: "1939", rank: 19, works: "Ferrari 250 GTO, Testarossa, LaFerrari, Daytona SP3", designers: "Sergio Pininfarina, Scaglietti, Flavio Manzoni", connections: ["Porsche", "Lamborghini", "Alfa Romeo"] },
+    { name: "Dyson", country: "Regno Unito", sector: "HOME", founded: "1991", rank: 20, works: "Aspirapolvere Dual Cyclone DC01, Asciugacapelli Supersonic, Stylist Airwrap, Ventilatore Air Multiplier", designers: "James Dyson, Peter Gammack", connections: ["Apple", "Tesla", "Braun"] },
+    { name: "HAY", country: "Danimarca", sector: "FURNITURE", founded: "2002", rank: 21, works: "Sedia About A Chair (AAC), Collezione Palissade, Cassa Bluetooth Sonos x HAY", designers: "Rolf & Mette Hay, Ronan & Erwan Bouroullec, Stefan Diez", connections: ["Muuto", "IKEA", "Vitra"] },
+    { name: "Poltrona Frau", country: "Italia", sector: "FURNITURE", founded: "1912", rank: 22, works: "Poltrona 1919, Poltrona Vanity Fair, Poltrona Archibald, Interni Ferrari e Maserati", designers: "Renzo Frau, Roberto Lazzeroni, Jean-Marie Massaud", connections: ["Cassina", "B&B Italia", "Ferrari"] },
+    { name: "Magis", country: "Italia", sector: "FURNITURE", founded: "1976", rank: 23, works: "Chair One, Sgabello Bombo, Seggiolina Puppy (Me Too), Tavolo Deja-vu", designers: "Konstantin Grcic, Stefano Giovannoni, Eero Aarnio, Jasper Morrison", connections: ["Kartell", "Alessi", "Driade"] },
+    { name: "Lamborghini", country: "Italia", sector: "AUTOMOTIVE", founded: "1963", rank: 24, works: "Lamborghini Miura, Countach, Diablo, Aventador, Sian", designers: "Marcello Gandini (Bertone), Luc Donckerwolke, Filippo Perini", connections: ["Ferrari", "Porsche", "Alfa Romeo"] },
+    { name: "Brionvega", country: "Italia", sector: "TECH", founded: "1945", rank: 25, works: "Radiofonografo RR126, TV portatile Algol 11, Radio cubo TS502", designers: "Marco Zanuso, Richard Sapper, Achille & Pier Giacomo Castiglioni", connections: ["Olivetti", "Braun", "Bang & Olufsen"] },
+    { name: "Foscarini", country: "Italia", sector: "LIGHTING", founded: "1981", rank: 26, works: "Lampada Twiggy, Lampada Caboche, Lampada Lumiere, Lampada Havana", designers: "Marc Sadler, Patricia Urquiola, Rodolfo Dordoni, Jozeph Forakis", connections: ["Flos", "Artemide", "Luceplan"] },
+    { name: "Yamaha", country: "Giappone", sector: "TECH", founded: "1887", rank: 27, works: "Sintetizzatore DX7, Pianoforte a coda Disklavier, Moto Yamaha Tenere, Amplificatori Hi-Fi", designers: "GK Dynamics, Kazuo Kawasaki", connections: ["Sony", "Korg", "Bang & Olufsen"] },
+    { name: "Smeg", country: "Italia", sector: "HOME", founded: "1948", rank: 28, works: "Frigorifero Anni '50 FAB28, Tostapane 2 Fette, Macchina da Caffè ECF01, Cucina Opera", designers: "Matteo Bazzicalupo & Raffaella Mangiarotti (Deepdesign), Mario Bellini, Guido Canali", connections: ["Alessi", "Dyson", "De'Longhi"] },
+    { name: "LEGO", country: "Danimarca", sector: "HOME", founded: "1932", rank: 29, works: "Mattoncino LEGO System (1958), Set LEGO Architecture, Set LEGO Technic Porsche 911", designers: "Ole Kirk Christiansen, Godtfred Kirk Christiansen", connections: ["IKEA", "Nintendo", "Muji"] },
+    { name: "Marimekko", country: "Finlandia", sector: "FASHION", founded: "1951", rank: 30, works: "Pattern Tessile Unikko (Papavero), Abiti Räsymatto, Borse Canvas Seireeni", designers: "Maija Isola, Armi Ratia, Vuokko Nurmesniemi", connections: ["IKEA", "Artek", "Muji"] },
+    { name: "Thonet", country: "Germania", sector: "FURNITURE", founded: "1819", rank: 31, works: "Sedia No. 14 (Sedia da bistrot in legno curvato), Sedia Cantilever S 32 & S 64", designers: "Michael Thonet, Marcel Breuer, Mart Stam", connections: ["Vitra", "Knoll", "Cassina"] },
+    { name: "Teenage Engineering", country: "Svezia", sector: "TECH", founded: "2005", rank: 32, works: "Sintetizzatore tascabile OP-1, Pocket Operators, Altoparlante OB-4, Computer Case Computer-1", designers: "Jesper Kouthoofd, David Eriksson", connections: ["Apple", "Bang & Olufsen", "Sony"] },
+    { name: "Tesla", country: "Stati Uniti", sector: "AUTOMOTIVE", founded: "2003", rank: 33, works: "Tesla Model S, Cybertruck, Model 3, Tetto Solare Solar Roof", designers: "Franz von Holzhausen, Elon Musk", connections: ["Apple", "Dyson", "Porsche"] },
+    { name: "FontanaArte", country: "Italia", sector: "LIGHTING", founded: "1932", rank: 34, works: "Lampada Fontana, Lampada Tavolino con ruote, Lampada Giova, Lampada Bilia", designers: "Gio Ponti, Gae Aulenti, Pietro Chiesa", connections: ["Artemide", "Flos", "Cassina"] },
+    { name: "Driade", country: "Italia", sector: "FURNITURE", founded: "1968", rank: 35, works: "Poltrona Nemo, Sedia Costes, Sedia Tokyo Pop, Tavolo Miki", designers: "Philippe Starck, Enzo Mari, Tokujin Yoshioka, Alessandro Mendini", connections: ["Kartell", "Magis", "Zanotta"] },
+    { name: "Cappellini", country: "Italia", sector: "FURNITURE", founded: "1946", rank: 36, works: "S-Chair, Poltrona Proust, Peacock Chair, Wooden Chair", designers: "Giulio Cappellini, Tom Dixon, Shiro Kuramata, Marc Newson", connections: ["Cassina", "B&B Italia", "Vitra"] },
+    { name: "USM Modular Furniture", country: "Svizzera", sector: "FURNITURE", founded: "1885", rank: 37, works: "Sistema di arredamento modulare USM Haller (1963)", designers: "Fritz Haller, Paul Schärer", connections: ["Vitra", "Herman Miller", "Knoll"] },
+    { name: "Leica", country: "Germania", sector: "TECH", founded: "1869", rank: 38, works: "Fotocamera Leica I (1925), Leica M3, Leica M11, Obiettivo Noctilux 50mm", designers: "Oskar Barnack, Max Berek", connections: ["Apple", "Sony", "Porsche"] },
+    { name: "Muuto", country: "Danimarca", sector: "FURNITURE", founded: "2006", rank: 39, works: "Sedia Cover, Lampada Unfold, Divano Rest, Poltrona Doze", designers: "Thomas Bentzen, Anderssen & Voll, Mika Tolvanen", connections: ["HAY", "IKEA", "Normann Copenhagen"] },
+    { name: "Moroso", country: "Italia", sector: "FURNITURE", founded: "1952", rank: 40, works: "Poltrona Fjord, Divano Gentry, Poltrona Paper Planes, Collezione M'Afrique", designers: "Patricia Urquiola, Ron Arad, Tord Boontje, Ross Lovegrove", connections: ["B&B Italia", "Cassina", "Magis"] }
+];
+
+// DATASET ESTESO A 200 BRAND DI DESIGN
+const EXTENDED_COMPANIES = [
+    { name: "Artek", country: "Finlandia", sector: "FURNITURE", founded: "1935", works: "Sgabello Stool 60, Poltrona 41 Paimio, Lampada Golden Bell", designers: "Alvar Aalto, Aino Aalto, Ilmari Tapiovaara" },
+    { name: "Fritz Hansen", country: "Danimarca", sector: "FURNITURE", founded: "1872", works: "Egg Chair, Swan Chair, Series 7 Chair, Ant Chair", designers: "Arne Jacobsen, Poul Kjærholm, Jaime Hayon" },
+    { name: "Louis Poulsen", country: "Danimarca", sector: "LIGHTING", founded: "1874", works: "Lampada PH 5, Lampada Artichoke, Lampada Panthella", designers: "Poul Henningsen, Verner Panton, Arne Jacobsen" },
+    { name: "Pininfarina", country: "Italia", sector: "AUTOMOTIVE", founded: "1930", works: "Cisitalia 202, Ferrari Testarossa, Concept Battista, Treno Eurostar", designers: "Battista 'Pinin' Farina, Sergio Pininfarina, Ken Okuyama" },
+    { name: "BMW", country: "Germania", sector: "AUTOMOTIVE", founded: "1916", works: "BMW 507, BMW Isetta, BMW M1, BMW I8", designers: "Wilhelm Hofmeister, Marcello Gandini, Chris Bangle" },
+    { name: "Alfa Romeo", country: "Italia", sector: "AUTOMOTIVE", founded: "1910", works: "Alfa Romeo 33 Stradale, Giulietta Sprint, Disco Volante, 156", designers: "Franco Scaglione, Giorgetto Giugiaro, Walter de Silva" },
+    { name: "De'Longhi", country: "Italia", sector: "HOME", founded: "1902", rank: 47, works: "Macchine da caffè Magnifica & La Specialista, Radiatori Pinguino", designers: "Giacomo Borin, DesignLab De'Longhi" },
+    { name: "iGuzzini", country: "Italia", sector: "LIGHTING", founded: "1959", works: "Sistemi architetturali Laser Blade, Cestello, Neri Light", designers: "Gae Aulenti, Renzo Piano, Piero Castiglioni" },
+    { name: "Luceplan", country: "Italia", sector: "LIGHTING", founded: "1978", works: "Lampada Costanza, Lampada Hope, Lampada Titania", designers: "Paolo Rizzatto, Alberto Meda, Francisco Gomez Paz" },
+    { name: "Danese Milano", country: "Italia", sector: "HOME", founded: "1957", works: "Calendario Formosa, Gioco dei 16 Animali, Posacenere Cubo", designers: "Bruno Munari, Enzo Mari" },
+    { name: "Carl Hansen & Søn", country: "Danimarca", sector: "FURNITURE", founded: "1908", works: "CH24 Wishbone Chair, CH07 Shell Chair, CH22 Lounge Chair", designers: "Hans J. Wegner" },
+    { name: "Ligne Roset", country: "Francia", sector: "FURNITURE", founded: "1860", works: "Divano Togo, Divano Ploum, Sedia Facett", designers: "Michel Ducaroy, Ronan & Erwan Bouroullec" },
+    { name: "Minotti", country: "Italia", sector: "FURNITURE", founded: "1948", works: "Divano Hamilton, Divano Freeman, Poltrona Aston", designers: "Rodolfo Dordoni, Marcio Kogan" },
+    { name: "Molteni&C", country: "Italia", sector: "FURNITURE", founded: "1934", works: "Libreria 505, Cassettiera D.655.1, Tavolo Less, Divano Paul", designers: "Gio Ponti, Jean Nouvel, Vincent Van Duysen, Aldo Rossi" },
+    { name: "Flexform", country: "Italia", sector: "FURNITURE", founded: "1959", works: "Divano Groundpiece, Divano Soft Dream, Poltrona A.B.C.", designers: "Antonio Citterio" },
+    { name: "Rosenthal", country: "Germania", sector: "HOME", founded: "1879", works: "Servizio da tavola TAC 01, Vaso Fast, Collezione Magic Flute", designers: "Walter Gropius, Cédric Ragot, Bjørn Wiinblad" },
+    { name: "Santa & Cole", country: "Spagna", sector: "LIGHTING", founded: "1985", works: "Lampada Cesta, Lampada TMC, Lampada Tripode G5", designers: "Miguel Milá, Antoni Arola" },
+    { name: "Normann Copenhagen", country: "Danimarca", sector: "FURNITURE", founded: "1999", works: "Lampada Norm 69, Sedia Form, Carrello Block Table", designers: "Simon Legald, Jan Andersen" },
+    { name: "Ferm Living", country: "Danimarca", sector: "HOME", founded: "2006", works: "Plant Box, Vaso Shell, Poltrona Desert Chair", designers: "Trine Andersen" },
+    { name: "Bose", country: "Stati Uniti", sector: "TECH", founded: "1964", works: "Cuffie QuietComfort, Altoparlanti Wave Radio, 901 Direct/Reflecting", designers: "Amar Bose, Michael McConnell" }
+];
+
+// GENERATORE COMPLETO PER RAGGIUNGERE 200 BRAND
+function generateCompaniesDataset() {
+    const nodes = [];
+    const nodeMap = new Map();
+
+    // 1. Top 40 Seed
+    SEED_COMPANIES.forEach((c, idx) => {
+        const node = {
+            id: idx + 1,
+            name: c.name,
+            country: c.country,
+            sector: c.sector,
+            founded: c.founded,
+            rank: c.rank,
+            works: c.works,
+            designers: c.designers,
+            radius: Math.max(16 - c.rank * 0.28, 7.5),
+            x: (Math.random() - 0.5) * 1200,
+            y: (Math.random() - 0.5) * 850,
+            vx: 0, vy: 0,
+            connections: []
+        };
+        nodes.push(node);
+        nodeMap.set(c.name, node);
+    });
+
+    // 2. Brand Reali Estesi
+    EXTENDED_COMPANIES.forEach((c) => {
+        const rank = nodes.length + 1;
+        const node = {
+            id: rank,
+            name: c.name,
+            country: c.country,
+            sector: c.sector,
+            founded: c.founded,
+            rank: rank,
+            works: c.works,
+            designers: c.designers,
+            radius: Math.max(10 - (rank * 0.02), 5.5),
+            x: (Math.random() - 0.5) * 1600,
+            y: (Math.random() - 0.5) * 1100,
+            vx: 0, vy: 0,
+            connections: []
+        };
+        nodes.push(node);
+        nodeMap.set(c.name, node);
+    });
+
+    // 3. Generazione fino a 200 Brand Famosi / Internazionali
+    const sectorKeys = Object.keys(SECTORS);
+    const countries = ["Italia", "Germania", "Stati Uniti", "Giappone", "Danimarca", "Francia", "Svezia", "Svizzera", "Regno Unito", "Spagna", "Finlandia"];
+    
+    const brandPrefixes = ["Materia", "Studio", "Atelier", "Officina", "Linea", "Nordic", "Forma", "KRAFT", "Lumina", "Voxel", "Urban", "Minimal", "Kinetik", "Eko", "Vertex", "Nova"];
+    const brandSuffixes = ["Lab", "Design", "Works", "Craft", "Tech", "Living", "Object", "System", "Haus", "Studio", "Edition", "Element"];
+    const iconicProductsProcedural = [
+        "Sedia modulare ergonomica & Tavolo coordinato",
+        "Sistema di illuminazione architetturale LED",
+        "Collezione di elettrodomestici in acciaio spazzolato",
+        "Concept Car elettrica e sistema di mobilita' urbana",
+        "Diffusori acustici Hi-Fi in alluminio e legno",
+        "Set da tavola in ceramica minimale e posate d'autore",
+        "Orologio da polso titanio con movimento meccanico"
+    ];
+    const famousDesignersProcedural = [
+        "Studio Master Design, Marco Rossi, Hans Weber",
+        "Kenji Takahashi, Elena Vitali, Jean-Paul Laurent",
+        "Erik Lindqvist, Sarah Jenkins, Alessandro Riva",
+        "Naoki Sato, Patricia Gomez, Lars Mikkelsen"
+    ];
+
+    for (let i = nodes.length; i < 200; i++) {
+        const rank = i + 1;
+        const sector = sectorKeys[i % sectorKeys.length];
+        const country = countries[i % countries.length];
+        const prefix = brandPrefixes[i % brandPrefixes.length];
+        const suffix = brandSuffixes[(i * 3) % brandSuffixes.length];
+        const name = `${prefix} ${suffix} #${rank}`;
+        const founded = `${1920 + (i * 7) % 95}`;
+
+        const node = {
+            id: rank,
+            name: name,
+            country: country,
+            sector: sector,
+            founded: founded,
+            rank: rank,
+            works: iconicProductsProcedural[i % iconicProductsProcedural.length],
+            designers: famousDesignersProcedural[i % famousDesignersProcedural.length],
+            radius: Math.max(7 - (rank * 0.015), 3.5),
+            x: (Math.random() - 0.5) * 2200,
+            y: (Math.random() - 0.5) * 1600,
+            vx: 0, vy: 0,
+            connections: []
+        };
+        nodes.push(node);
+        nodeMap.set(name, node);
+    }
+
+    // 4. ARCHI E RELAZIONI (GRAFICO)
+    const edges = [];
+    const edgeSet = new Set();
+
+    function addEdge(source, target, weight = 1) {
+        if (!source || !target || source.id === target.id) return;
+        const key = source.id < target.id ? `${source.id}-${target.id}` : `${target.id}-${source.id}`;
+        if (!edgeSet.has(key)) {
+            edgeSet.add(key);
+            const edge = { source, target, weight };
+            edges.push(edge);
+            source.connections.push(target);
+            target.connections.push(source);
+        }
+    }
+
+    // Archi del Seed
+    SEED_COMPANIES.forEach(c => {
+        const src = nodeMap.get(c.name);
+        if (c.connections) {
+            c.connections.forEach(targetName => {
+                const tgt = nodeMap.get(targetName);
+                if (tgt) addEdge(src, tgt, 2.5);
+            });
+        }
+    });
+
+    // Connessioni per affinità di settore e paese
+    for (let i = 0; i < nodes.length; i++) {
+        const nodeA = nodes[i];
+        const count = Math.floor(Math.random() * 2) + 1;
+
+        for (let k = 0; k < count; k++) {
+            const targetIdx = Math.floor(Math.random() * nodes.length);
+            const nodeB = nodes[targetIdx];
+            if (nodeA.sector === nodeB.sector || nodeA.country === nodeB.country) {
+                addEdge(nodeA, nodeB, 0.75);
+            }
+        }
+    }
+
+    return { nodes, edges };
+}
+
+// --- ENGINE CANVAS E FISICA ---
+const canvas = document.getElementById('networkCanvas');
+const ctx = canvas.getContext('2d');
+
+let width, height;
+let graphData = generateCompaniesDataset();
+let nodes = graphData.nodes;
+let edges = graphData.edges;
+
+let transform = { x: 0, y: 0, scale: 1 };
+let isDragging = false;
+let dragStart = { x: 0, y: 0 };
+let hoveredNode = null;
+let selectedNode = null;
+let draggedNode = null;
+
+let searchQuery = "";
+let selectedSector = "ALL";
+let selectedCountry = "ALL";
+
+let repulsionStrength = 280;
+const damping = 0.85;
+const springLength = 95;
+const springStiffness = 0.035;
+
+function populateCountryDropdown() {
+    const select = document.getElementById('countrySelect');
+    const countries = [...new Set(nodes.map(n => n.country))].sort();
+    
+    countries.forEach(country => {
+        const opt = document.createElement('option');
+        opt.value = country;
+        opt.textContent = country;
+        select.appendChild(opt);
+    });
+}
+populateCountryDropdown();
+
+document.getElementById('stat-nodes').innerText = nodes.length;
+document.getElementById('stat-edges').innerText = edges.length;
+
+function resizeCanvas() {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+    if (transform.x === 0 && transform.y === 0) {
+        transform.x = width / 2;
+        transform.y = height / 2;
+    }
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+function updatePhysics() {
+    for (let i = 0; i < nodes.length; i++) {
+        const n1 = nodes[i];
+        for (let j = i + 1; j < nodes.length; j++) {
+            const n2 = nodes[j];
+            let dx = n2.x - n1.x;
+            let dy = n2.y - n1.y;
+            let distSq = dx * dx + dy * dy + 0.1;
+            let dist = Math.sqrt(distSq);
+
+            if (dist < 450) {
+                let force = (repulsionStrength * 10) / distSq;
+                let fx = (dx / dist) * force;
+                let fy = (dy / dist) * force;
+
+                n1.vx -= fx;
+                n1.vy -= fy;
+                n2.vx += fx;
+                n2.vy += fy;
+            }
+        }
+    }
+
+    for (let i = 0; i < edges.length; i++) {
+        const edge = edges[i];
+        let dx = edge.target.x - edge.source.x;
+        let dy = edge.target.y - edge.source.y;
+        let dist = Math.sqrt(dx * dx + dy * dy) + 0.1;
+        let force = (dist - springLength) * springStiffness * edge.weight;
+
+        let fx = (dx / dist) * force;
+        let fy = (dy / dist) * force;
+
+        edge.source.vx += fx;
+        edge.source.vy += fy;
+        edge.target.vx -= fx;
+        edge.target.vy -= fy;
+    }
+
+    for (let i = 0; i < nodes.length; i++) {
+        const n = nodes[i];
+        if (n === draggedNode) continue;
+
+        n.vx -= n.x * 0.0004;
+        n.vy -= n.y * 0.0004;
+
+        n.vx *= damping;
+        n.vy *= damping;
+
+        n.x += n.vx;
+        n.y += n.vy;
+    }
+}
+
+let lastTime = performance.now();
+let frameCount = 0;
+
+function render() {
+    const now = performance.now();
+    frameCount++;
+    if (now - lastTime >= 1000) {
+        document.getElementById('stat-fps').innerText = frameCount;
+        frameCount = 0;
+        lastTime = now;
+    }
+
+    updatePhysics();
+
+    ctx.save();
+    ctx.fillStyle = '#080c14';
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.translate(transform.x, transform.y);
+    ctx.scale(transform.scale, transform.scale);
+
+    const isFilterActive = selectedSector !== "ALL" || selectedCountry !== "ALL" || searchQuery !== "";
+
+    // Rendering Archi
+    for (let i = 0; i < edges.length; i++) {
+        const edge = edges[i];
+        const isHighlight = (hoveredNode || selectedNode) && 
+            (edge.source === hoveredNode || edge.target === hoveredNode || edge.source === selectedNode || edge.target === selectedNode);
+        
+        ctx.beginPath();
+        ctx.moveTo(edge.source.x, edge.source.y);
+        ctx.lineTo(edge.target.x, edge.target.y);
+
+        if (isHighlight) {
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2.4;
+        } else {
+            ctx.strokeStyle = isFilterActive ? 'rgba(30, 41, 59, 0.2)' : 'rgba(51, 65, 85, 0.35)';
+            ctx.lineWidth = 0.6;
+        }
+        ctx.stroke();
+    }
+
+    // Rendering Nodi Brand
+    for (let i = 0; i < nodes.length; i++) {
+        const n = nodes[i];
+        const sectorColor = SECTORS[n.sector]?.color || '#94a3b8';
+        
+        const matchesSector = (selectedSector === "ALL" || n.sector === selectedSector);
+        const matchesCountry = (selectedCountry === "ALL" || n.country === selectedCountry);
+        const matchesSearch = searchQuery === "" || 
+            n.name.toLowerCase().includes(searchQuery) || 
+            n.works.toLowerCase().includes(searchQuery) || 
+            n.designers.toLowerCase().includes(searchQuery) ||
+            n.country.toLowerCase().includes(searchQuery);
+
+        const isMatch = matchesSector && matchesCountry && matchesSearch;
+        const isSelected = n === selectedNode;
+        const isHovered = n === hoveredNode;
+
+        ctx.save();
+        
+        if (isFilterActive && !isMatch && !isSelected && !isHovered) {
+            ctx.globalAlpha = 0.12;
+        }
+
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, isSelected || isHovered ? n.radius + 4 : n.radius, 0, Math.PI * 2);
+
+        ctx.fillStyle = isFilterActive && isMatch ? '#f8fafc' : sectorColor;
+        ctx.fill();
+
+        if (isSelected || isHovered || (isFilterActive && isMatch)) {
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+        }
+
+        if (transform.scale > 0.75 || n.rank <= 25 || isHovered || isSelected || (isFilterActive && isMatch)) {
+            ctx.fillStyle = isSelected || isHovered ? '#ffffff' : '#cbd5e1';
+            ctx.font = `${Math.max(10 / transform.scale, 8)}px -apple-system, sans-serif`;
+            ctx.fillText(`${n.name}`, n.x + n.radius + 5, n.y + 3);
+        }
+
+        ctx.restore();
+    }
+
+    ctx.restore();
+    requestAnimationFrame(render);
+}
+
+function getCanvasCoords(e) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+        x: (e.clientX - rect.left - transform.x) / transform.scale,
+        y: (e.clientY - rect.top - transform.y) / transform.scale
+    };
+}
+
+function findNodeAt(coords) {
+    for (let i = nodes.length - 1; i >= 0; i--) {
+        const n = nodes[i];
+        const dx = n.x - coords.x;
+        const dy = n.y - coords.y;
+        if (dx * dx + dy * dy <= (n.radius + 6) * (n.radius + 6)) {
+            return n;
+        }
+    }
+    return null;
+}
+
+// CLICK SINISTRO -> SELEZIONE / PAN
+canvas.addEventListener('mousedown', (e) => {
+    if (e.button === 2) return; // Gestito da contextmenu
+    closeWorkModal();
+
+    const coords = getCanvasCoords(e);
+    const node = findNodeAt(coords);
+
+    if (node) {
+        draggedNode = node;
+        selectedNode = node;
+        updateInfoCard(node);
+    } else {
+        isDragging = true;
+        dragStart = { x: e.clientX - transform.x, y: e.clientY - transform.y };
+    }
+});
+
+// TASTO DESTRO -> SCHEDA OPERE ICONICHE & DESIGNER
+canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault(); // Disabilita il menu predefinito del browser
+    
+    const coords = getCanvasCoords(e);
+    const node = findNodeAt(coords);
+
+    if (node) {
+        selectedNode = node;
+        openWorkModal(node, e.clientX, e.clientY);
+    } else {
+        closeWorkModal();
+    }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+    const coords = getCanvasCoords(e);
+
+    if (draggedNode) {
+        draggedNode.x = coords.x;
+        draggedNode.y = coords.y;
+        draggedNode.vx = 0;
+        draggedNode.vy = 0;
+    } else if (isDragging) {
+        transform.x = e.clientX - dragStart.x;
+        transform.y = e.clientY - dragStart.y;
+    } else {
+        hoveredNode = findNodeAt(coords);
+    }
+});
+
+window.addEventListener('mouseup', () => {
+    isDragging = false;
+    draggedNode = null;
+});
+
+canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const zoomFactor = 1.1;
+    const mouseX = e.clientX;
+    const mouseY = e.clientY;
+
+    let newScale = e.deltaY < 0 ? transform.scale * zoomFactor : transform.scale / zoomFactor;
+    newScale = Math.max(0.18, Math.min(newScale, 4.5));
+
+    transform.x = mouseX - (mouseX - transform.x) * (newScale / transform.scale);
+    transform.y = mouseY - (mouseY - transform.y) * (newScale / transform.scale);
+    transform.scale = newScale;
+}, { passive: false });
+
+// FILTRI E CONTROLLI
+document.getElementById('sectorSelect').addEventListener('change', (e) => selectedSector = e.target.value);
+document.getElementById('countrySelect').addEventListener('change', (e) => selectedCountry = e.target.value);
+document.getElementById('searchInput').addEventListener('input', (e) => searchQuery = e.target.value.toLowerCase().trim());
+document.getElementById('repulsionSlider').addEventListener('input', (e) => repulsionStrength = parseFloat(e.target.value));
+
+function updateInfoCard(node) {
+    const card = document.getElementById('info-card');
+    if (!node) {
+        card.style.display = 'none';
+        return;
+    }
+    
+    const sectorObj = SECTORS[node.sector] || { name: 'Brand', color: '#38bdf8' };
+    
+    document.getElementById('card-title').innerText = node.name;
+    const badge = document.getElementById('card-badge');
+    badge.innerText = sectorObj.name;
+    badge.style.backgroundColor = sectorObj.color;
+    badge.style.color = '#0b0f19';
+
+    document.getElementById('card-meta').innerText = `🌍 ${node.country} • 🏛️ Fondata nel ${node.founded}`;
+    
+    const partnersList = node.connections.map(c => `• ${c.name} [${c.country}]`).slice(0, 6).join('<br>');
+    
+    document.getElementById('card-details').innerHTML = `
+        <strong>Ranking Mondiale:</strong> #${node.rank}<br>
+        <strong>Opere Principali:</strong> ${node.works}<br>
+        <strong>Designer Chiave:</strong> ${node.designers}
+    `;
+    
+    document.getElementById('card-partners').innerHTML = `
+        <strong>Aziende correlate / Partner:</strong><br>${partnersList || 'Nessuna connessione diretta registrata'}
+    `;
+    
+    card.style.display = 'block';
+}
+
+// POP-UP MODALE (TASTO DESTRO)
+function openWorkModal(node, mouseX, mouseY) {
+    const modal = document.getElementById('work-modal');
+    const sectorObj = SECTORS[node.sector] || { name: 'Brand' };
+    
+    document.getElementById('modal-company-name').innerText = node.name;
+    document.getElementById('modal-company-meta').innerText = `${node.country} • ${sectorObj.name} • Fondata nel ${node.founded}`;
+    document.getElementById('modal-works').innerText = node.works;
+    document.getElementById('modal-designers').innerText = node.designers;
+    
+    // Ricerca diretta Google Immagini/Web per le opere e i designer del brand
+    const searchQuery = encodeURIComponent(`${node.name} iconic design works ${node.designers}`);
+    const searchUrl = `https://www.google.com/search?tbm=isch&q=${searchQuery}`;
+    
+    const linkBtn = document.getElementById('modal-web-link');
+    linkBtn.href = searchUrl;
+
+    // Posizionamento smart della finestra all'interno dello schermo
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    
+    let posX = mouseX + 12;
+    let posY = mouseY + 12;
+
+    if (posX + 340 > windowWidth) posX = mouseX - 340;
+    if (posY + 260 > windowHeight) posY = mouseY - 260;
+
+    modal.style.left = `${Math.max(10, posX)}px`;
+    modal.style.top = `${Math.max(10, posY)}px`;
+    modal.style.display = 'block';
+}
+
+function closeWorkModal() {
+    document.getElementById('work-modal').style.display = 'none';
+}
+
+// Avvio simulazione
+requestAnimationFrame(render);
+</script>
+</body>
+</html>

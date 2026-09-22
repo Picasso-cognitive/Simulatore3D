@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulatore Comparativo 3D: Icone del Food Design vs Packaging Poliedrico</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Three.js + OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #0a0a0c;
+            --panel-bg: #141418;
+            --accent-left: #e65100;
+            --accent-right: #d4af37;
+            --text-color: #f0f0f4;
+            --subtext-color: #9a9ab0;
+            --border-color: #262630;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Montserrat', system-ui, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+        }
+
+        /* STRUTTURA SPLIT SCREEN (50% - 50%) */
+        .split-pane {
+            flex: 1;
+            display: flex;
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pane-left {
+            border-right: 2px solid var(--border-color);
+        }
+
+        /* SIDEBARS */
+        .sidebar {
+            width: 250px;
+            min-width: 250px;
+            background-color: var(--panel-bg);
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow-y: auto;
+            z-index: 10;
+            border-right: 1px solid var(--border-color);
+        }
+
+        .sidebar header {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+        }
+
+        .sidebar h1 {
+            font-size: 0.85rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .pane-left h1 { color: var(--accent-left); }
+        .pane-right h1 { color: var(--accent-right); }
+
+        .sidebar .subtitle {
+            font-size: 0.65rem;
+            color: var(--subtext-color);
+            margin-top: 2px;
+        }
+
+        .section-title {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 700;
+            margin-top: 2px;
+        }
+
+        .pane-left .section-title { color: var(--accent-left); }
+        .pane-right .section-title { color: var(--accent-right); }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 6px;
+        }
+
+        .control-row .control-group {
+            flex: 1;
+        }
+
+        label {
+            font-size: 0.62rem;
+            text-transform: uppercase;
+            color: var(--subtext-color);
+            display: flex;
+            justify-content: space-between;
+            font-weight: 600;
+        }
+
+        select, input[type="text"], input[type="number"], input[type="color"], input[type="range"] {
+            width: 100%;
+            padding: 5px 6px;
+            background: #1c1c24;
+            border: 1px solid var(--border-color);
+            color: #fff;
+            border-radius: 4px;
+            outline: none;
+            font-size: 0.72rem;
+        }
+
+        input[type="range"] {
+            padding: 0;
+            cursor: pointer;
+        }
+
+        .pane-left input[type="range"] { accent-color: var(--accent-left); }
+        .pane-right input[type="range"] { accent-color: var(--accent-right); }
+
+        input[type="color"] {
+            height: 26px;
+            padding: 1px;
+            cursor: pointer;
+        }
+
+        select:focus, input:focus {
+            border-color: #666;
+        }
+
+        /* VIEWPORT 3D CANVAS */
+        .viewport {
+            flex-grow: 1;
+            height: 100vh;
+            position: relative;
+            background: radial-gradient(circle at center, #1a1a22 0%, #050508 100%);
+        }
+
+        canvas.webgl-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .canvas-hint {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: rgba(0,0,0,0.65);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.65rem;
+            color: #ccc;
+            pointer-events: none;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* OVERLAY SCHEDE INFORMATIVE */
+        .overlay-card {
+            position: absolute;
+            bottom: 12px;
+            right: 12px;
+            background: rgba(16, 16, 22, 0.90);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            border-radius: 6px;
+            width: 270px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.7);
+        }
+
+        .overlay-card h2 {
+            font-size: 0.82rem;
+            color: #ffffff;
+            margin-bottom: 2px;
+        }
+
+        .overlay-card .meta {
+            font-size: 0.65rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .pane-left .overlay-card .meta { color: var(--accent-left); }
+        .pane-right .overlay-card .meta { color: var(--accent-right); }
+
+        .overlay-card p {
+            font-size: 0.68rem;
+            color: #cccccc;
+            line-height: 1.35;
+            margin-bottom: 6px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 0.58rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .pane-left .badge {
+            background: rgba(230, 81, 0, 0.2);
+            color: var(--accent-left);
+            border: 1px solid var(--accent-left);
+        }
+
+        /* PENTAWARDS METRICS (DESTRI) */
+        .metric { margin-bottom: 5px; }
+        .metric-title {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.63rem;
+            margin-bottom: 2px;
+        }
+        .progress-bar {
+            height: 4px;
+            background: #2a2a35;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: var(--accent-right);
+            width: 50%;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ========================================== -->
+    <!-- FINISTRA SINISTRA: OGGETTO STORICO ICONICO -->
+    <!-- ========================================== -->
+    <div class="split-pane pane-left">
+        <div class="sidebar">
+            <header>
+                <h1>1. Oggetto Storico</h1>
+                <div class="subtitle">Laboratorio 3D Alberto Bassi</div>
+            </header>
+
+            <div class="section-title">Seleziona Icona</div>
+            <div class="control-group">
+                <select id="leftProduct">
+                    <option value="campari">Campari Soda (F. Depero, 1932)</option>
+                    <option value="moka">Moka Express (A. Bialetti, 1933)</option>
+                    <option value="gianduiotto">Gianduiotto (Caffarel, 1865)</option>
+                    <option value="rigatoni">Rigatone Estruso (Pasta)</option>
+                    <option value="nutella">Vaso Nutella (Ferrero, 1964)</option>
+                </select>
+            </div>
+            <div><span class="badge" id="leftBadge">Packaging Alimentare</span></div>
+
+            <div class="section-title">Dimensioni & Scala 3D</div>
+            <div class="control-row">
+                <div class="control-group">
+                    <label>X <span id="valX">1.0</span></label>
+                    <input type="range" id="scaleX" min="0.3" max="2.2" step="0.05" value="1.0">
+                </div>
+                <div class="control-group">
+                    <label>Y <span id="valY">1.0</span></label>
+                    <input type="range" id="scaleY" min="0.3" max="2.2" step="0.05" value="1.0">
+                </div>
+                <div class="control-group">
+                    <label>Z <span id="valZ">1.0</span></label>
+                    <input type="range" id="scaleZ" min="0.3" max="2.2" step="0.05" value="1.0">
+                </div>
+            </div>
+
+            <div class="section-title">Materiale & Finitura</div>
+            <div class="control-group">
+                <select id="leftMatType">
+                    <option value="glass">Vetro Trasparente / Satinato</option>
+                    <option value="metal">Metallo / Alluminio Spazzolato</option>
+                    <option value="plastic_gloss">Plastica Lucida</option>
+                    <option value="plastic_matte">Plastica Opaca</option>
+                    <option value="foil">Lamina Metallizzata (Foil)</option>
+                    <option value="ceramic">Ceramica / Terracotta</option>
+                </select>
+            </div>
+            <div class="control-row">
+                <div class="control-group">
+                    <label>Rugosità <span id="valRough">0.2</span></label>
+                    <input type="range" id="roughness" min="0.0" max="1.0" step="0.05" value="0.2">
+                </div>
+                <div class="control-group">
+                    <label>Riflesso <span id="valMetal">0.1</span></label>
+                    <input type="range" id="metalness" min="0.0" max="1.0" step="0.05" value="0.1">
+                </div>
+            </div>
+
+            <div class="section-title">Palette Colori</div>
+            <div class="control-row">
+                <div class="control-group">
+                    <label>Principale</label>
+                    <input type="color" id="mainColor" value="#d32f2f">
+                </div>
+                <div class="control-group">
+                    <label>Dettagli</label>
+                    <input type="color" id="secColor" value="#cccccc">
+                </div>
+                <div class="control-group">
+                    <label>Sfondo</label>
+                    <input type="color" id="bgColorLeft" value="#121218">
+                </div>
+            </div>
+
+            <div class="section-title">Animazione</div>
+            <div class="control-row">
+                <div class="control-group">
+                    <label>Velocità Rotazione</label>
+                    <input type="range" id="rotSpeedLeft" min="0.0" max="3.0" step="0.2" value="1.0">
+                </div>
+            </div>
+        </div>
+
+        <div class="viewport" id="viewportLeft">
+            <div class="canvas-hint">🖱️ Ruota / Zoom 3D</div>
+            <canvas id="canvasLeft" class="webgl-canvas"></canvas>
+
+            <div class="overlay-card">
+                <h2 id="leftTitle">Bottiglietta Campari Soda</h2>
+                <div class="meta" id="leftMeta">Fortunato Depero, 1932</div>
+                <p id="leftDesc">Icona del packaging italiano monodose conica.</p>
+                <div id="leftAnalysis" style="font-size:0.62rem; color:#aaa; border-top:1px solid #333; padding-top:4px;">
+                    <strong>Analisi Alberto Bassi:</strong> Integrazione tra arte futurista e produzione industriale.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- FINESTRA DESTRA: PACKAGING POLIEDRICO      -->
+    <!-- ========================================== -->
+    <div class="split-pane pane-right">
+        <div class="sidebar">
+            <header>
+                <h1>2. Packaging Poliedrico</h1>
+                <div class="subtitle">Pentawards Redesign Studio</div>
+            </header>
+
+            <div class="section-title">Geometria Poliedro</div>
+            <div class="control-group">
+                <select id="polyhedron">
+                    <option value="hexagonalPrisma">Prisma Esagonale (Modulare)</option>
+                    <option value="dodecahedron">Dodecaedro (12 Facce)</option>
+                    <option value="tetrahedron">Tetraedro (Piramide 4 Facce)</option>
+                    <option value="icosahedron">Icosaedro (20 Facce)</option>
+                    <option value="cube">Esaedro (Cubo / Scatola)</option>
+                </select>
+            </div>
+
+            <div class="section-title">Brand & Categoria</div>
+            <div class="control-group">
+                <input type="text" id="brandName" value="CAMPARI SODA">
+            </div>
+            <div class="control-group">
+                <select id="productCategory">
+                    <option value="beverage">Bevanda / Spirits Premium</option>
+                    <option value="eco-food">Cibo Artigianale / Bio</option>
+                    <option value="luxury">Profumo / Cosmetico Luxury</option>
+                    <option value="tech">Tech Gadget Minimal</option>
+                </select>
+            </div>
+
+            <div class="section-title">Materiale Packaging</div>
+            <div class="control-group">
+                <select id="rightMaterial">
+                    <option value="glass">Vetro Satinato Premium</option>
+                    <option value="kraft">Carta Kraft Ecologica</option>
+                    <option value="metal">Alluminio Spazzolato</option>
+                    <option value="cardboard">Cartone Rigido Opaco</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <select id="rightFinish">
+                    <option value="metalFoil">Dettagli Lamina Metallica</option>
+                    <option value="matte">Matte Soft-Touch</option>
+                    <option value="gloss">Glossy Lucido</option>
+                </select>
+            </div>
+
+            <div class="section-title">Grafica & Tipografia</div>
+            <div class="control-group">
+                <select id="typography">
+                    <option value="sans">Sans-Serif Moderno</option>
+                    <option value="serif">Serif Elegante (Editoriale)</option>
+                    <option value="mono">Monospazio Techno</option>
+                </select>
+            </div>
+            <div class="control-row">
+                <div class="control-group">
+                    <label>Fondo Packaging</label>
+                    <input type="color" id="pkgBgColor" value="#5c0a0a">
+                </div>
+                <div class="control-group">
+                    <label>Testo / Logo</label>
+                    <input type="color" id="pkgTextColor" value="#e6a100">
+                </div>
+            </div>
+        </div>
+
+        <div class="viewport" id="viewportRight">
+            <div class="canvas-hint">🖱️ Ruota / Zoom 3D</div>
+            <canvas id="canvasRight" class="webgl-canvas"></canvas>
+
+            <div class="overlay-card">
+                <h2 style="display:flex; justify-size:space-between; justify-content:space-between; align-items:center;">
+                    <span>Pentawards Score</span>
+                    <span id="scoreTotal" style="color:var(--accent-right); font-weight:800;">85/100</span>
+                </h2>
+                
+                <div style="margin-top:8px;">
+                    <div class="metric">
+                        <div class="metric-title"><span>Shelf Impact (Visivo 3D)</span><span id="scoreVisual">80%</span></div>
+                        <div class="progress-bar"><div class="progress-fill" id="barVisual" style="width:80%;"></div></div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-title"><span>Sostenibilità Strutturale</span><span id="scoreEco">75%</span></div>
+                        <div class="progress-bar"><div class="progress-fill" id="barEco" style="width:75%;"></div></div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-title"><span>Coerenza Forma/Brand</span><span id="scoreCoherence">90%</span></div>
+                        <div class="progress-bar"><div class="progress-fill" id="barCoherence" style="width:90%;"></div></div>
+                    </div>
+                </div>
+
+                <p id="rightFeedback" style="margin-top:8px; font-style:italic; font-size:0.64rem;">
+                    Analisi re-design poliedrico...
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Canvas nascosto per la generazione dinamica della grafica 2D delle facce del packaging -->
+    <canvas id="texture-canvas" width="1024" height="1024" style="display:none;"></canvas>
+
+    <script>
+        // =================================================================
+        // DATABASE PRODOTTI ICONICI & CORRELAZIONE PACKAGING POLIEDRICO
+        // =================================================================
+        const productsDatabase = {
+            campari: {
+                title: "Bottiglietta Campari Soda",
+                meta: "Fortunato Depero, 1932 | Camparisoda",
+                category: "Packaging Alimentare & Rituale",
+                description: "La celebre bottiglia conica tronca monodose in vetro che elimina l'etichetta cartacea imprimendo il marchio nella materia.",
+                analysis: "Rappresenta l'integrazione tra avanguardia artistica futurista, riproducibilità industriale e rituale sociale.",
+                defaultMat: "glass", mainColor: "#d32f2f", secColor: "#cccccc",
+                build: createCampariModel,
+                // Correlation Right Side
+                poly: "hexagonalPrisma", brand: "CAMPARI SODA", cat: "beverage",
+                rightMat: "glass", rightFinish: "metalFoil", rightBg: "#5c0a0a", rightText: "#e6a100"
+            },
+            moka: {
+                title: "Moka Express Bialetti",
+                meta: "Alfonso Bialetti, 1933 | Bialetti",
+                category: "Design PER il Cibo (Strumento)",
+                description: "Caffettiera ottagonale in fusione d'alluminio ispirata all'Art Déco.",
+                analysis: "Bassi evidenzia come la Moka abbia 'democratizzato' l'espresso da bar portandolo nelle case degli italiani.",
+                defaultMat: "metal", mainColor: "#dddddd", secColor: "#111111",
+                build: createMokaModel,
+                poly: "dodecahedron", brand: "BIALETTI MOKA", cat: "eco-food",
+                rightMat: "kraft", rightFinish: "matte", rightBg: "#1e241e", rightText: "#d4af37"
+            },
+            gianduiotto: {
+                title: "Gianduiotto Caffarel",
+                meta: "Caffarel, 1865 | Cioccolato Piemontese",
+                category: "Design DEL Cibo (Prodotto Edibile)",
+                description: "Il primo cioccolatino incartato singolarmente al mondo, con forma a barca rovesciata.",
+                analysis: "Esempio classico di design edibile dove forma e grammatura nascono da esigenze della miscela nocciola-cacao.",
+                defaultMat: "foil", mainColor: "#d4af37", secColor: "#3d2314",
+                build: createGianduiottoModel,
+                poly: "tetrahedron", brand: "CAFFAREL 1865", cat: "luxury",
+                rightMat: "metal", rightFinish: "metalFoil", rightBg: "#3b2313", rightText: "#ffd700"
+            },
+            rigatoni: {
+                title: "Rigatone Estruso in Bronzo",
+                meta: "Tradizione Pastaia | Trafilatura",
+                category: "Design DEL Cibo (Geometria)",
+                description: "Formato di pasta cilindrico con scanalature esterne longitudinali per trattenere il condimento.",
+                analysis: "Analizzato da Bassi come 'architettura edibile': micro-ingegneria funzionale per la cottura e fluidodinamica del sugo.",
+                defaultMat: "ceramic", mainColor: "#e0a96d", secColor: "#ffffff",
+                build: createRigatoniModel,
+                poly: "hexagonalPrisma", brand: "PASTA BIO 100%", cat: "eco-food",
+                rightMat: "kraft", rightFinish: "matte", rightBg: "#2b2015", rightText: "#e6a96d"
+            },
+            nutella: {
+                title: "Vaso Nutella (Pelicon / Ferrero)",
+                meta: "Pietro Ferrero & Studio Pelicon, 1964",
+                category: "Packaging & Seconda Vita",
+                description: "Il famoso vaso in vetro conico sporgente progettato per essere riutilizzato come bicchiere da tavola.",
+                analysis: "Genialità dell'eco-design ante-litteram: il packaging prolunga la presenza del marchio nelle case.",
+                defaultMat: "glass", mainColor: "#ffffff", secColor: "#3d2314",
+                build: createNutellaModel,
+                poly: "icosahedron", brand: "NUTELLA FERRERO", cat: "luxury",
+                rightMat: "glass", rightFinish: "gloss", rightBg: "#2a170d", rightText: "#ffffff"
+            }
+        };
+
+        // ==========================================
+        // 1. ENGINE LEFT (OGGETTO STORICO 3D)
+        // ==========================================
+        const canvasL = document.getElementById('canvasLeft');
+        const viewL = document.getElementById('viewportLeft');
+        const rendererL = new THREE.WebGLRenderer({ canvas: canvasL, antialias: true, alpha: true });
+        rendererL.setSize(viewL.clientWidth, viewL.clientHeight);
+        rendererL.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const sceneL = new THREE.Scene();
+        const cameraL = new THREE.PerspectiveCamera(45, viewL.clientWidth / viewL.clientHeight, 0.1, 100);
+        cameraL.position.set(0, 2, 5.5);
+
+        const controlsL = new THREE.OrbitControls(cameraL, rendererL.domElement);
+        controlsL.enableDamping = true;
+
+        sceneL.add(new THREE.AmbientLight(0xffffff, 0.8));
+        const dirLightL1 = new THREE.DirectionalLight(0xffffff, 1.2);
+        dirLightL1.position.set(5, 8, 5);
+        sceneL.add(dirLightL1);
+
+        let currentGroupL = new THREE.Group();
+        sceneL.add(currentGroupL);
+
+        function createCustomMat(type, colorHex, roughness, metalness) {
+            const color = new THREE.Color(colorHex);
+            if (type === 'glass') {
+                return new THREE.MeshPhysicalMaterial({ color: color, transmission: 0.85, transparent: true, opacity: 0.9, roughness: roughness, metalness: metalness });
+            } else if (type === 'metal') {
+                return new THREE.MeshStandardMaterial({ color: color, metalness: Math.max(0.7, metalness), roughness: roughness });
+            } else if (type === 'plastic_gloss') {
+                return new THREE.MeshPhysicalMaterial({ color: color, roughness: roughness, metalness: metalness, clearcoat: 1.0 });
+            } else if (type === 'foil') {
+                return new THREE.MeshStandardMaterial({ color: color, metalness: 0.85, roughness: Math.min(0.3, roughness) });
+            } else if (type === 'ceramic') {
+                return new THREE.MeshStandardMaterial({ color: color, roughness: Math.max(0.4, roughness), metalness: 0.05 });
+            }
+            return new THREE.MeshStandardMaterial({ color: color, roughness: Math.max(0.6, roughness), metalness: 0.0 });
+        }
+
+        // Costruttori 3D oggetti storici
+        function createCampariModel(mType, mCol, sCol, r, m) {
+            const g = new THREE.Group();
+            const mat = createCustomMat(mType, mCol, r, m);
+            const capMat = createCustomMat('metal', sCol, 0.3, 0.9);
+            const b = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 1.1, 2.6, 24), mat);
+            const n = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.5, 20), mat); n.position.y = 1.55;
+            const c = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.12, 20), capMat); c.position.y = 1.82;
+            g.add(b, n, c); return g;
+        }
+
+        function createMokaModel(mType, mCol, sCol, r, m) {
+            const g = new THREE.Group();
+            const bMat = createCustomMat(mType, mCol, r, m);
+            const dMat = createCustomMat('plastic_matte', sCol, 0.8, 0.0);
+            const base = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 0.8, 1.2, 8), bMat); base.position.y = -0.6;
+            const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 0.15, 8), bMat); ring.position.y = 0.05;
+            const top = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 0.85, 1.2, 8), bMat); top.position.y = 0.72;
+            const lid = new THREE.Mesh(new THREE.ConeGeometry(1.06, 0.3, 8), bMat); lid.position.y = 1.45;
+            const knob = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.2, 8), dMat); knob.position.y = 1.68;
+            const handle = new THREE.Mesh(new THREE.TorusGeometry(0.6, 0.08, 8, 16, Math.PI), dMat);
+            handle.position.set(0.9, 0.6, 0); handle.rotation.z = -Math.PI / 2;
+            g.add(base, ring, top, lid, knob, handle); return g;
+        }
+
+        function createGianduiottoModel(mType, mCol, sCol, r, m) {
+            const g = new THREE.Group();
+            const mat = createCustomMat(mType, mCol, r, m);
+            const shape = new THREE.Shape();
+            shape.moveTo(-1.2, -0.4); shape.lineTo(1.2, -0.4); shape.lineTo(0.8, 0.5); shape.lineTo(-0.8, 0.5); shape.closePath();
+            const geom = new THREE.ExtrudeGeometry(shape, { depth: 0.7, bevelEnabled: true, bevelSegments: 3, steps: 1, bevelSize: 0.1, bevelThickness: 0.1 });
+            geom.center();
+            const mesh = new THREE.Mesh(geom, mat); mesh.rotation.x = Math.PI / 6;
+            g.add(mesh); return g;
+        }
+
+        function createRigatoniModel(mType, mCol, sCol, r, m) {
+            const g = new THREE.Group();
+            const mat = createCustomMat(mType, mCol, r, m);
+            const o = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 2.2, 32, 1, true), mat);
+            const i = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 2.2, 32, 1, true), mat);
+            g.add(o, i); return g;
+        }
+
+        function createNutellaModel(mType, mCol, sCol, r, m) {
+            const g = new THREE.Group();
+            const jarMat = createCustomMat(mType, mCol, r, m);
+            const nutMat = createCustomMat('plastic_matte', sCol, 0.6, 0.0);
+            const capMat = createCustomMat('plastic_gloss', '#ffffff', 0.2, 0.0);
+            const jar = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.75, 1.8, 24), jarMat);
+            const nut = new THREE.Mesh(new THREE.CylinderGeometry(0.82, 0.68, 1.5, 24), nutMat); nut.position.y = -0.1;
+            const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.92, 0.92, 0.35, 24), capMat); cap.position.y = 1.05;
+            g.add(jar, nut, cap); return g;
+        }
+
+        // ==========================================
+        // 2. ENGINE RIGHT (PACKAGING POLIEDRICO 3D)
+        // ==========================================
+        const canvasR = document.getElementById('canvasRight');
+        const viewR = document.getElementById('viewportRight');
+        const rendererR = new THREE.WebGLRenderer({ canvas: canvasR, antialias: true, alpha: true });
+        rendererR.setSize(viewR.clientWidth, viewR.clientHeight);
+        rendererR.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const sceneR = new THREE.Scene();
+        const cameraR = new THREE.PerspectiveCamera(45, viewR.clientWidth / viewR.clientHeight, 0.1, 100);
+        cameraR.position.set(0, 2, 5.0);
+
+        const controlsR = new THREE.OrbitControls(cameraR, rendererR.domElement);
+        controlsR.enableDamping = true;
+
+        sceneR.add(new THREE.AmbientLight(0xffffff, 0.8));
+        const dirLightR = new THREE.DirectionalLight(0xffffff, 1.2);
+        dirLightR.position.set(5, 8, 5);
+        sceneR.add(dirLightR);
+
+        let currentMeshR = null;
+
+        // Texture Generator per Facce Packaging
+        const texCanvas = document.getElementById('texture-canvas');
+        const ctx = texCanvas.getContext('2d');
+
+        function generatePackageTexture() {
+            const brand = document.getElementById('brandName').value || 'BRAND';
+            const bgCol = document.getElementById('pkgBgColor').value;
+            const textCol = document.getElementById('pkgTextColor').value;
+            const fontType = document.getElementById('typography').value;
+            const category = document.getElementById('productCategory').value;
+
+            ctx.fillStyle = bgCol; ctx.fillRect(0, 0, 1024, 1024);
+            ctx.strokeStyle = textCol; ctx.lineWidth = 12; ctx.strokeRect(60, 60, 904, 904);
+            ctx.lineWidth = 4; ctx.strokeRect(80, 80, 864, 864);
+
+            let font = 'sans-serif';
+            if (fontType === 'serif') font = 'Georgia, serif';
+            if (fontType === 'mono') font = 'Courier New, monospace';
+
+            ctx.fillStyle = textCol; ctx.textAlign = 'center';
+            ctx.font = `bold 85px ${font}`; ctx.fillText(brand.toUpperCase(), 512, 480);
+
+            ctx.font = `30px ${font}`;
+            let sub = 'DESIGN EDITION';
+            if (category === 'beverage') sub = 'PREMIUM SPIRIT';
+            if (category === 'eco-food') sub = 'ORGANIC CRAFT';
+            if (category === 'luxury') sub = 'LUXURY PACKAGING';
+            ctx.fillText(sub, 512, 560);
+
+            ctx.font = `22px sans-serif`; ctx.fillText('EDIZIONE POLIEDRICA 3D', 512, 880);
+
+            const tex = new THREE.CanvasTexture(texCanvas);
+            tex.needsUpdate = true;
+            return tex;
+        }
+
+        function getPolyGeometry(type) {
+            switch(type) {
+                case 'tetrahedron': return new THREE.TetrahedronGeometry(1.4);
+                case 'dodecahedron': return new THREE.DodecahedronGeometry(1.2);
+                case 'icosahedron': return new THREE.IcosahedronGeometry(1.2);
+                case 'hexagonalPrisma': return new THREE.CylinderGeometry(1.1, 1.1, 2.2, 6);
+                case 'cube': default: return new THREE.BoxGeometry(1.6, 2.0, 1.6);
+            }
+        }
+
+        // ==========================================
+        // 3. LOGICA DI SINCRONIZZAZIONE E AGGIORNAMENTO
+        // ==========================================
+        function updateLeftPane() {
+            const pKey = document.getElementById('leftProduct').value;
+            const data = productsDatabase[pKey];
+
+            sceneL.remove(currentGroupL);
+
+            const mType = document.getElementById('leftMatType').value;
+            const mCol = document.getElementById('mainColor').value;
+            const sCol = document.getElementById('secColor').value;
+            const r = parseFloat(document.getElementById('roughness').value);
+            const m = parseFloat(document.getElementById('metalness').value);
+
+            const sx = parseFloat(document.getElementById('scaleX').value);
+            const sy = parseFloat(document.getElementById('scaleY').value);
+            const sz = parseFloat(document.getElementById('scaleZ').value);
+
+            document.getElementById('valX').textContent = sx.toFixed(1);
+            document.getElementById('valY').textContent = sy.toFixed(1);
+            document.getElementById('valZ').textContent = sz.toFixed(1);
+            document.getElementById('valRough').textContent = r.toFixed(2);
+            document.getElementById('valMetal').textContent = m.toFixed(2);
+
+            const bgCol = document.getElementById('bgColorLeft').value;
+            viewL.style.background = `radial-gradient(circle at center, ${bgCol} 0%, #050508 100%)`;
+
+            currentGroupL = data.build(mType, mCol, sCol, r, m);
+            currentGroupL.scale.set(sx, sy, sz);
+            sceneL.add(currentGroupL);
+
+            // Card Testi
+            document.getElementById('leftTitle').textContent = data.title;
+            document.getElementById('leftMeta').textContent = data.meta;
+            document.getElementById('leftDesc').textContent = data.description;
+            document.getElementById('leftAnalysis').innerHTML = `<strong>Analisi Alberto Bassi:</strong> ${data.analysis}`;
+            document.getElementById('leftBadge').textContent = data.category;
+        }
+
+        function updateRightPane() {
+            if (currentMeshR) sceneR.remove(currentMeshR);
+
+            const poly = document.getElementById('polyhedron').value;
+            const mat = document.getElementById('rightMaterial').value;
+            const finish = document.getElementById('rightFinish').value;
+
+            const geom = getPolyGeometry(poly);
+            const tex = generatePackageTexture();
+
+            let roughness = 0.4, metalness = 0.1, clearcoat = 0.0;
+            if (mat === 'kraft') { roughness = 0.9; metalness = 0.0; }
+            if (mat === 'metal') { roughness = 0.2; metalness = 0.8; }
+            if (mat === 'glass') { roughness = 0.1; metalness = 0.1; }
+
+            if (finish === 'gloss') { clearcoat = 1.0; roughness = 0.1; }
+            if (finish === 'metalFoil') { metalness = 0.6; }
+
+            const material = new THREE.MeshPhysicalMaterial({
+                map: tex, roughness: roughness, metalness: metalness, clearcoat: clearcoat
+            });
+
+            currentMeshR = new THREE.Mesh(geom, material);
+            sceneR.add(currentMeshR);
+
+            evaluatePentawards();
+        }
+
+        function evaluatePentawards() {
+            const poly = document.getElementById('polyhedron').value;
+            let visual = 70, eco = 60, coherence = 75;
+            let feedback = "";
+
+            if (poly === 'dodecahedron' || poly === 'icosahedron') {
+                visual += 25; eco -= 15;
+                feedback = "Geometria complessa ad elevatissimo impatto visivo (*Shelf Impact*). Ottima per edizioni limitate e luxury.";
+            } else if (poly === 'hexagonalPrisma' || poly === 'cube') {
+                eco += 25; coherence += 15;
+                feedback = "Forma prismatica perfetta per la modularità logistica: azzera gli spazi vuoti durante il trasporto su pallet.";
+            } else if (poly === 'tetrahedron') {
+                visual += 15; coherence += 20;
+                feedback = "Design tetraedrico d'impatto. Protegge il prodotto interno da urti meccanici garantendo rigidità.";
+            }
+
+            const total = Math.round((visual + eco + coherence) / 3);
+            document.getElementById('scoreVisual').textContent = visual + '%';
+            document.getElementById('barVisual').style.width = visual + '%';
+            document.getElementById('scoreEco').textContent = eco + '%';
+            document.getElementById('barEco').style.width = eco + '%';
+            document.getElementById('scoreCoherence').textContent = coherence + '%';
+            document.getElementById('barCoherence').style.width = coherence + '%';
+            document.getElementById('scoreTotal').textContent = total + '/100';
+            document.getElementById('rightFeedback').textContent = feedback;
+        }
+
+        // Sincronizzazione automatica Prodotto Storico -> Packaging Poliedrico
+        document.getElementById('leftProduct').addEventListener('change', (e) => {
+            const key = e.target.value;
+            const data = productsDatabase[key];
+
+            // Aggiorna controlli Left
+            document.getElementById('leftMatType').value = data.defaultMat;
+            document.getElementById('mainColor').value = data.mainColor;
+            document.getElementById('secColor').value = data.secColor;
+
+            // Sincronizza controlli Right
+            document.getElementById('polyhedron').value = data.poly;
+            document.getElementById('brandName').value = data.brand;
+            document.getElementById('productCategory').value = data.cat;
+            document.getElementById('rightMaterial').value = data.rightMat;
+            document.getElementById('rightFinish').value = data.rightFinish;
+            document.getElementById('pkgBgColor').value = data.rightBg;
+            document.getElementById('pkgTextColor').value = data.rightText;
+
+            updateLeftPane();
+            updateRightPane();
+        });
+
+        // Listeners aggiornamenti Left
+        ['scaleX','scaleY','scaleZ','leftMatType','roughness','metalness','mainColor','secColor','bgColorLeft'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updateLeftPane);
+        });
+
+        // Listeners aggiornamenti Right
+        ['polyhedron','brandName','productCategory','rightMaterial','rightFinish','typography','pkgBgColor','pkgTextColor'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updateRightPane);
+        });
+
+        // ANIMATION LOOP UNIFICATO
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const speedL = parseFloat(document.getElementById('rotSpeedLeft').value) * 0.008;
+            if (currentGroupL) currentGroupL.rotation.y += speedL;
+            if (currentMeshR) currentMeshR.rotation.y += 0.005;
+
+            controlsL.update();
+            controlsR.update();
+
+            rendererL.render(sceneL, cameraL);
+            rendererR.render(sceneR, cameraR);
+        }
+
+        window.addEventListener('resize', () => {
+            cameraL.aspect = viewL.clientWidth / viewL.clientHeight;
+            cameraL.updateProjectionMatrix();
+            rendererL.setSize(viewL.clientWidth, viewL.clientHeight);
+
+            cameraR.aspect = viewR.clientWidth / viewR.clientHeight;
+            cameraR.updateProjectionMatrix();
+            rendererR.setSize(viewR.clientWidth, viewR.clientHeight);
+        });
+
+        // AVVIO INIZIALE
+        updateLeftPane();
+        updateRightPane();
+        animate();
+    </script>
+</body>
+</html>

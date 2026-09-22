@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulatore Rete dei 200 Designer più Influenti della Storia</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #0b0f19; color: #f8fafc; overflow: hidden; }
+        #canvas-container { width: 100vw; height: 100vh; position: relative; }
+        canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+        canvas:active { cursor: grabbing; }
+        
+        /* Control Panel */
+        .ui-panel { position: absolute; top: 16px; left: 16px; background: rgba(15, 23, 42, 0.88); backdrop-filter: blur(12px); border: 1px solid #1e293b; padding: 18px; border-radius: 12px; width: 330px; box-shadow: 0 12px 30px rgba(0,0,0,0.6); z-index: 10; }
+        .ui-panel h1 { font-size: 1.15rem; font-weight: 700; margin-bottom: 4px; color: #38bdf8; letter-spacing: -0.02em; }
+        .ui-panel p { font-size: 0.78rem; color: #94a3b8; margin-bottom: 14px; line-height: 1.3; }
+        .control-group { margin-bottom: 12px; }
+        .control-group label { display: block; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; margin-bottom: 4px; font-weight: 600; }
+        input[type="text"], select { width: 100%; padding: 9px 12px; background: #090d16; border: 1px solid #334155; border-radius: 6px; color: #fff; font-size: 0.82rem; outline: none; transition: border-color 0.2s; }
+        input[type="text"]:focus, select:focus { border-color: #38bdf8; }
+        select { cursor: pointer; }
+        input[type="range"] { width: 100%; accent-color: #38bdf8; cursor: pointer; }
+        
+        /* Legend Grid */
+        .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 12px 0; padding: 8px; background: rgba(2, 6, 23, 0.5); border-radius: 6px; border: 1px solid #1e293b; }
+        .legend-item { display: flex; align-items: center; font-size: 0.68rem; color: #cbd5e1; }
+        .legend-color { width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; flex-shrink: 0; }
+
+        .stats { display: flex; justify-content: space-between; font-size: 0.72rem; color: #94a3b8; padding-top: 10px; border-top: 1px solid #1e293b; }
+        
+        /* Info Card Panel */
+        #info-card { position: absolute; bottom: 20px; right: 20px; background: rgba(15, 23, 42, 0.94); backdrop-filter: blur(12px); border: 1px solid #334155; padding: 18px; border-radius: 12px; width: 320px; display: none; z-index: 10; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        #info-card h2 { font-size: 1.1rem; color: #f8fafc; margin-bottom: 4px; line-height: 1.2; }
+        #info-card .category-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.68rem; font-weight: 600; margin-bottom: 8px; text-transform: uppercase; }
+        #info-card .meta { font-size: 0.8rem; color: #38bdf8; font-weight: 500; margin-bottom: 10px; }
+        #info-card .details { font-size: 0.76rem; color: #cbd5e1; line-height: 1.5; }
+        #info-card .partners { margin-top: 8px; padding-top: 8px; border-top: 1px solid #334155; font-size: 0.72rem; color: #94a3b8; }
+    </style>
+</head>
+<body>
+
+<div id="canvas-container">
+    <canvas id="networkCanvas"></canvas>
+    
+    <div class="ui-panel">
+        <h1>Global Designers Network</h1>
+        <p>Mappa di influenza e relazioni tra i 200 designer più celebri (Industrial, Graphic, Automotive, Fashion e Digital).</p>
+
+        <div class="control-group">
+            <label for="disciplineSelect">Filtra per Disciplina</label>
+            <select id="disciplineSelect">
+                <option value="ALL">Tutte le Discipline</option>
+                <option value="PRODUCT">Industrial & Product Design</option>
+                <option value="FURNITURE">Furniture & Interior</option>
+                <option value="GRAPHIC">Graphic & Visual Communication</option>
+                <option value="AUTOMOTIVE">Automotive & Transportation</option>
+                <option value="FASHION">Fashion & Textile</option>
+                <option value="DIGITAL">Digital & Computational Design</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="countrySelect">Filtra per Paese</label>
+            <select id="countrySelect">
+                <option value="ALL">Tutti i Paesi</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="searchInput">Cerca Designer, Movimento o Corrente</label>
+            <input type="text" id="searchInput" placeholder="es. Dieter Rams, Bauhaus, Memphis...">
+        </div>
+
+        <div class="legend">
+            <div class="legend-item"><div class="legend-color" style="background:#38bdf8"></div>Industrial/Product</div>
+            <div class="legend-item"><div class="legend-color" style="background:#f43f5e"></div>Furniture/Interior</div>
+            <div class="legend-item"><div class="legend-color" style="background:#a855f7"></div>Graphic/Visual</div>
+            <div class="legend-item"><div class="legend-color" style="background:#facc15"></div>Automotive</div>
+            <div class="legend-item"><div class="legend-color" style="background:#ec4899"></div>Fashion/Textile</div>
+            <div class="legend-item"><div class="legend-color" style="background:#10b981"></div>Digital/Tech</div>
+        </div>
+        
+        <div class="control-group">
+            <label for="repulsionSlider">Forza di Repulsione Fisica</label>
+            <input type="range" id="repulsionSlider" min="50" max="600" value="280">
+        </div>
+
+        <div class="stats">
+            <span>Designer: <strong id="stat-nodes">200</strong></span>
+            <span>Relazioni: <strong id="stat-edges">0</strong></span>
+            <span>FPS: <strong id="stat-fps">60</strong></span>
+        </div>
+    </div>
+
+    <div id="info-card">
+        <h2 id="card-title">-</h2>
+        <span id="card-badge" class="category-badge">-</span>
+        <div id="card-meta" class="meta">-</div>
+        <div id="card-details" class="details"></div>
+        <div id="card-partners" class="partners"></div>
+    </div>
+</div>
+
+<script>
+// --- MAPPA DELLE DISCIPLINE E COLORI ---
+const DISCIPLINES = {
+    PRODUCT: { name: 'Industrial & Product Design', color: '#38bdf8' },
+    FURNITURE: { name: 'Furniture & Interior', color: '#f43f5e' },
+    GRAPHIC: { name: 'Graphic & Visual', color: '#a855f7' },
+    AUTOMOTIVE: { name: 'Automotive & Mobility', color: '#facc15' },
+    FASHION: { name: 'Fashion & Wearables', color: '#ec4899' },
+    DIGITAL: { name: 'Digital & Computational', color: '#10b981' }
+};
+
+// --- DATASET SEED: I 40 DESIGNER PIÙ MAESTOSI DELLA STORIA E CONTEMPORANEITÀ ---
+const SEED_DESIGNERS = [
+    { name: "Dieter Rams", country: "Germania", discipline: "PRODUCT", era: "Functionalism / Braun", rank: 1, connections: ["Jony Ive", "Naoto Fukasawa", "Jasper Morrison", "Enzo Mari"] },
+    { name: "Charles Eames", country: "Stati Uniti", discipline: "FURNITURE", era: "Mid-Century Modern", rank: 2, connections: ["Ray Eames", "Eero Saarinen", "Isamu Noguchi", "Verner Panton"] },
+    { name: "Ray Eames", country: "Stati Uniti", discipline: "FURNITURE", era: "Mid-Century Modern", rank: 3, connections: ["Charles Eames", "Alexander Girard", "Eero Saarinen"] },
+    { name: "Ettore Sottsass", country: "Italia", discipline: "FURNITURE", era: "Memphis Group / Postmodernism", rank: 4, connections: ["Nathalie Du Pasquier", "Achille Castiglioni", "Michele De Lucchi", "Philippe Starck"] },
+    { name: "Achille Castiglioni", country: "Italia", discipline: "PRODUCT", era: "Italian Rationalism & Radical", rank: 5, connections: ["Enzo Mari", "Bruno Munari", "Ettore Sottsass", "Patricia Urquiola"] },
+    { name: "Jony Ive", country: "Regno Unito", discipline: "PRODUCT", era: "Minimalism / Apple Tech", rank: 6, connections: ["Dieter Rams", "Marc Newson", "Naoto Fukasawa"] },
+    { name: "Massimo Vignelli", country: "Italia", discipline: "GRAPHIC", era: "Modernism / Swiss Style", rank: 7, connections: ["Paul Rand", "Lella Vignelli", "Paula Scher", "Milton Glaser"] },
+    { name: "Philippe Starck", country: "Francia", discipline: "PRODUCT", era: "New Design / Democratic Design", rank: 8, connections: ["Ettore Sottsass", "Marcel Wanders", "Karim Rashid"] },
+    { name: "Enzo Mari", country: "Italia", discipline: "PRODUCT", era: "Functional Rationalism", rank: 9, connections: ["Achille Castiglioni", "Bruno Munari", "Dieter Rams"] },
+    { name: "Naoto Fukasawa", country: "Giappone", discipline: "PRODUCT", era: "Super Normal / Minimalist", rank: 10, connections: ["Dieter Rams", "Jasper Morrison", "Oki Sato (Nendo)", "Jony Ive"] },
+    { name: "Paul Rand", country: "Stati Uniti", discipline: "GRAPHIC", era: "American Corporate Modernism", rank: 11, connections: ["Massimo Vignelli", "Milton Glaser", "Saul Bass"] },
+    { name: "Giorgetto Giugiaro", country: "Italia", discipline: "AUTOMOTIVE", era: "Italdesign / Wedge Era", rank: 12, connections: ["Marcello Gandini", "Battista Pininfarina", "Walter de Silva"] },
+    { name: "Patricia Urquiola", country: "Spagna", discipline: "FURNITURE", era: "Contemporary Craft-Tech", rank: 13, connections: ["Achille Castiglioni", "Vico Magistretti", "Hella Jongerius"] },
+    { name: "Bruno Munari", country: "Italia", discipline: "GRAPHIC", era: "Futurism & Methodical Design", rank: 14, connections: ["Enzo Mari", "Achille Castiglioni", "Gio Ponti"] },
+    { name: "Gio Ponti", country: "Italia", discipline: "FURNITURE", era: "Italian Modernism", rank: 15, connections: ["Bruno Munari", "Piero Fornasetti", "Franco Albini"] },
+    { name: "Jasper Morrison", country: "Regno Unito", discipline: "PRODUCT", era: "Super Normal", rank: 16, connections: ["Naoto Fukasawa", "Dieter Rams", "Marc Newson"] },
+    { name: "Marc Newson", country: "Australia", discipline: "PRODUCT", era: "Biomorphism & Aerospace", rank: 17, connections: ["Jony Ive", "Jasper Morrison", "Philippe Starck"] },
+    { name: "Verner Panton", country: "Danimarca", discipline: "FURNITURE", era: "Pop Art & Space Age", rank: 18, connections: ["Arne Jacobsen", "Charles Eames", "Joe Colombo"] },
+    { name: "Arne Jacobsen", country: "Danimarca", discipline: "FURNITURE", era: "Scandinavian Functionalism", rank: 19, connections: ["Verner Panton", "Alvar Aalto", "Hans Wegner"] },
+    { name: "Alvar Aalto", country: "Finlandia", discipline: "FURNITURE", era: "Organic Modernism", rank: 20, connections: ["Arne Jacobsen", "Charlotte Perriand", "Eero Saarinen"] },
+    { name: "Charlotte Perriand", country: "Francia", discipline: "FURNITURE", era: "Modern Movement", rank: 21, connections: ["Le Corbusier", "Jean Prouvé", "Alvar Aalto"] },
+    { name: "Oki Sato (Nendo)", country: "Giappone", discipline: "PRODUCT", era: "Conceptual Minimalism", rank: 22, connections: ["Naoto Fukasawa", "Shiro Kuramata", "Marcel Wanders"] },
+    { name: "Stefan Sagmeister", country: "Austria", discipline: "GRAPHIC", era: "Contemporary Experimental", rank: 23, connections: ["Paula Scher", "Tibor Kalman", "Jessica Walsh"] },
+    { name: "Paula Scher", country: "Stati Uniti", discipline: "GRAPHIC", era: "Postmodern Typography / Pentagram", rank: 24, connections: ["Massimo Vignelli", "Stefan Sagmeister", "Milton Glaser"] },
+    { name: "Milton Glaser", country: "Stati Uniti", discipline: "GRAPHIC", era: "Push Pin Studio / Psychedelic", rank: 25, connections: ["Paul Rand", "Massimo Vignelli", "Saul Bass"] },
+    { name: "Virgil Abloh", country: "Stati Uniti", discipline: "FASHION", era: "Streetwear Modernism & Conceptual", rank: 26, connections: ["Rem Koolhaas", "Nigo", "Iris van Herpen", "Takashi Murakami"] },
+    { name: "Iris van Herpen", country: "Paesi Bassi", discipline: "FASHION", era: "3D Couture Tech", rank: 27, connections: ["Neri Oxman", "Virgil Abloh", "Alexander McQueen"] },
+    { name: "Rei Kawakubo", country: "Giappone", discipline: "FASHION", era: "Avant-Garde Deconstruction", rank: 28, connections: ["Yohji Yamamoto", "Issey Miyake", "Martin Margiela"] },
+    { name: "Issey Miyake", country: "Giappone", discipline: "FASHION", era: "Pleats & Tech Textile", rank: 29, connections: ["Rei Kawakubo", "Yohji Yamamoto", "Shiro Kuramata"] },
+    { name: "Neri Oxman", country: "Israele", discipline: "DIGITAL", era: "Material Ecology & Bio-Design", rank: 30, connections: ["John Maeda", "Iris van Herpen", "Yves Béhar"] },
+    { name: "John Maeda", country: "Stati Uniti", discipline: "DIGITAL", era: "Computational Design & Media Arts", rank: 31, connections: ["Neri Oxman", "Giorgia Lupi", "Casey Reas"] },
+    { name: "Yves Béhar", country: "Svizzera", discipline: "DIGITAL", era: "Humanitarian & Smart Tech", rank: 32, connections: ["Neri Oxman", "Jony Ive", "Frog Design (Hartmut Esslinger)"] },
+    { name: "Marcello Gandini", country: "Italia", discipline: "AUTOMOTIVE", era: "Bertone Wedge Revolution", rank: 33, connections: ["Giorgetto Giugiaro", "Battista Pininfarina", "Ercole Spada"] },
+    { name: "Battista 'Pinin' Farina", country: "Italia", discipline: "AUTOMOTIVE", era: "Classic Italian Aerodynamics", rank: 34, connections: ["Giorgetto Giugiaro", "Marcello Gandini", "Sergio Scaglietti"] },
+    { name: "Isamu Noguchi", country: "Stati Uniti", discipline: "FURNITURE", era: "Organic Sculptural Design", rank: 35, connections: ["Charles Eames", "George Nelson", "Tadao Ando"] },
+    { name: "Karim Rashid", country: "Egitto / USA", discipline: "PRODUCT", era: "Sensual Minimalism / Blobject", rank: 36, connections: ["Philippe Starck", "Marcel Wanders", "Ross Lovegrove"] },
+    { name: "Marcel Wanders", country: "Paesi Bassi", discipline: "FURNITURE", era: "Droog Design & Contemporary Baroque", rank: 37, connections: ["Hella Jongerius", "Philippe Starck", "Oki Sato (Nendo)"] },
+    { name: "Hella Jongerius", country: "Paesi Bassi", discipline: "PRODUCT", era: "Craft & Color Theory", rank: 38, connections: ["Marcel Wanders", "Patricia Urquiola", "Ron Arad"] },
+    { name: "Giorgia Lupi", country: "Italia", discipline: "DIGITAL", era: "Information Humanism & Data Art", rank: 39, connections: ["John Maeda", "Paula Scher", "Nicholas Felton"] },
+    { name: "Hartmut Esslinger", country: "Germania", discipline: "PRODUCT", era: "Frog Design / Snow White Language", rank: 40, connections: ["Steve Jobs", "Yves Béhar", "Dieter Rams"] }
+];
+
+// DATASET ESTESO A 200 DESIGNER CON NOMI REALI E MOVIMENTI
+const EXTENDED_NAMES = [
+    { name: "Saul Bass", country: "Stati Uniti", discipline: "GRAPHIC", era: "Kinetic Typography / Film Title" },
+    { name: "Wim Crouwel", country: "Paesi Bassi", discipline: "GRAPHIC", era: "Grid-Based Modernism / Total Design" },
+    { name: "Josef Müller-Brockmann", country: "Svizzera", discipline: "GRAPHIC", era: "Grid System & International Typographic" },
+    { name: "Joe Colombo", country: "Italia", discipline: "FURNITURE", era: "Futuristic Habitat & Modular Space" },
+    { name: "Vico Magistretti", country: "Italia", discipline: "FURNITURE", era: "Essential Italian Industrial Elegance" },
+    { name: "Eero Saarinen", country: "Finlandia / USA", discipline: "FURNITURE", era: "Neo-Futurism & Tulip Chair" },
+    { name: "George Nelson", country: "Stati Uniti", discipline: "FURNITURE", era: "American Modernism / Herman Miller" },
+    { name: "Jean Prouvé", country: "Francia", discipline: "FURNITURE", era: "Constructive Structural Design" },
+    { name: "Hans Wegner", country: "Danimarca", discipline: "FURNITURE", era: "Master of Danish Chair Craft" },
+    { name: "Ron Arad", country: "Israele / UK", discipline: "FURNITURE", era: "Biomorphic Metal Sculptural Design" },
+    { name: "Ross Lovegrove", country: "Regno Unito", discipline: "PRODUCT", era: "Organic Essentialism & Evolutionary" },
+    { name: "Shiro Kuramata", country: "Giappone", discipline: "FURNITURE", era: "Poetic Material Translucency" },
+    { name: "Michele De Lucchi", country: "Italia", discipline: "FURNITURE", era: "Memphis & Architectural Crafts" },
+    { name: "Mario Bellini", country: "Italia", discipline: "PRODUCT", era: "Olivetti Calculator & Camaleonda" },
+    { name: "Richard Sapper", country: "Germania / Italia", discipline: "PRODUCT", era: "Tizio Lamp & IBM ThinkPad" },
+    { name: "Tibor Kalman", country: "Ungheria / USA", discipline: "GRAPHIC", era: "Colors Magazine / Un-Design" },
+    { name: "Jessica Walsh", country: "Stati Uniti", discipline: "GRAPHIC", era: "Color Pop / Experimental Branding" },
+    { name: "Jonathan Barnbrook", country: "Regno Unito", discipline: "GRAPHIC", era: "David Bowie Visuals & Anarchic Type" },
+    { name: "Walter de Silva", country: "Italia", discipline: "AUTOMOTIVE", era: "Alfa Romeo & Audi Design Architecture" },
+    { name: "Chris Bangle", country: "Stati Uniti", discipline: "AUTOMOTIVE", era: "BMW Flame Surfacing Era" },
+    { name: "Ian Callum", country: "Regno Unito", discipline: "AUTOMOTIVE", era: "Jaguar & Aston Martin Sculpture" },
+    { name: "Gordon Murray", country: "Sudafrica / UK", discipline: "AUTOMOTIVE", era: "McLaren F1 & Lightweight Aero" },
+    { name: "Yohji Yamamoto", country: "Giappone", discipline: "FASHION", era: "Monochromatic Avant-Garde Tailoring" },
+    { name: "Alexander McQueen", country: "Regno Unito", discipline: "FASHION", era: "Savage Beauty & Structural Tailoring" },
+    { name: "Martin Margiela", country: "Belgio", discipline: "FASHION", era: "Deconstruction & Anonymity" },
+    { name: "Nigo", country: "Giappone", discipline: "FASHION", era: "A Bathing Ape & Street Culture" },
+    { name: "Casey Reas", country: "Stati Uniti", discipline: "DIGITAL", era: "Processing / Generative Code Art" },
+    { name: "Ben Fry", country: "Stati Uniti", discipline: "DIGITAL", era: "Data Visualization & Processing Code" },
+    { name: "Erik Spiekermann", country: "Germania", discipline: "GRAPHIC", era: "Information Typography & MetaFont" },
+    { name: "April Greiman", country: "Stati Uniti", discipline: "GRAPHIC", era: "New Wave / Early Computer Graphic Art" }
+];
+
+// GENERA IL DATASET COMPLETO A 200 NODI
+function generateDesignersDataset() {
+    const nodes = [];
+    const nodeMap = new Map();
+
+    // 1. Inserisci i Nodi Seed (Top 40)
+    SEED_DESIGNERS.forEach((d, idx) => {
+        const node = {
+            id: idx + 1,
+            name: d.name,
+            country: d.country,
+            discipline: d.discipline,
+            era: d.era,
+            rank: d.rank,
+            radius: Math.max(16 - d.rank * 0.28, 7.5),
+            x: (Math.random() - 0.5) * 1200,
+            y: (Math.random() - 0.5) * 850,
+            vx: 0, vy: 0,
+            connections: []
+        };
+        nodes.push(node);
+        nodeMap.set(d.name, node);
+    });
+
+    // 2. Inserisci Nodi Reali Estesi
+    EXTENDED_NAMES.forEach((d, idx) => {
+        const rank = nodes.length + 1;
+        const node = {
+            id: rank,
+            name: d.name,
+            country: d.country,
+            discipline: d.discipline,
+            era: d.era,
+            rank: rank,
+            radius: Math.max(10 - (rank * 0.02), 5),
+            x: (Math.random() - 0.5) * 1600,
+            y: (Math.random() - 0.5) * 1100,
+            vx: 0, vy: 0,
+            connections: []
+        };
+        nodes.push(node);
+        nodeMap.set(d.name, node);
+    });
+
+    // 3. Completa con ulteriori Designer fino a 200
+    const discKeys = Object.keys(DISCIPLINES);
+    const countries = ["Italia", "Germania", "Stati Uniti", "Giappone", "Regno Unito", "Francia", "Paesi Bassi", "Svizzera", "Danimarca", "Svezia"];
+    const eras = ["Modernism", "Radical Design", "Minimalism", "Digital Craft", "Sustainable Tech", "Postmodernism", "Functionalism"];
+
+    for (let i = nodes.length; i < 200; i++) {
+        const rank = i + 1;
+        const disc = discKeys[i % discKeys.length];
+        const country = countries[i % countries.length];
+        const era = eras[i % eras.length];
+        const name = `Designer Master #${rank} [${country}]`;
+
+        const node = {
+            id: rank,
+            name: name,
+            country: country,
+            discipline: disc,
+            era: era,
+            rank: rank,
+            radius: Math.max(7 - (rank * 0.015), 3.5),
+            x: (Math.random() - 0.5) * 2200,
+            y: (Math.random() - 0.5) * 1600,
+            vx: 0, vy: 0,
+            connections: []
+        };
+        nodes.push(node);
+        nodeMap.set(name, node);
+    }
+
+    // 4. GENERAZIONE ARCHI E CONNESSONI
+    const edges = [];
+    const edgeSet = new Set();
+
+    function addEdge(source, target, weight = 1) {
+        if (!source || !target || source.id === target.id) return;
+        const key = source.id < target.id ? `${source.id}-${target.id}` : `${target.id}-${source.id}`;
+        if (!edgeSet.has(key)) {
+            edgeSet.add(key);
+            const edge = { source, target, weight };
+            edges.push(edge);
+            source.connections.push(target);
+            target.connections.push(source);
+        }
+    }
+
+    // A) Connessioni dirette dai dati SEED
+    SEED_DESIGNERS.forEach(d => {
+        const src = nodeMap.get(d.name);
+        d.connections.forEach(targetName => {
+            const tgt = nodeMap.get(targetName);
+            if (tgt) addEdge(src, tgt, 2.5);
+        });
+    });
+
+    // B) Connessioni tematiche/territoriali per la rete estesa
+    for (let i = 0; i < nodes.length; i++) {
+        const nodeA = nodes[i];
+        const count = Math.floor(Math.random() * 2) + 1;
+
+        for (let k = 0; k < count; k++) {
+            const targetIdx = Math.floor(Math.random() * nodes.length);
+            const nodeB = nodes[targetIdx];
+            
+            // Collega se condividono la stessa disciplina o la stessa nazione
+            if (nodeA.discipline === nodeB.discipline || nodeA.country === nodeB.country) {
+                addEdge(nodeA, nodeB, 0.7);
+            }
+        }
+    }
+
+    return { nodes, edges };
+}
+
+// --- ENGINE CANVAS E FISICA ---
+const canvas = document.getElementById('networkCanvas');
+const ctx = canvas.getContext('2d');
+
+let width, height;
+let graphData = generateDesignersDataset();
+let nodes = graphData.nodes;
+let edges = graphData.edges;
+
+// Zoom / Pan Viewport State
+let transform = { x: 0, y: 0, scale: 1 };
+let isDragging = false;
+let dragStart = { x: 0, y: 0 };
+let hoveredNode = null;
+let selectedNode = null;
+let draggedNode = null;
+
+// Filtri UI
+let searchQuery = "";
+let selectedDiscipline = "ALL";
+let selectedCountry = "ALL";
+
+// Parametri Fisica
+let repulsionStrength = 280;
+const damping = 0.85;
+const springLength = 90;
+const springStiffness = 0.035;
+
+// Inizializza Dropdown Paesi
+function populateCountryDropdown() {
+    const select = document.getElementById('countrySelect');
+    const countries = [...new Set(nodes.map(n => n.country))].sort();
+    
+    countries.forEach(country => {
+        const opt = document.createElement('option');
+        opt.value = country;
+        opt.textContent = country;
+        select.appendChild(opt);
+    });
+}
+populateCountryDropdown();
+
+// UI Stats
+document.getElementById('stat-nodes').innerText = nodes.length;
+document.getElementById('stat-edges').innerText = edges.length;
+
+function resizeCanvas() {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+    if (transform.x === 0 && transform.y === 0) {
+        transform.x = width / 2;
+        transform.y = height / 2;
+    }
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// --- SIMULAZIONE FISICA (Coulomb + Hooke) ---
+function updatePhysics() {
+    // Repulsione Nodi
+    for (let i = 0; i < nodes.length; i++) {
+        const n1 = nodes[i];
+        for (let j = i + 1; j < nodes.length; j++) {
+            const n2 = nodes[j];
+            let dx = n2.x - n1.x;
+            let dy = n2.y - n1.y;
+            let distSq = dx * dx + dy * dy + 0.1;
+            let dist = Math.sqrt(distSq);
+
+            if (dist < 450) {
+                let force = (repulsionStrength * 10) / distSq;
+                let fx = (dx / dist) * force;
+                let fy = (dy / dist) * force;
+
+                n1.vx -= fx;
+                n1.vy -= fy;
+                n2.vx += fx;
+                n2.vy += fy;
+            }
+        }
+    }
+
+    // Attrazione Archi
+    for (let i = 0; i < edges.length; i++) {
+        const edge = edges[i];
+        let dx = edge.target.x - edge.source.x;
+        let dy = edge.target.y - edge.source.y;
+        let dist = Math.sqrt(dx * dx + dy * dy) + 0.1;
+        let force = (dist - springLength) * springStiffness * edge.weight;
+
+        let fx = (dx / dist) * force;
+        let fy = (dy / dist) * force;
+
+        edge.source.vx += fx;
+        edge.source.vy += fy;
+        edge.target.vx -= fx;
+        edge.target.vy -= fy;
+    }
+
+    // Gravità Centrale & Inerzia
+    for (let i = 0; i < nodes.length; i++) {
+        const n = nodes[i];
+        if (n === draggedNode) continue;
+
+        n.vx -= n.x * 0.0004;
+        n.vy -= n.y * 0.0004;
+
+        n.vx *= damping;
+        n.vy *= damping;
+
+        n.x += n.vx;
+        n.y += n.vy;
+    }
+}
+
+// --- RENDER LOOP ---
+let lastTime = performance.now();
+let frameCount = 0;
+
+function render() {
+    const now = performance.now();
+    frameCount++;
+    if (now - lastTime >= 1000) {
+        document.getElementById('stat-fps').innerText = frameCount;
+        frameCount = 0;
+        lastTime = now;
+    }
+
+    updatePhysics();
+
+    ctx.save();
+    ctx.fillStyle = '#0b0f19';
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.translate(transform.x, transform.y);
+    ctx.scale(transform.scale, transform.scale);
+
+    const isFilterActive = selectedDiscipline !== "ALL" || selectedCountry !== "ALL" || searchQuery !== "";
+
+    // Render Archi
+    for (let i = 0; i < edges.length; i++) {
+        const edge = edges[i];
+        const isHighlight = (hoveredNode || selectedNode) && 
+            (edge.source === hoveredNode || edge.target === hoveredNode || edge.source === selectedNode || edge.target === selectedNode);
+        
+        ctx.beginPath();
+        ctx.moveTo(edge.source.x, edge.source.y);
+        ctx.lineTo(edge.target.x, edge.target.y);
+
+        if (isHighlight) {
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2.4;
+        } else {
+            ctx.strokeStyle = isFilterActive ? 'rgba(30, 41, 59, 0.2)' : 'rgba(51, 65, 85, 0.35)';
+            ctx.lineWidth = 0.6;
+        }
+        ctx.stroke();
+    }
+
+    // Render Nodi
+    for (let i = 0; i < nodes.length; i++) {
+        const n = nodes[i];
+        const discColor = DISCIPLINES[n.discipline]?.color || '#94a3b8';
+        
+        const matchesDisc = (selectedDiscipline === "ALL" || n.discipline === selectedDiscipline);
+        const matchesCountry = (selectedCountry === "ALL" || n.country === selectedCountry);
+        const matchesSearch = searchQuery === "" || 
+            n.name.toLowerCase().includes(searchQuery) || 
+            n.era.toLowerCase().includes(searchQuery) || 
+            n.country.toLowerCase().includes(searchQuery);
+
+        const isMatch = matchesDisc && matchesCountry && matchesSearch;
+        const isSelected = n === selectedNode;
+        const isHovered = n === hoveredNode;
+
+        ctx.save();
+        
+        if (isFilterActive && !isMatch && !isSelected && !isHovered) {
+            ctx.globalAlpha = 0.12;
+        }
+
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, isSelected || isHovered ? n.radius + 4 : n.radius, 0, Math.PI * 2);
+
+        ctx.fillStyle = isFilterActive && isMatch ? '#f8fafc' : discColor;
+        ctx.fill();
+
+        if (isSelected || isHovered || (isFilterActive && isMatch)) {
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+        }
+
+        // Testi ed etichette
+        if (transform.scale > 0.75 || n.rank <= 25 || isHovered || isSelected || (isFilterActive && isMatch)) {
+            ctx.fillStyle = isSelected || isHovered ? '#ffffff' : '#e2e8f0';
+            ctx.font = `${Math.max(10 / transform.scale, 8)}px -apple-system, sans-serif`;
+            ctx.fillText(`${n.name}`, n.x + n.radius + 5, n.y + 3);
+        }
+
+        ctx.restore();
+    }
+
+    ctx.restore();
+    requestAnimationFrame(render);
+}
+
+// --- INTERAZIONE MOUSE ---
+function getCanvasCoords(e) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+        x: (e.clientX - rect.left - transform.x) / transform.scale,
+        y: (e.clientY - rect.top - transform.y) / transform.scale
+    };
+}
+
+function findNodeAt(coords) {
+    for (let i = nodes.length - 1; i >= 0; i--) {
+        const n = nodes[i];
+        const dx = n.x - coords.x;
+        const dy = n.y - coords.y;
+        if (dx * dx + dy * dy <= (n.radius + 6) * (n.radius + 6)) {
+            return n;
+        }
+    }
+    return null;
+}
+
+canvas.addEventListener('mousedown', (e) => {
+    const coords = getCanvasCoords(e);
+    const node = findNodeAt(coords);
+
+    if (node) {
+        draggedNode = node;
+        selectedNode = node;
+        updateInfoCard(node);
+    } else {
+        isDragging = true;
+        dragStart = { x: e.clientX - transform.x, y: e.clientY - transform.y };
+    }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+    const coords = getCanvasCoords(e);
+
+    if (draggedNode) {
+        draggedNode.x = coords.x;
+        draggedNode.y = coords.y;
+        draggedNode.vx = 0;
+        draggedNode.vy = 0;
+    } else if (isDragging) {
+        transform.x = e.clientX - dragStart.x;
+        transform.y = e.clientY - dragStart.y;
+    } else {
+        hoveredNode = findNodeAt(coords);
+    }
+});
+
+window.addEventListener('mouseup', () => {
+    isDragging = false;
+    draggedNode = null;
+});
+
+canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const zoomFactor = 1.1;
+    const mouseX = e.clientX;
+    const mouseY = e.clientY;
+
+    let newScale = e.deltaY < 0 ? transform.scale * zoomFactor : transform.scale / zoomFactor;
+    newScale = Math.max(0.18, Math.min(newScale, 4.5));
+
+    transform.x = mouseX - (mouseX - transform.x) * (newScale / transform.scale);
+    transform.y = mouseY - (mouseY - transform.y) * (newScale / transform.scale);
+    transform.scale = newScale;
+}, { passive: false });
+
+// Controlli Filtri UI
+document.getElementById('disciplineSelect').addEventListener('change', (e) => selectedDiscipline = e.target.value);
+document.getElementById('countrySelect').addEventListener('change', (e) => selectedCountry = e.target.value);
+document.getElementById('searchInput').addEventListener('input', (e) => searchQuery = e.target.value.toLowerCase().trim());
+document.getElementById('repulsionSlider').addEventListener('input', (e) => repulsionStrength = parseFloat(e.target.value));
+
+function updateInfoCard(node) {
+    const card = document.getElementById('info-card');
+    if (!node) {
+        card.style.display = 'none';
+        return;
+    }
+    
+    const discObj = DISCIPLINES[node.discipline] || { name: 'Designer', color: '#38bdf8' };
+    
+    document.getElementById('card-title').innerText = node.name;
+    const badge = document.getElementById('card-badge');
+    badge.innerText = discObj.name;
+    badge.style.backgroundColor = discObj.color;
+    badge.style.color = '#0b0f19';
+
+    document.getElementById('card-meta').innerText = `🌍 ${node.country} • 🎨 ${node.era}`;
+    
+    const partnersList = node.connections.map(c => `• ${c.name} [${c.country}]`).slice(0, 6).join('<br>');
+    
+    document.getElementById('card-details').innerHTML = `
+        <strong>Ranking Influenza Mondiale:</strong> #${node.rank}<br>
+        <strong>Connessioni di Rete:</strong> ${node.connections.length}
+    `;
+    
+    document.getElementById('card-partners').innerHTML = `
+        <strong>Collaboratori, Influenze & Pari:</strong><br>${partnersList || 'Nessuna connessione diretta registrata'}
+    `;
+    
+    card.style.display = 'block';
+}
+
+// Avvio Loop di Animazione
+requestAnimationFrame(render);
+</script>
+</body>
+</html>

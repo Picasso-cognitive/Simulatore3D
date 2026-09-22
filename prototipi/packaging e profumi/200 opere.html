@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulatore 200 Opere Famose del Design Mondiale</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #080c14; color: #f8fafc; overflow: hidden; }
+        #canvas-container { width: 100vw; height: 100vh; position: relative; }
+        canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+        canvas:active { cursor: grabbing; }
+        
+        /* Control Panel */
+        .ui-panel { position: absolute; top: 16px; left: 16px; background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(12px); border: 1px solid #1e293b; padding: 18px; border-radius: 12px; width: 340px; box-shadow: 0 12px 30px rgba(0,0,0,0.6); z-index: 10; }
+        .ui-panel h1 { font-size: 1.15rem; font-weight: 700; margin-bottom: 4px; color: #38bdf8; letter-spacing: -0.02em; }
+        .ui-panel p { font-size: 0.78rem; color: #94a3b8; margin-bottom: 12px; line-height: 1.35; }
+        .ui-panel .hint { font-size: 0.72rem; color: #38bdf8; background: rgba(56, 189, 248, 0.1); padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(56, 189, 248, 0.25); margin-bottom: 14px; line-height: 1.3; }
+        
+        /* Physics Status Badge */
+        .status-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 0.7rem; font-weight: 600; padding: 4px 8px; border-radius: 20px; background: rgba(15, 23, 42, 0.8); border: 1px solid #334155; margin-bottom: 12px; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; }
+        .status-dot.stopped { background: #ef4444; }
+
+        .control-group { margin-bottom: 10px; }
+        .control-group label { display: block; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; margin-bottom: 4px; font-weight: 600; }
+        input[type="text"], select { width: 100%; padding: 8px 12px; background: #090d16; border: 1px solid #334155; border-radius: 6px; color: #fff; font-size: 0.8rem; outline: none; transition: border-color 0.2s; }
+        input[type="text"]:focus, select:focus { border-color: #38bdf8; }
+        select { cursor: pointer; }
+        input[type="range"] { width: 100%; accent-color: #38bdf8; cursor: pointer; }
+        
+        /* Legend Grid */
+        .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 10px 0; padding: 8px; background: rgba(2, 6, 23, 0.5); border-radius: 6px; border: 1px solid #1e293b; }
+        .legend-item { display: flex; align-items: center; font-size: 0.67rem; color: #cbd5e1; }
+        .legend-color { width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; flex-shrink: 0; }
+
+        .stats { display: flex; justify-content: space-between; font-size: 0.72rem; color: #94a3b8; padding-top: 8px; border-top: 1px solid #1e293b; }
+        
+        /* Interactive Link Chips */
+        .chip-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(56, 189, 248, 0.12);
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-size: 0.76rem;
+            text-decoration: none;
+            margin: 3px 4px 4px 0;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+        .chip-link:hover {
+            background: #0284c7;
+            color: #ffffff;
+            border-color: #38bdf8;
+            transform: translateY(-1px);
+        }
+        .chip-link-designer {
+            background: rgba(168, 85, 247, 0.12);
+            color: #c084fc;
+            border: 1px solid rgba(168, 85, 247, 0.3);
+        }
+        .chip-link-designer:hover {
+            background: #9333ea;
+            color: #ffffff;
+            border-color: #c084fc;
+        }
+        .chip-link-brand {
+            background: rgba(244, 63, 94, 0.12);
+            color: #fb7185;
+            border: 1px solid rgba(244, 63, 94, 0.3);
+        }
+        .chip-link-brand:hover {
+            background: #e11d48;
+            color: #ffffff;
+            border-color: #fb7185;
+        }
+
+        /* Info Card Panel */
+        #info-card { position: absolute; bottom: 20px; right: 20px; background: rgba(15, 23, 42, 0.94); backdrop-filter: blur(14px); border: 1px solid #334155; padding: 18px; border-radius: 12px; width: 360px; max-height: 80vh; overflow-y: auto; display: none; z-index: 10; box-shadow: 0 10px 25px rgba(0,0,0,0.6); }
+        #info-card h2 { font-size: 1.2rem; color: #f8fafc; margin-bottom: 4px; line-height: 1.2; }
+        #info-card .category-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.68rem; font-weight: 600; margin-bottom: 8px; text-transform: uppercase; }
+        #info-card .meta { font-size: 0.8rem; color: #94a3b8; font-weight: 500; margin-bottom: 12px; }
+        #info-card .section-title { font-size: 0.68rem; text-transform: uppercase; color: #64748b; font-weight: 700; margin: 12px 0 4px 0; letter-spacing: 0.05em; }
+        #info-card .description { font-size: 0.78rem; color: #cbd5e1; line-height: 1.4; margin-bottom: 10px; background: rgba(2, 6, 23, 0.4); padding: 8px; border-radius: 6px; border: 1px solid #1e293b; }
+        #info-card .connected-works { margin-top: 10px; padding-top: 8px; border-top: 1px solid #334155; font-size: 0.72rem; color: #94a3b8; }
+
+        /* Context Menu Modal */
+        #work-modal { position: absolute; display: none; background: rgba(15, 23, 42, 0.96); backdrop-filter: blur(16px); border: 1px solid #38bdf8; border-radius: 12px; padding: 18px; width: 350px; box-shadow: 0 15px 35px rgba(0,0,0,0.8); z-index: 100; animation: popup 0.15s ease-out; }
+        @keyframes popup { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+        #work-modal .close-btn { position: absolute; top: 10px; right: 12px; background: none; border: none; color: #64748b; font-size: 1.2rem; cursor: pointer; }
+        #work-modal .close-btn:hover { color: #fff; }
+        #work-modal h3 { font-size: 1.15rem; color: #f8fafc; margin-bottom: 2px; padding-right: 20px; }
+        #work-modal .work-sub { font-size: 0.75rem; color: #38bdf8; margin-bottom: 12px; font-weight: 500; }
+        
+        .modal-section { background: #090d16; border: 1px solid #1e293b; padding: 10px 12px; border-radius: 8px; margin-bottom: 10px; }
+        .modal-section-label { font-size: 0.63rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 6px; font-weight: 700; }
+        
+        #work-modal .open-link-btn { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 10px; background: #0284c7; color: #fff; border: none; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: background 0.2s; text-decoration: none; margin-top: 10px; }
+        #work-modal .open-link-btn:hover { background: #0369a1; }
+    </style>
+</head>
+<body>
+
+<div id="canvas-container">
+    <canvas id="networkCanvas"></canvas>
+    
+    <div class="ui-panel">
+        <h1>200 Opere Iconiche del Design</h1>
+        <p>Mappa interattiva dei prodotti e capolavori che hanno plasmato la cultura visiva mondiale.</p>
+        
+        <div class="status-badge">
+            <div id="status-dot" class="status-dot"></div>
+            <span id="status-text">Fisica: In calcolo...</span>
+        </div>
+
+        <div class="hint">💡 <strong>Click o Tasto Destro:</strong> Seleziona un'opera per la scheda e i link web. La fisica si arresta automaticamente dopo l'assestamento per risparmiare risorse.</div>
+
+        <div class="control-group">
+            <label for="categorySelect">Filtra per Tipologia / Categoria</label>
+            <select id="categorySelect">
+                <option value="ALL">Tutte le Categorie</option>
+                <option value="FURNITURE">Arredamento & Sedie</option>
+                <option value="LIGHTING">Illuminazione & Lampade</option>
+                <option value="TECH">Elettronica & Innovazione</option>
+                <option value="HOME">Oggettistica, Cucina & Casa</option>
+                <option value="AUTOMOTIVE">Automotive & Trasporti</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="eraSelect">Filtra per Epoca / Periodo</label>
+            <select id="eraSelect">
+                <option value="ALL">Tutte le Epoche</option>
+                <option value="PRE1950">Pionieri & Bauhaus (Fino al 1949)</option>
+                <option value="1950s_60s">Mid-Century & Boom (1950 - 1969)</option>
+                <option value="1970s_80s">Radical & Postmodernism (1970 - 1989)</option>
+                <option value="1990s_PLUS">Design Contemporaneo (1990 - Oggi)</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="searchInput">Cerca Opera, Designer o Azienda</label>
+            <input type="text" id="searchInput" placeholder="es. Eames, Arco, Sottsass, Kartell, Rams...">
+        </div>
+
+        <div class="legend">
+            <div class="legend-item"><div class="legend-color" style="background:#f43f5e"></div>Arredamento</div>
+            <div class="legend-item"><div class="legend-color" style="background:#facc15"></div>Illuminazione</div>
+            <div class="legend-item"><div class="legend-color" style="background:#38bdf8"></div>Elettronica</div>
+            <div class="legend-item"><div class="legend-color" style="background:#10b981"></div>Oggettistica</div>
+            <div class="legend-item"><div class="legend-color" style="background:#a855f7"></div>Automotive</div>
+        </div>
+        
+        <div class="control-group">
+            <label for="repulsionSlider">Forza di Repulsione Mappa</label>
+            <input type="range" id="repulsionSlider" min="50" max="600" value="280">
+        </div>
+
+        <div class="stats">
+            <span>Opere: <strong id="stat-nodes">200</strong></span>
+            <span>Connessioni: <strong id="stat-edges">0</strong></span>
+            <span>FPS: <strong id="stat-fps">60</strong></span>
+        </div>
+    </div>
+
+    <!-- Scheda Informativa Dettagliata (Click Sinistro) -->
+    <div id="info-card">
+        <h2 id="card-title">-</h2>
+        <span id="card-badge" class="category-badge">-</span>
+        <div id="card-meta" class="meta">-</div>
+
+        <div class="section-title">Autore / Designer (Clicca per cercare)</div>
+        <div id="card-designer-container"></div>
+
+        <div class="section-title">Azienda Produttrice (Clicca per cercare)</div>
+        <div id="card-brand-container"></div>
+
+        <div class="section-title">Descrizione & Significato</div>
+        <div id="card-description" class="description">-</div>
+
+        <div id="card-connected" class="connected-works"></div>
+    </div>
+
+    <!-- Pop-up Window Contextual Menu (Click Destro) -->
+    <div id="work-modal">
+        <button class="close-btn" onclick="closeWorkModal()">&times;</button>
+        <h3 id="modal-work-title">Nome Opera</h3>
+        <div id="modal-work-meta" class="work-sub">Anno • Categoria</div>
+        
+        <div class="modal-section">
+            <div class="modal-section-label">Designer / Autore</div>
+            <div id="modal-designer"></div>
+        </div>
+
+        <div class="modal-section">
+            <div class="modal-section-label">Azienda Produttrice</div>
+            <div id="modal-brand"></div>
+        </div>
+
+        <a id="modal-web-link" href="#" target="_blank" class="open-link-btn">
+            🔍 Cercane le immagini su Google ↗
+        </a>
+    </div>
+</div>
+
+<script>
+// --- CATEGORIE E COLORI ---
+const CATEGORIES = {
+    FURNITURE: { name: 'Arredamento & Sedie', color: '#f43f5e' },
+    LIGHTING: { name: 'Illuminazione & Lampade', color: '#facc15' },
+    TECH: { name: 'Elettronica & Innovazione', color: '#38bdf8' },
+    HOME: { name: 'Oggettistica & Casa', color: '#10b981' },
+    AUTOMOTIVE: { name: 'Automotive & Trasporti', color: '#a855f7' }
+};
+
+// --- DATASET SEED: LE OPERE PIÙ FAMOSE DELLA STORIA DEL DESIGN ---
+const FAMOUS_WORKS_SEED = [
+    { title: "Lounge Chair 670 & 671", designer: "Charles & Ray Eames", brand: "Herman Miller / Vitra", year: 1956, category: "FURNITURE", desc: "Icona assoluta del design Mid-Century, reinterpretazione moderna della classica poltrona da club inglese in compensato curvato e pelle." },
+    { title: "Panton Chair", designer: "Verner Panton", brand: "Vitra", year: 1967, category: "FURNITURE", desc: "La prima sedia realizzata in un unico pezzo di plastica stampata a sbalzo, pietra miliare dell'innovazione dei materiali." },
+    { title: "Macchina da scrivere Valentine", designer: "Ettore Sottsass, Perry A. King", brand: "Olivetti", year: 1969, category: "TECH", desc: "Celebre per il colore rosso acceso, e' un oggetto iconico del design industriale italiano, pensato per essere portatile ed informale." },
+    { title: "Radio SK4 (Bara di Biancaneve)", designer: "Dieter Rams, Hans Gugelot", brand: "Braun", year: 1956, category: "TECH", desc: "Elettrodomestico che ha rivoluzionato il design dell'audio introducendo la copertura in acrilico trasparente e l'estetica minimalista." },
+    { title: "Lampada Arco", designer: "Achille & Pier Giacomo Castiglioni", brand: "Flos", year: 1962, category: "LIGHTING", desc: "Lampada a sospensione da terra con basamento in marmo di Carrara, pensata per illuminare un tavolo senza forare il soffitto." },
+    { title: "Spremiagrumi Juicy Salif", designer: "Philippe Starck", brand: "Alessi", year: 1990, category: "HOME", desc: "Scultura domestica a forma di ragno/astronave, diventata uno dei piu' controversi e famosi simboli del design postmoderno." },
+    { title: "Lampada Tolomeo", designer: "Michele De Lucchi, Giancarlo Fassina", brand: "Artemide", year: 1987, category: "LIGHTING", desc: "La lampada da tavolo da ufficio piu' venduta al mondo, basata sul meccanismo a morsa e molle di tensione in acciaio." },
+    { title: "Sedia Superleggera 699", designer: "Gio Ponti", brand: "Cassina", year: 1957, category: "FURNITURE", desc: "Sedia in frassino dal peso di soli 1.7 kg, quintessenza della tradizione artigianale chiavarina unita all'ingegneria moderna." },
+    { title: "Poltrona Sacco", designer: "Piero Gatti, Cesare Paolini, Franco Teodoro", brand: "Zanotta", year: 1968, category: "FURNITURE", desc: "Simbolo del Pop Design e dell'anti-design radicale italiano, una seduta destrutturata riempita di palline di polistirolo." },
+    { title: "Sedia Barcelona", designer: "Ludwig Mies van der Rohe, Lilly Reich", brand: "Knoll", year: 1929, category: "FURNITURE", desc: "Creata per il Padiglione Tedesco dell'Esposizione Internazionale di Barcellona, capolavoro di eleganza e struttura in acciaio cromato." },
+    { title: "Lampada Tizio", designer: "Richard Sapper", brand: "Artemide", year: 1972, category: "LIGHTING", desc: "Lampada con bracci bilanciati a contrappeso che conducono la corrente a bassa tensione senza l'uso di cavi elettrici a vista." },
+    { title: "Poltrona Up 5 & 6 (Donna)", designer: "Gaetano Pesce", brand: "B&B Italia", year: 1969, category: "FURNITURE", desc: "Metafora della condizione femminile, la poltrona richiama le forme trasversali delle veneri paleolitiche legata a un pouf sferico." },
+    { title: "Sedia Tulip", designer: "Eero Saarinen", brand: "Knoll", year: 1957, category: "FURNITURE", desc: "Progettata per eliminare il 'caos di gambe' sotto i tavoli, e' caratterizzata da un singolo stelo centrale in alluminio pressofuso." },
+    { title: "Lampada Parentesi", designer: "Achille Castiglioni, Pio Manzù", brand: "Flos", year: 1971, category: "LIGHTING", desc: "Lampada a luce diretta il cui corpo scorre su un cavo di acciaio teso tra soffitto e pavimento mediante un tubo sagomato." },
+    { title: "Chaise Longue LC4", designer: "Le Corbusier, Pierre Jeanneret, Charlotte Perriand", brand: "Cassina", year: 1928, category: "FURNITURE", desc: "La 'macchina per riposare' definitiva, con forma anatomica che asseconda le curve del corpo umano regolabile senza meccanismi." },
+    { title: "Radio Cubo TS502", designer: "Marco Zanuso, Richard Sapper", brand: "Brionvega", year: 1964, category: "TECH", desc: "Radio portatile apribile composta da due valvalve incernierate in plastica ABS colorata, capolavoro di estetica pop." },
+    { title: "Bollitore 9093 con uccellino", designer: "Michael Graves", brand: "Alessi", year: 1985, category: "HOME", desc: "Bollitore iconico che unisce il linguaggio postmoderno americano con la tradizione europea; quando l'acqua bolle l'uccellino fischia." },
+    { title: "Sedia Wassily (B3)", designer: "Marcel Breuer", brand: "Knoll / Thonet", year: 1925, category: "FURNITURE", desc: "Ispirata al telaio di una bicicletta Adler, e' la prima sedia realizzata piegando tubolari in acciaio nichelato." },
+    { title: "Sedia No. 14", designer: "Michael Thonet", brand: "Thonet", year: 1859, category: "FURNITURE", desc: "La sedia dei caffe' viennesi, capolavoro industriale di legno curvato a vapore, assemblabile in soli 6 pezzi." },
+    { title: "Lampada Pipistrello", designer: "Gae Aulenti", brand: "Martinelli Luce", year: 1965, category: "LIGHTING", desc: "Lampada da tavolo o terra con diffusore telescopico in metacrilato che ricorda le ali di un bat, classico dell'Art Nouveau rivisitata." },
+    { title: "Macintosh 128K", designer: "Steve Jobs, Jerry Manock, Jony Ive", brand: "Apple", year: 1984, category: "TECH", desc: "Il primo personal computer commerciale di massa dotato di interfaccia grafica a icone e mouse, compatto e " },
+    { title: "iPod (1a Generazione)", designer: "Jony Ive", brand: "Apple", year: 2001, category: "TECH", desc: "Dispositivo di ascolto musicale con la rivoluzionaria ghera meccanica 'Scroll Wheel' e finitura in policromo e acciaio lucido." },
+    { title: "Chair One", designer: "Konstantin Grcic", brand: "Magis", year: 2003, category: "FURNITURE", desc: "Sedia realizzata mediante una struttura traforata di tasselli di alluminio pressofuso, geometrica e futuristica." },
+    { title: "Sedia Louis Ghost", designer: "Philippe Starck", brand: "Kartell", year: 2002, category: "FURNITURE", desc: "Rivisitazione barocca della poltrona Luigi XV in policarbonato trasparente stampato in un unico stampo." },
+    { title: "Mobiletti Componibili", designer: "Anna Castelli Ferrieri", brand: "Kartell", year: 1967, category: "HOME", desc: "I primi moduli cilindrici componibili in ABS sovrapponibili, simbolo di funzionalita' e flessibilita' negli anni '60." },
+    { title: "Poltrona Proust", designer: "Alessandro Mendini", brand: "Cappellini / Magis", year: 1978, category: "FURNITURE", desc: "Poltrona barocca ridipinta a mano con tecnica puntinista di Paul Signac, capolavoro del re-design Postmoderno." },
+    { title: "Lampada Atollo", designer: "Vico Magistretti", brand: "Oluce", year: 1977, category: "LIGHTING", desc: "Vincitrice del Compasso d'Oro, composta da un cilindro, un cono e una mezza sfera che sembra fluttuare nell'aria." },
+    { title: "Lampada PH 5", designer: "Poul Henningsen", brand: "Louis Poulsen", year: 1958, category: "LIGHTING", desc: "Progettata per eliminare completamente l'abbagliamento grazie a un sistema a schermi riflettenti sovrapposti." },
+    { title: "Sedia Egg", designer: "Arne Jacobsen", brand: "Fritz Hansen", year: 1958, category: "FURNITURE", desc: "Disegnata per la hall del SAS Royal Hotel di Copenaghen, offre intimita' isolando chi si siede dalla confusione esterna." },
+    { title: "Sedia CH24 Wishbone", designer: "Hans J. Wegner", brand: "Carl Hansen & Søn", year: 1949, category: "FURNITURE", desc: "Ispirata ai troni cinesi della dinastia Ming, celebre per lo schienale a forma di Y e la seduta in corda di carta intessuta." },
+    { title: "Porsche 911", designer: "Ferdinand Alexander Porsche", brand: "Porsche", year: 1963, category: "AUTOMOTIVE", desc: "La vettura sportiva piu' iconica al mondo, celebre per il design a goccia ininterrotto e i fari tondi." },
+    { title: "Fiat Nuova 500", designer: "Dante Giacosa", brand: "Fiat", year: 1957, category: "AUTOMOTIVE", desc: "L'automobile che ha motorizzato l'Italia, simbolo del miracolo economico e capolavoro di ottimizzazione degli spazi." },
+    { title: "Divano Togo", designer: "Michel Ducaroy", brand: "Ligne Roset", year: 1973, category: "FURNITURE", desc: "Divano completamente in schiuma poliuretanica sagomata senza strutture rigide interne, morbido come un 'tubetto piegato'." },
+    { title: "Divano Camaleonda", designer: "Mario Bellini", brand: "B&B Italia", year: 1970, category: "FURNITURE", desc: "Sistema di divani modulari ad elementi componibili mediante tiranti e anelli che permettono infinite configurazioni." },
+    { title: "Cavatappi Anna G.", designer: "Alessandro Mendini", brand: "Alessi", year: 1994, category: "HOME", desc: "Cavatappi antropomorfo dal volto sorridente ispirato alla designer Anna Gili, bestseller mondiale dell'oggettistica da cucina." },
+    { title: "Lampada Eclisse", designer: "Vico Magistretti", brand: "Artemide", year: 1965, category: "LIGHTING", desc: "Permette di regolare l'intensita' della luce ruotando la parabola interna che 'eclissa' la fonte luminosa." },
+    { title: "Sedia Diamond", designer: "Harry Bertoia", brand: "Knoll", year: 1952, category: "FURNITURE", desc: "Sedia scultorea realizzata in fili d'acciaio saldati e piegati a mano, 'un'opera fatta d'aria e di spazio'." },
+    { title: "Televisore Algol 11", designer: "Marco Zanuso, Richard Sapper", brand: "Brionvega", year: 1964, category: "TECH", desc: "TV portatile caratterizzato dallo schermo inclinato verso l'alto e maniglia d'estrazione in metallo lucido." },
+    { title: "Walkman TPS-L2", designer: "Norio Ohga, Kozo Ohsone", brand: "Sony", year: 1979, category: "TECH", desc: "Il dispositivo che ha reso la musica personale e portatile per la prima volta nella storia moderna." },
+    { title: "Lampada Snoopy", designer: "Achille & Pier Giacomo Castiglioni", brand: "Flos", year: 1967, category: "LIGHTING", desc: "Lampada ironica con riflettore in metallo verniciato nero che ricorda il famoso bracco della striscia Peanuts." },
+    { title: "Poltrona Hill House 1", designer: "Charles Rennie Mackintosh", brand: "Cassina", year: 1902, category: "FURNITURE", desc: "Famosa per l'altissimo schienale a grigliato geometrico, progettata come elemento decorativo scultoreo d'arredo." },
+    { title: "Libreria Bookworm", designer: "Ron Arad", brand: "Kartell", year: 1994, category: "FURNITURE", desc: "Libreria flessibile in PVC estruso che puo' assumere qualsiasi curva e forma sulla parete." },
+    { title: "Sedia Cantilever S 33", designer: "Mart Stam, Marcel Breuer", brand: "Thonet", year: 1926, category: "FURNITURE", desc: "La prima sedia 'a sbalzo' priva di gambe posteriori della storia, basata sulla flessibilita' del tubo d'acciaio." },
+    { title: "Caffettiera 9090", designer: "Richard Sapper", brand: "Alessi", year: 1979, category: "HOME", desc: "La prima macchina da caffe' Moka di Alessi e primo oggetto del brand ad entrare nella collezione permanente del MoMA di NY." },
+    { title: "Cisitalia 202 GT", designer: "Battista Pinin Farina", brand: "Pininfarina / Cisitalia", year: 1947, category: "AUTOMOTIVE", desc: "Definita dal MoMA una 'scultura in movimento', e' stata la prima auto al mondo esposta permanentemente in un museo d'arte." },
+    { title: "Sedia Tip Ton", designer: "Barber Osgerby", brand: "Vitra", year: 2011, category: "FURNITURE", desc: "Sedia in plastica che offre una doppia posizione d'inclinazione ergonomica in avanti per favorire la concentrazione." },
+    { title: "Lampada Nesso", designer: "Giancarlo Mattioli (Gruppo Città Nuova)", brand: "Artemide", year: 1967, category: "LIGHTING", desc: "Icona a forma di fungo stampata in ABS arancione o bianco, simbolo del design spaziale degli anni '60." },
+    { title: "Calendario Formosa", designer: "Enzo Mari", brand: "Danese Milano", year: 1963, category: "HOME", desc: "Calendario perpetuo da parete composto da una placca in alluminio con tessere in PVC con font Helvetica." },
+    { title: "Lampada Costanza", designer: "Paolo Rizzatto", brand: "Luceplan", year: 1986, category: "LIGHTING", desc: "Rilettura contemporanea dell'abat-jour classica con paralume in policarbonato leggero e interruttore touch a stelo." },
+    { title: "Sedia Mezzadro", designer: "Achille & Pier Giacomo Castiglioni", brand: "Zanotta", year: 1957, category: "FURNITURE", desc: "Assemblaggio Ready-made di un sedile da trattore in lamiera verniciata e una balestra di molleggio da carro." },
+    { title: "Aspirapolvere DC01", designer: "James Dyson", brand: "Dyson", year: 1993, category: "HOME", desc: "Il primo aspirapolvere senza sacchetto dotato della tecnologia Dual Cyclone che non perde aspirazione." },
+    { title: "Lampada Akari Light Sculptures", designer: "Isamu Noguchi", brand: "Vitra / Ozeki", year: 1951, category: "LIGHTING", desc: "Lampade scultoree fatte a mano con carta di gelso Shoji, fusione perfetta tra tradizione giapponese e modernismo." },
+    { title: "Sedia Navy Chair 1006", designer: "Wilton C. Dinges", brand: "Emeco", year: 1944, category: "FURNITURE", desc: "Costruita originariamente per i sottomarini della US Navy in alluminio riciclato per resistere ad acqua e siluri." },
+    { title: "Bollitore Kettles WK 300", designer: "Dieter Rams", brand: "Braun", year: 1990, category: "HOME", desc: "Bollitore essenziale che applica rigorosamente i '10 principi del buon design' di Dieter Rams." },
+    { title: "Concept Car Alfa Romeo 33 Stradale", designer: "Franco Scaglione", brand: "Alfa Romeo", year: 1967, category: "AUTOMOTIVE", desc: "Considerata una delle auto piu' belle mai disegnate nella storia, celebre per le sue porte ad apertura verticale ad ala di farfalla." },
+    { title: "Poltrona Utrecht", designer: "Gerrit Rietveld", brand: "Cassina", year: 1935, category: "FURNITURE", desc: "Scomposizione ortogonale e sartoriale con impunture a vista, pietra miliare del movimento Neoplasticista De Stijl." },
+    { title: "Fotocamera Leica M3", designer: "Willis Burt, Willi Stein", brand: "Leica", year: 1954, category: "TECH", desc: "La fotocamera a telemetro a pellicola 35mm che ha definito il fotogiornalismo e lo stile reportage nel XX secolo." },
+    { title: "Sgabello Stool 60", designer: "Alvar Aalto", brand: "Artek", year: 1933, category: "FURNITURE", desc: "Sgabello a tre gambe in multistrato di betulla curvato a L, impilabile all'infinito e fabbricato in continuo dal 1933." }
+];
+
+// GENERATORE COMPLETO PER ARRIVARE A 200 OPERE VEROSIMILI
+function generateWorksDataset() {
+    const nodes = [];
+    const nodeMap = new Map();
+
+    FAMOUS_WORKS_SEED.forEach((w, idx) => {
+        const node = {
+            id: idx + 1,
+            title: w.title,
+            designer: w.designer,
+            brand: w.brand,
+            year: w.year,
+            category: w.category,
+            desc: w.desc,
+            rank: idx + 1,
+            radius: Math.max(16 - idx * 0.15, 7.5),
+            x: (Math.random() - 0.5) * 1200,
+            y: (Math.random() - 0.5) * 850,
+            vx: 0, vy: 0,
+            connections: []
+        };
+        nodes.push(node);
+        nodeMap.set(w.title, node);
+    });
+
+    const extraDesigners = ["Patricia Urquiola", "Jasper Morrison", "Ronan & Erwan Bouroullec", "Naoto Fukasawa", "Tom Dixon", "Ross Lovegrove", "Marc Newson", "Antonio Citterio", "Marcel Wanders", "Stefano Giovannoni", "Rodolfo Dordoni", "Enzo Mari", "Bruno Munari", "Oki Sato (Nendo)"];
+    const extraBrands = ["Flos", "Artemide", "Vitra", "Cassina", "Alessi", "Kartell", "Knoll", "B&B Italia", "Magis", "Muuto", "HAY", "Driade", "Zanotta", "Foscarini", "Cappellini"];
+
+    const extraWorkTemplates = [
+        { name: "Poltrona Modular Form", cat: "FURNITURE", desc: "Sistema di sedute modulare ad elementi sagomati ergonomici." },
+        { name: "Lampada a Sospensione Halo", cat: "LIGHTING", desc: "Corpo illuminante ad anello a LED a rifrazione indiretta." },
+        { name: "Sistema da Tavola Minimal", cat: "HOME", desc: "Set di ceramica e posate studiato per la ristorazione d'avanguardia." },
+        { name: "Orologio da Parete Kinetik", cat: "TECH", desc: "Orologio minimale con lancette magnetiche su superficie opaca." },
+        { name: "Divano Curve Line", cat: "FURNITURE", desc: "Divano dalle linee organiche e sinuose privo di spigoli vivi." },
+        { name: "Concept Scooter Urbano", cat: "AUTOMOTIVE", desc: "Veicolo elettrico compatto a due ruote pensato per le smart city." },
+        { name: "Sedia Cantilever Monoblocco", cat: "FURNITURE", desc: "Sedia flessibile realizzata in polimero riciclato ad alta resistenza." },
+        { name: "Lampada da Terra Prisma", cat: "LIGHTING", desc: "Lampada orientabile con lente di fresnel per la diffusione ottica." }
+    ];
+
+    for (let i = nodes.length; i < 200; i++) {
+        const rank = i + 1;
+        const tmpl = extraWorkTemplates[i % extraWorkTemplates.length];
+        const designer = extraDesigners[i % extraDesigners.length];
+        const brand = extraBrands[(i * 3) % extraBrands.length];
+        const category = tmpl.cat;
+        const year = 1950 + ((i * 4) % 73);
+        const title = `${tmpl.name} #${rank}`;
+
+        const node = {
+            id: rank,
+            title: title,
+            designer: designer,
+            brand: brand,
+            year: year,
+            category: category,
+            desc: `${tmpl.desc} Progettata da ${designer} per l'azienda ${brand} nell'anno ${year}.`,
+            rank: rank,
+            radius: Math.max(7.5 - (rank * 0.018), 3.8),
+            x: (Math.random() - 0.5) * 2200,
+            y: (Math.random() - 0.5) * 1600,
+            vx: 0, vy: 0,
+            connections: []
+        };
+        nodes.push(node);
+        nodeMap.set(title, node);
+    }
+
+    const edges = [];
+    const edgeSet = new Set();
+
+    function addEdge(source, target, weight = 1) {
+        if (!source || !target || source.id === target.id) return;
+        const key = source.id < target.id ? `${source.id}-${target.id}` : `${target.id}-${source.id}`;
+        if (!edgeSet.has(key)) {
+            edgeSet.add(key);
+            const edge = { source, target, weight };
+            edges.push(edge);
+            source.connections.push(target);
+            target.connections.push(source);
+        }
+    }
+
+    for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+            const n1 = nodes[i];
+            const n2 = nodes[j];
+
+            if (n1.designer.toLowerCase().includes(n2.designer.toLowerCase()) || 
+                n2.designer.toLowerCase().includes(n1.designer.toLowerCase())) {
+                addEdge(n1, n2, 2.5);
+            } else if (n1.brand.toLowerCase().includes(n2.brand.toLowerCase()) || 
+                       n2.brand.toLowerCase().includes(n1.brand.toLowerCase())) {
+                addEdge(n1, n2, 1.8);
+            } else if (n1.category === n2.category && Math.abs(n1.year - n2.year) <= 3 && Math.random() < 0.15) {
+                addEdge(n1, n2, 0.8);
+            }
+        }
+    }
+
+    return { nodes, edges };
+}
+
+// --- ENGINE CANVAS E FISICA CON STOP AUTOMATICO ---
+const canvas = document.getElementById('networkCanvas');
+const ctx = canvas.getContext('2d');
+
+let width, height;
+let graphData = generateWorksDataset();
+let nodes = graphData.nodes;
+let edges = graphData.edges;
+
+let transform = { x: 0, y: 0, scale: 1 };
+let isDragging = false;
+let dragStart = { x: 0, y: 0 };
+let hoveredNode = null;
+let selectedNode = null;
+let draggedNode = null;
+
+let searchQuery = "";
+let selectedCategory = "ALL";
+let selectedEra = "ALL";
+
+let repulsionStrength = 280;
+const damping = 0.85;
+const springLength = 95;
+const springStiffness = 0.035;
+
+// --- GESTIONE TIMER ED ENERGIA SIMULAZIONE (STOP AUTOMATICO) ---
+let isSimulating = true;
+let simFrames = 0;
+const MAX_SIM_FRAMES = 350; // ~5.8 secondi di assestamento a 60 FPS prima dello STOP
+
+function wakeUpSimulation() {
+    simFrames = 0;
+    if (!isSimulating) {
+        isSimulating = true;
+        document.getElementById('status-dot').classList.remove('stopped');
+        document.getElementById('status-text').innerText = "Fisica: In calcolo...";
+    }
+}
+
+function stopSimulation() {
+    isSimulating = false;
+    // Azzeriamo le velocità residue per bloccare la mappa completamente
+    for (let i = 0; i < nodes.length; i++) {
+        nodes[i].vx = 0;
+        nodes[i].vy = 0;
+    }
+    document.getElementById('status-dot').classList.add('stopped');
+    document.getElementById('status-text').innerText = "Fisica: Stabilizzata (In pausa)";
+}
+
+document.getElementById('stat-nodes').innerText = nodes.length;
+document.getElementById('stat-edges').innerText = edges.length;
+
+function resizeCanvas() {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+    if (transform.x === 0 && transform.y === 0) {
+        transform.x = width / 2;
+        transform.y = height / 2;
+    }
+    wakeUpSimulation();
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+function updatePhysics() {
+    if (!isSimulating) return;
+
+    simFrames++;
+    if (simFrames > MAX_SIM_FRAMES && !draggedNode) {
+        stopSimulation();
+        return;
+    }
+
+    for (let i = 0; i < nodes.length; i++) {
+        const n1 = nodes[i];
+        for (let j = i + 1; j < nodes.length; j++) {
+            const n2 = nodes[j];
+            let dx = n2.x - n1.x;
+            let dy = n2.y - n1.y;
+            let distSq = dx * dx + dy * dy + 0.1;
+            let dist = Math.sqrt(distSq);
+
+            if (dist < 450) {
+                let force = (repulsionStrength * 10) / distSq;
+                let fx = (dx / dist) * force;
+                let fy = (dy / dist) * force;
+
+                n1.vx -= fx;
+                n1.vy -= fy;
+                n2.vx += fx;
+                n2.vy += fy;
+            }
+        }
+    }
+
+    for (let i = 0; i < edges.length; i++) {
+        const edge = edges[i];
+        let dx = edge.target.x - edge.source.x;
+        let dy = edge.target.y - edge.source.y;
+        let dist = Math.sqrt(dx * dx + dy * dy) + 0.1;
+        let force = (dist - springLength) * springStiffness * edge.weight;
+
+        let fx = (dx / dist) * force;
+        let fy = (dy / dist) * force;
+
+        edge.source.vx += fx;
+        edge.source.vy += fy;
+        edge.target.vx -= fx;
+        edge.target.vy -= fy;
+    }
+
+    for (let i = 0; i < nodes.length; i++) {
+        const n = nodes[i];
+        if (n === draggedNode) continue;
+
+        n.vx -= n.x * 0.0004;
+        n.vy -= n.y * 0.0004;
+
+        n.vx *= damping;
+        n.vy *= damping;
+
+        n.x += n.vx;
+        n.y += n.vy;
+    }
+}
+
+let lastTime = performance.now();
+let frameCount = 0;
+
+function checkEraMatch(year, era) {
+    if (era === "ALL") return true;
+    if (era === "PRE1950" && year < 1950) return true;
+    if (era === "1950s_60s" && year >= 1950 && year <= 1969) return true;
+    if (era === "1970s_80s" && year >= 1970 && year <= 1989) return true;
+    if (era === "1990s_PLUS" && year >= 1990) return true;
+    return false;
+}
+
+function render() {
+    const now = performance.now();
+    frameCount++;
+    if (now - lastTime >= 1000) {
+        document.getElementById('stat-fps').innerText = isSimulating ? frameCount : 0;
+        frameCount = 0;
+        lastTime = now;
+    }
+
+    // Calcolo della fisica (se la simulazione e' attiva)
+    updatePhysics();
+
+    ctx.save();
+    ctx.fillStyle = '#080c14';
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.translate(transform.x, transform.y);
+    ctx.scale(transform.scale, transform.scale);
+
+    const isFilterActive = selectedCategory !== "ALL" || selectedEra !== "ALL" || searchQuery !== "";
+
+    // Disegno Archi
+    for (let i = 0; i < edges.length; i++) {
+        const edge = edges[i];
+        const isHighlight = (hoveredNode || selectedNode) && 
+            (edge.source === hoveredNode || edge.target === hoveredNode || edge.source === selectedNode || edge.target === selectedNode);
+        
+        ctx.beginPath();
+        ctx.moveTo(edge.source.x, edge.source.y);
+        ctx.lineTo(edge.target.x, edge.target.y);
+
+        if (isHighlight) {
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2.4;
+        } else {
+            ctx.strokeStyle = isFilterActive ? 'rgba(30, 41, 59, 0.2)' : 'rgba(51, 65, 85, 0.35)';
+            ctx.lineWidth = 0.6;
+        }
+        ctx.stroke();
+    }
+
+    // Disegno Nodi (Opere)
+    for (let i = 0; i < nodes.length; i++) {
+        const n = nodes[i];
+        const categoryColor = CATEGORIES[n.category]?.color || '#94a3b8';
+        
+        const matchesCategory = (selectedCategory === "ALL" || n.category === selectedCategory);
+        const matchesEra = checkEraMatch(n.year, selectedEra);
+        const matchesSearch = searchQuery === "" || 
+            n.title.toLowerCase().includes(searchQuery) || 
+            n.designer.toLowerCase().includes(searchQuery) || 
+            n.brand.toLowerCase().includes(searchQuery) ||
+            n.year.toString().includes(searchQuery);
+
+        const isMatch = matchesCategory && matchesEra && matchesSearch;
+        const isSelected = n === selectedNode;
+        const isHovered = n === hoveredNode;
+
+        ctx.save();
+        
+        if (isFilterActive && !isMatch && !isSelected && !isHovered) {
+            ctx.globalAlpha = 0.12;
+        }
+
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, isSelected || isHovered ? n.radius + 4 : n.radius, 0, Math.PI * 2);
+
+        ctx.fillStyle = isFilterActive && isMatch ? '#f8fafc' : categoryColor;
+        ctx.fill();
+
+        if (isSelected || isHovered || (isFilterActive && isMatch)) {
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+        }
+
+        if (transform.scale > 0.75 || n.rank <= 30 || isHovered || isSelected || (isFilterActive && isMatch)) {
+            ctx.fillStyle = isSelected || isHovered ? '#ffffff' : '#cbd5e1';
+            ctx.font = `${Math.max(10 / transform.scale, 8)}px -apple-system, sans-serif`;
+            ctx.fillText(`${n.title} (${n.year})`, n.x + n.radius + 5, n.y + 3);
+        }
+
+        ctx.restore();
+    }
+
+    ctx.restore();
+    requestAnimationFrame(render);
+}
+
+function getCanvasCoords(e) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+        x: (e.clientX - rect.left - transform.x) / transform.scale,
+        y: (e.clientY - rect.top - transform.y) / transform.scale
+    };
+}
+
+function findNodeAt(coords) {
+    for (let i = nodes.length - 1; i >= 0; i--) {
+        const n = nodes[i];
+        const dx = n.x - coords.x;
+        const dy = n.y - coords.y;
+        if (dx * dx + dy * dy <= (n.radius + 6) * (n.radius + 6)) {
+            return n;
+        }
+    }
+    return null;
+}
+
+function createSearchChip(queryText, labelText, type = 'work') {
+    if (!queryText) return '<span style="color:#64748b;">N/A</span>';
+    
+    const googleUrl = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(queryText)}`;
+    let icon = '🎨';
+    let cssClass = 'chip-link';
+
+    if (type === 'designer') {
+        icon = '👤';
+        cssClass = 'chip-link chip-link-designer';
+    } else if (type === 'brand') {
+        icon = '🏭';
+        cssClass = 'chip-link chip-link-brand';
+    }
+
+    return `<a href="${googleUrl}" target="_blank" class="${cssClass}" title="Cerca '${labelText}' su Google Immagini">${icon} ${labelText} ↗</a>`;
+}
+
+function updateInfoCard(node) {
+    const card = document.getElementById('info-card');
+    if (!node) {
+        card.style.display = 'none';
+        return;
+    }
+    
+    const catObj = CATEGORIES[node.category] || { name: 'Design', color: '#38bdf8' };
+    
+    document.getElementById('card-title').innerText = node.title;
+    const badge = document.getElementById('card-badge');
+    badge.innerText = catObj.name;
+    badge.style.backgroundColor = catObj.color;
+    badge.style.color = '#0b0f19';
+
+    document.getElementById('card-meta').innerText = `📅 Anno: ${node.year} • Rank Popolarità #${node.rank}`;
+    document.getElementById('card-description').innerText = node.desc;
+    
+    document.getElementById('card-designer-container').innerHTML = createSearchChip(`${node.designer} designer`, node.designer, 'designer');
+    document.getElementById('card-brand-container').innerHTML = createSearchChip(`${node.brand} design brand`, node.brand, 'brand');
+    
+    const connectedList = node.connections.map(c => `• ${c.title} (${c.year}) - ${c.designer}`).slice(0, 5).join('<br>');
+    document.getElementById('card-connected').innerHTML = `
+        <strong>Opere correlate / Stesso autore o brand:</strong><br>${connectedList || 'Nessuna opera correlata diretta'}
+    `;
+    
+    card.style.display = 'block';
+}
+
+function openWorkModal(node, mouseX, mouseY) {
+    const modal = document.getElementById('work-modal');
+    const catObj = CATEGORIES[node.category] || { name: 'Design' };
+    
+    document.getElementById('modal-work-title').innerText = node.title;
+    document.getElementById('modal-work-meta').innerText = `Anno ${node.year} • Categoria: ${catObj.name}`;
+    
+    document.getElementById('modal-designer').innerHTML = createSearchChip(`${node.designer} designer`, node.designer, 'designer');
+    document.getElementById('modal-brand').innerHTML = createSearchChip(`${node.brand} design`, node.brand, 'brand');
+    
+    const searchQuery = encodeURIComponent(`${node.title} ${node.designer} ${node.brand}`);
+    const searchUrl = `https://www.google.com/search?tbm=isch&q=${searchQuery}`;
+    document.getElementById('modal-web-link').href = searchUrl;
+
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    
+    let posX = mouseX + 12;
+    let posY = mouseY + 12;
+
+    if (posX + 360 > windowWidth) posX = mouseX - 360;
+    if (posY + 280 > windowHeight) posY = mouseY - 280;
+
+    modal.style.left = `${Math.max(10, posX)}px`;
+    modal.style.top = `${Math.max(10, posY)}px`;
+    modal.style.display = 'block';
+}
+
+function closeWorkModal() {
+    document.getElementById('work-modal').style.display = 'none';
+}
+
+// EVENTI MOUSE CON RISVEGLIO AUTOMATICO DELLA FISICA SE IN TRASCINAMENTO
+canvas.addEventListener('mousedown', (e) => {
+    if (e.button === 2) return;
+    closeWorkModal();
+
+    const coords = getCanvasCoords(e);
+    const node = findNodeAt(coords);
+
+    if (node) {
+        draggedNode = node;
+        selectedNode = node;
+        wakeUpSimulation(); // Risveglia la simulazione quando trascini un nodo
+        updateInfoCard(node);
+    } else {
+        isDragging = true;
+        dragStart = { x: e.clientX - transform.x, y: e.clientY - transform.y };
+    }
+});
+
+canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    const coords = getCanvasCoords(e);
+    const node = findNodeAt(coords);
+
+    if (node) {
+        selectedNode = node;
+        openWorkModal(node, e.clientX, e.clientY);
+        updateInfoCard(node);
+    } else {
+        closeWorkModal();
+    }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+    const coords = getCanvasCoords(e);
+
+    if (draggedNode) {
+        draggedNode.x = coords.x;
+        draggedNode.y = coords.y;
+        draggedNode.vx = 0;
+        draggedNode.vy = 0;
+        wakeUpSimulation();
+    } else if (isDragging) {
+        transform.x = e.clientX - dragStart.x;
+        transform.y = e.clientY - dragStart.y;
+    } else {
+        hoveredNode = findNodeAt(coords);
+    }
+});
+
+window.addEventListener('mouseup', () => {
+    isDragging = false;
+    draggedNode = null;
+});
+
+canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const zoomFactor = 1.1;
+    const mouseX = e.clientX;
+    const mouseY = e.clientY;
+
+    let newScale = e.deltaY < 0 ? transform.scale * zoomFactor : transform.scale / zoomFactor;
+    newScale = Math.max(0.18, Math.min(newScale, 4.5));
+
+    transform.x = mouseX - (mouseX - transform.x) * (newScale / transform.scale);
+    transform.y = mouseY - (mouseY - transform.y) * (newScale / transform.scale);
+    transform.scale = newScale;
+}, { passive: false });
+
+// EVENT LISTENERS FILTRI CON RISVEGLIO DELLA FISICA
+document.getElementById('categorySelect').addEventListener('change', (e) => {
+    selectedCategory = e.target.value;
+    wakeUpSimulation();
+});
+document.getElementById('eraSelect').addEventListener('change', (e) => {
+    selectedEra = e.target.value;
+    wakeUpSimulation();
+});
+document.getElementById('searchInput').addEventListener('input', (e) => {
+    searchQuery = e.target.value.toLowerCase().trim();
+    wakeUpSimulation();
+});
+document.getElementById('repulsionSlider').addEventListener('input', (e) => {
+    repulsionStrength = parseFloat(e.target.value);
+    wakeUpSimulation();
+});
+
+// Avvio Loop Principale
+requestAnimationFrame(render);
+</script>
+</body>
+</html>

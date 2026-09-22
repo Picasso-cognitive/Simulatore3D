@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Packaging Design Studio - Inspired by Pentawards</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --panel-bg: #1e1e1e;
+            --accent-color: #d4af37; /* Oro Pentawards */
+            --text-color: #f0f0f0;
+            --box-color: #2b2b2b;
+            --box-text-color: #ffffff;
+            --box-font: 'Helvetica Neue', sans-serif;
+            --box-border: none;
+            --box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar Controlli */
+        .sidebar {
+            width: 380px;
+            background-color: var(--panel-bg);
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-shadow: 5px 0 15px rgba(0,0,0,0.3);
+            overflow-y: auto;
+            z-index: 10;
+        }
+
+        .sidebar h1 {
+            font-size: 1.4rem;
+            color: var(--accent-color);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .control-group label {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #aaa;
+        }
+
+        select, input[type="text"], input[type="color"] {
+            width: 100%;
+            padding: 10px;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            color: #fff;
+            border-radius: 5px;
+            outline: none;
+            font-size: 0.9rem;
+        }
+
+        select:focus, input:focus {
+            border-color: var(--accent-color);
+        }
+
+        /* Viewport Canvas */
+        .viewport {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: radial-gradient(circle at center, #2a2a2a 0%, #111 100%);
+            padding: 20px;
+        }
+
+        /* Mockup 3D del Packaging */
+        .package-stage {
+            perspective: 1000px;
+            width: 300px;
+            height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .package-box {
+            width: 220px;
+            height: 320px;
+            background: var(--box-color);
+            color: var(--box-text-color);
+            border-radius: 8px;
+            box-shadow: var(--box-shadow);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 25px;
+            transition: all 0.5s ease;
+            position: relative;
+            transform-style: preserve-3d;
+            transform: rotateY(-15deg) rotateX(5deg);
+            border: var(--box-border);
+        }
+
+        .package-box:hover {
+            transform: rotateY(0deg) rotateX(0deg) scale(1.02);
+        }
+
+        /* Texture Overlay */
+        .package-texture {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border-radius: 8px;
+            pointer-events: none;
+            opacity: 0.15;
+            mix-blend-mode: overlay;
+        }
+
+        .texture-craft {
+            background-image: radial-gradient(#000 10%, transparent 11%);
+            background-size: 4px 4px;
+        }
+
+        .texture-gloss {
+            background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 50%);
+        }
+
+        .texture-matte {
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        /* Dettagli della Scatola */
+        .brand-header {
+            text-align: center;
+        }
+
+        .brand-logo {
+            font-size: 1.6rem;
+            font-weight: bold;
+            font-family: var(--box-font);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            word-wrap: break-word;
+        }
+
+        .brand-subtitle {
+            font-size: 0.75rem;
+            margin-top: 5px;
+            opacity: 0.8;
+            letter-spacing: 1px;
+            font-family: var(--box-font);
+        }
+
+        .package-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            font-size: 0.7rem;
+            font-family: var(--box-font);
+        }
+
+        .eco-badge {
+            display: none;
+            padding: 3px 6px;
+            border: 1px solid currentColor;
+            border-radius: 3px;
+            font-size: 0.6rem;
+            text-transform: uppercase;
+        }
+
+        /* Dashboard Punteggio Pentawards */
+        .evaluation-panel {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(30, 30, 30, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid #333;
+            padding: 20px;
+            border-radius: 10px;
+            width: 320px;
+        }
+
+        .evaluation-panel h3 {
+            font-size: 1rem;
+            color: var(--accent-color);
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .metric {
+            margin-bottom: 8px;
+        }
+
+        .metric-title {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            margin-bottom: 3px;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: #333;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent-color);
+            width: 50%;
+            transition: width 0.4s ease;
+        }
+
+        .feedback-text {
+            font-size: 0.75rem;
+            margin-top: 12px;
+            color: #ccc;
+            font-style: italic;
+            line-height: 1.3;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h1>Packaging Studio</h1>
+        
+        <div class="control-group">
+            <label for="brandName">Nome del Brand</label>
+            <input type="text" id="brandName" value="AURA" placeholder="Inserisci il nome...">
+        </div>
+
+        <div class="control-group">
+            <label for="productType">Categoria Prodotto</label>
+            <select id="productType">
+                <option value="luxury">Profumo / Cosmetico Luxury</option>
+                <option value="eco-food">Cibo Biologico / Artigianale</option>
+                <option value="beverage">Bevanda / Spirits Premium</option>
+                <option value="tech">Minimal Tech Gadget</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="material">Materiale principale</label>
+            <select id="material">
+                <option value="cardboard">Cartone Rigido Premium</option>
+                <option value="kraft">Carta Kraft 100% Riciclata</option>
+                <option value="glass">Vetro Smerigliato</option>
+                <option value="metal">Alluminio Anodizzato</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="finish">Finitura Superficiale</label>
+            <select id="finish">
+                <option value="matte">Opaco (Matte Touch)</option>
+                <option value="gloss">Lucido (High Gloss)</option>
+                <option value="foil">Lamina Oro Stampata a Caldo</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="typography">Stile Tipografico</label>
+            <select id="typography">
+                <option value="'Playfair Display', serif">Serif Elegante (Editoriale/Lusso)</option>
+                <option value="'Helvetica Neue', sans-serif">Sans-Serif Minimal (Moderno)</option>
+                <option value="'Courier New', monospace">Monospazio (Industriale/Laboratorio)</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="bgColor">Colore Primario</label>
+            <input type="color" id="bgColor" value="#1a1a1a">
+        </div>
+
+        <div class="control-group">
+            <label for="textColor">Colore Testo & Grafica</label>
+            <input type="color" id="textColor" value="#d4af37">
+        </div>
+    </div>
+
+    <div class="viewport">
+        <div class="package-stage">
+            <div class="package-box" id="packageBox">
+                <div class="package-texture" id="packageTexture"></div>
+                
+                <div class="brand-header">
+                    <div class="brand-logo" id="displayLogo">AURA</div>
+                    <div class="brand-subtitle" id="displaySubtitle">EAU DE PARFUM</div>
+                </div>
+
+                <div class="package-footer">
+                    <span>50 ml / 1.7 fl. oz.</span>
+                    <span class="eco-badge" id="ecoBadge">Eco-Friendly</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="evaluation-panel">
+            <h3>Pentawards Score <span id="scoreTotal">0/100</span></h3>
+            
+            <div class="metric">
+                <div class="metric-title">
+                    <span>Impatto Visivo (Shelf Impact)</span>
+                    <span id="scoreVisual">0%</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill" id="barVisual"></div></div>
+            </div>
+
+            <div class="metric">
+                <div class="metric-title">
+                    <span>Sostenibilità (Eco Design)</span>
+                    <span id="scoreEco">0%</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill" id="barEco"></div></div>
+            </div>
+
+            <div class="metric">
+                <div class="metric-title">
+                    <span>Coerenza di Brand</span>
+                    <span id="scoreCoherence">0%</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill" id="barCoherence"></div></div>
+            </div>
+
+            <div class="feedback-text" id="feedbackText">
+                Modifica i parametri per generare la valutazione del design...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Elementi DOM
+        const brandNameInput = document.getElementById('brandName');
+        const productTypeSelect = document.getElementById('productType');
+        const materialSelect = document.getElementById('material');
+        const finishSelect = document.getElementById('finish');
+        const typographySelect = document.getElementById('typography');
+        const bgColorInput = document.getElementById('bgColor');
+        const textColorInput = document.getElementById('textColor');
+
+        const packageBox = document.getElementById('packageBox');
+        const packageTexture = document.getElementById('packageTexture');
+        const displayLogo = document.getElementById('displayLogo');
+        const displaySubtitle = document.getElementById('displaySubtitle');
+        const ecoBadge = document.getElementById('ecoBadge');
+
+        // Aggiorna il Design in tempo reale
+        function updateDesign() {
+            const brand = brandNameInput.value || 'BRAND';
+            const product = productTypeSelect.value;
+            const material = materialSelect.value;
+            const finish = finishSelect.value;
+            const font = typographySelect.value;
+            const bgColor = bgColorInput.value;
+            const textColor = textColorInput.value;
+
+            // Aggiorna testo
+            displayLogo.textContent = brand;
+            displayLogo.style.fontFamily = font;
+            displaySubtitle.style.fontFamily = font;
+
+            // Sottotitolo basato sulla categoria
+            if (product === 'luxury') displaySubtitle.textContent = 'EAU DE PARFUM';
+            else if (product === 'eco-food') displaySubtitle.textContent = 'ORGANIC SELECTION';
+            else if (product === 'beverage') displaySubtitle.textContent = 'CRAFT DISTILLED';
+            else if (product === 'tech') displaySubtitle.textContent = 'SERIES 01';
+
+            // Colori
+            packageBox.style.backgroundColor = bgColor;
+            packageBox.style.color = textColor;
+
+            // Finitura & Finitura speciale
+            packageTexture.className = 'package-texture';
+            if (finish === 'gloss') packageTexture.classList.add('texture-gloss');
+            else if (finish === 'matte') packageTexture.classList.add('texture-matte');
+            
+            if (material === 'kraft') packageTexture.classList.add('texture-craft');
+
+            if (finish === 'foil') {
+                displayLogo.style.background = 'linear-gradient(45deg, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c)';
+                displayLogo.style.webkitBackgroundClip = 'text';
+                displayLogo.style.webkitTextFillColor = 'transparent';
+            } else {
+                displayLogo.style.background = 'none';
+                displayLogo.style.webkitTextFillColor = textColor;
+            }
+
+            // Materiali & Badge
+            if (material === 'kraft') {
+                ecoBadge.style.display = 'inline-block';
+            } else {
+                ecoBadge.style.display = 'none';
+            }
+
+            // Calcolo Score Critico
+            evaluateDesign(product, material, finish, font, bgColor, textColor);
+        }
+
+        // Valutazione Critica ispirata ai principi di "The Packaging Design Book"
+        function evaluateDesign(product, material, finish, font, bgColor, textColor) {
+            let visual = 50;
+            let eco = 30;
+            let coherence = 50;
+            let feedback = "";
+
+            // Regola Sostenibilità
+            if (material === 'kraft') eco += 50;
+            if (material === 'cardboard') eco += 30;
+            if (material === 'metal') eco += 20;
+            if (material === 'glass') eco += 25;
+
+            // Coerenza Categoria vs Materiale & Stile
+            if (product === 'luxury') {
+                if (material === 'glass' || material === 'cardboard') coherence += 20;
+                if (finish === 'foil' || finish === 'matte') visual += 25;
+                if (font.includes('Playfair')) coherence += 25;
+                feedback = "Eccellente posizionamento Premium. La finitura e la tipografia Serif comunicano alta gamma.";
+            } 
+            else if (product === 'eco-food') {
+                if (material === 'kraft') {
+                    coherence += 40;
+                    visual += 15;
+                    feedback = "Ottima coerenza Eco-Design. Il materiale Kraft trasmette immediatamente genuinità al consumatore.";
+                } else {
+                    coherence -= 20;
+                    feedback = "Attenzione: Prodotti biologici beneficiano di materiali naturali come Kraft o cartone non trattato.";
+                }
+            } 
+            else if (product === 'tech') {
+                if (font.includes('Helvetica') || font.includes('Courier')) coherence += 30;
+                if (finish === 'matte') visual += 20;
+                feedback = "Look minimalista e pulito. Adatto per la tecnologia di consumo contemporanea.";
+            } 
+            else if (product === 'beverage') {
+                if (material === 'glass' || material === 'metal') coherence += 35;
+                visual += 20;
+                feedback = "Ottimo impatto visivo sullo scaffale per la categoria Spirits/Beverage.";
+            }
+
+            // Normalizzazione punteggi max 100
+            visual = Math.min(100, visual);
+            eco = Math.min(100, eco);
+            coherence = Math.min(100, coherence);
+            
+            const totalScore = Math.round((visual + eco + coherence) / 3);
+
+            // Aggiorna UI Valutazione
+            document.getElementById('scoreVisual').textContent = visual + '%';
+            document.getElementById('barVisual').style.width = visual + '%';
+
+            document.getElementById('scoreEco').textContent = eco + '%';
+            document.getElementById('barEco').style.width = eco + '%';
+
+            document.getElementById('scoreCoherence').textContent = coherence + '%';
+            document.getElementById('barCoherence').style.width = coherence + '%';
+
+            document.getElementById('scoreTotal').textContent = totalScore + '/100';
+            document.getElementById('feedbackText').textContent = feedback;
+        }
+
+        // Event Listeners
+        [brandNameInput, productTypeSelect, materialSelect, finishSelect, typographySelect, bgColorInput, textColorInput].forEach(element => {
+            element.addEventListener('input', updateDesign);
+        });
+
+        // Inizializzazione
+        updateDesign();
+    </script>
+</body>
+</html>

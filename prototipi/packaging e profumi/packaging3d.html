@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Polyhedral Packaging Studio - Pentawards Edition</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        :root {
+            --bg-color: #0d0d0d;
+            --panel-bg: #181818;
+            --accent-color: #d4af37;
+            --text-color: #f0f0f0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar Controlli */
+        .sidebar {
+            width: 360px;
+            background-color: var(--panel-bg);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            box-shadow: 5px 0 15px rgba(0,0,0,0.5);
+            overflow-y: auto;
+            z-index: 10;
+        }
+
+        .sidebar h1 {
+            font-size: 1.2rem;
+            color: var(--accent-color);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .control-group label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #aaa;
+        }
+
+        select, input[type="text"], input[type="color"] {
+            width: 100%;
+            padding: 8px 10px;
+            background: #252525;
+            border: 1px solid #444;
+            color: #fff;
+            border-radius: 4px;
+            outline: none;
+            font-size: 0.85rem;
+        }
+
+        select:focus, input:focus {
+            border-color: var(--accent-color);
+        }
+
+        /* Canvas 3D Viewport */
+        .viewport {
+            flex-grow: 1;
+            position: relative;
+            background: radial-gradient(circle at center, #222 0%, #050505 100%);
+        }
+
+        #webgl-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* Overlay istruzioni 3D */
+        .canvas-hint {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.6);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            color: #ccc;
+            pointer-events: none;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* Dashboard Punteggio Pentawards */
+        .evaluation-panel {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(20, 20, 20, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid #333;
+            padding: 20px;
+            border-radius: 8px;
+            width: 300px;
+        }
+
+        .evaluation-panel h3 {
+            font-size: 0.95rem;
+            color: var(--accent-color);
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .metric {
+            margin-bottom: 8px;
+        }
+
+        .metric-title {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            margin-bottom: 3px;
+        }
+
+        .progress-bar {
+            height: 5px;
+            background: #333;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent-color);
+            width: 50%;
+            transition: width 0.4s ease;
+        }
+
+        .feedback-text {
+            font-size: 0.75rem;
+            margin-top: 10px;
+            color: #bbb;
+            font-style: italic;
+            line-height: 1.3;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h1>3D Polyhedral Studio</h1>
+        
+        <div class="control-group">
+            <label for="polyhedron">Geometria Poliedro</label>
+            <select id="polyhedron">
+                <option value="cube">Esaedro (Cubo / Scatola)</option>
+                <option value="tetrahedron">Tetraedro (Piramide 4 Facce)</option>
+                <option value="octahedron">Ottaedro (Doppia Piramide)</option>
+                <option value="dodecahedron">Dodecaedro (12 Facce)</option>
+                <option value="icosahedron">Icosaedro (20 Facce)</option>
+                <option value="hexagonalPrisma">Prisma Esagonale</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="brandName">Nome del Brand</label>
+            <input type="text" id="brandName" value="AURA" placeholder="Nome Brand...">
+        </div>
+
+        <div class="control-group">
+            <label for="productType">Categoria Prodotto</label>
+            <select id="productType">
+                <option value="luxury">Profumo / Cosmetico Luxury</option>
+                <option value="beverage">Bevanda / Spirits Premium</option>
+                <option value="eco-food">Cibo Artigianale / Bio</option>
+                <option value="tech">Tech Gadget Minimal</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="material">Materiale Superficie</label>
+            <select id="material">
+                <option value="cardboard">Cartone Rigido Opaco</option>
+                <option value="kraft">Carta Kraft Ecologica</option>
+                <option value="glass">Vetro Satinato Premium</option>
+                <option value="metal">Alluminio Spazzolato</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="finish">Finitura / Effetto</label>
+            <select id="finish">
+                <option value="matte">Matte Soft-Touch</option>
+                <option value="gloss">Glossy Lucido</option>
+                <option value="metalFoil">Dettagli Lamina Metallica</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="typography">Carattere Tipografico</label>
+            <select id="typography">
+                <option value="serif">Serif Elegante (Editoriale)</option>
+                <option value="sans">Sans-Serif Moderno (Minimal)</option>
+                <option value="mono">Monospazio (Techno/Lab)</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="bgColor">Colore Primario Fondo</label>
+            <input type="color" id="bgColor" value="#122a28">
+        </div>
+
+        <div class="control-group">
+            <label for="textColor">Colore Grafica & Testo</label>
+            <input type="color" id="textColor" value="#d4af37">
+        </div>
+    </div>
+
+    <div class="viewport">
+        <div class="canvas-hint">🖱️ Trascina per ruotare | Scroll per Zoom</div>
+        <canvas id="webgl-canvas"></canvas>
+
+        <div class="evaluation-panel">
+            <h3>Pentawards Score <span id="scoreTotal">0/100</span></h3>
+            
+            <div class="metric">
+                <div class="metric-title">
+                    <span>Shelf Impact (3D Visual)</span>
+                    <span id="scoreVisual">0%</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill" id="barVisual"></div></div>
+            </div>
+
+            <div class="metric">
+                <div class="metric-title">
+                    <span>Sostenibilità Strutturale</span>
+                    <span id="scoreEco">0%</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill" id="barEco"></div></div>
+            </div>
+
+            <div class="metric">
+                <div class="metric-title">
+                    <span>Coerenza Forma/Brand</span>
+                    <span id="scoreCoherence">0%</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill" id="barCoherence"></div></div>
+            </div>
+
+            <div class="feedback-text" id="feedbackText">
+                Inizializzazione rendering 3D...
+            </div>
+        </div>
+    </div>
+
+    <canvas id="texture-canvas" width="1024" height="1024" style="display:none;"></canvas>
+
+    <script>
+        // --- INIZIALIZZAZIONE SCENA THREE.JS ---
+        const canvas3D = document.getElementById('webgl-canvas');
+        const renderer = new THREE.WebGLRenderer({ canvas: canvas3D, antialias: true, alpha: true });
+        renderer.setSize(canvas3D.clientWidth, canvas3D.clientHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(45, canvas3D.clientWidth / canvas3D.clientHeight, 0.1, 100);
+        camera.position.set(0, 2, 5);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        // ILLUMINAZIONE STUDIO
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        dirLight.position.set(5, 8, 5);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+
+        const fillLight = new THREE.DirectionalLight(0xd4af37, 0.4);
+        fillLight.position.set(-5, -2, -5);
+        scene.add(fillLight);
+
+        // Oggetto mesh globale
+        let currentPackageMesh = null;
+
+        // --- DYNAMIC TEXTURE GENERATOR ---
+        const texCanvas = document.getElementById('texture-canvas');
+        const ctx = texCanvas.getContext('2d');
+
+        function generateTexture() {
+            const brand = document.getElementById('brandName').value || 'BRAND';
+            const bgCol = document.getElementById('bgColor').value;
+            const textCol = document.getElementById('textColor').value;
+            const fontType = document.getElementById('typography').value;
+            const product = document.getElementById('productType').value;
+
+            // Sfondo
+            ctx.fillStyle = bgCol;
+            ctx.fillRect(0, 0, 1024, 1024);
+
+            // Frame/Bordo Decorativo
+            ctx.strokeStyle = textCol;
+            ctx.lineWidth = 12;
+            ctx.strokeRect(60, 60, 904, 904);
+            ctx.lineWidth = 4;
+            ctx.strokeRect(80, 80, 864, 864);
+
+            // Font Tipografico
+            let fontFamily = 'sans-serif';
+            if (fontType === 'serif') fontFamily = '"Playfair Display", Georgia, serif';
+            else if (fontType === 'mono') fontFamily = 'Courier New, monospace';
+
+            // Logo Principale
+            ctx.fillStyle = textCol;
+            ctx.textAlign = 'center';
+            ctx.font = `bold 90px ${fontFamily}`;
+            ctx.fillText(brand.toUpperCase(), 512, 480);
+
+            // Sottotitolo
+            ctx.font = `30px ${fontFamily}`;
+            let sub = 'EAU DE PARFUM';
+            if (product === 'eco-food') sub = 'ORGANIC CRAFT';
+            if (product === 'beverage') sub = 'PREMIUM SPIRIT';
+            if (product === 'tech') sub = 'DESIGN EDITION';
+            ctx.fillText(sub, 512, 560);
+
+            // Dettagli Eco/Volume
+            ctx.font = `22px sans-serif`;
+            ctx.fillText('50 ML / 1.7 FL. OZ.', 512, 880);
+
+            const texture = new THREE.CanvasTexture(texCanvas);
+            texture.needsUpdate = true;
+            return texture;
+        }
+
+        // --- GENERATORE GEOMETRIE POLIEDRICHE ---
+        function getPolyhedronGeometry(type) {
+            switch(type) {
+                case 'tetrahedron': return new THREE.TetrahedronGeometry(1.5);
+                case 'octahedron': return new THREE.OctahedronGeometry(1.4);
+                case 'dodecahedron': return new THREE.DodecahedronGeometry(1.3);
+                case 'icosahedron': return new THREE.IcosahedronGeometry(1.3);
+                case 'hexagonalPrisma': return new THREE.CylinderGeometry(1.2, 1.2, 2.2, 6);
+                case 'cube':
+                default: return new THREE.BoxGeometry(1.8, 2.2, 1.8);
+            }
+        }
+
+        // --- AGGIORNAMENTO MODELLO 3D ---
+        function update3DModel() {
+            if (currentPackageMesh) scene.remove(currentPackageMesh);
+
+            const polyType = document.getElementById('polyhedron').value;
+            const matType = document.getElementById('material').value;
+            const finish = document.getElementById('finish').value;
+
+            const geometry = getPolyhedronGeometry(polyType);
+            const texture = generateTexture();
+
+            let roughness = 0.5;
+            let metalness = 0.1;
+            let clearcoat = 0.0;
+
+            if (matType === 'kraft') { roughness = 0.9; metalness = 0.0; }
+            if (matType === 'metal') { roughness = 0.2; metalness = 0.8; }
+            if (matType === 'glass') { roughness = 0.1; metalness = 0.1; }
+
+            if (finish === 'gloss') { roughness = 0.1; clearcoat = 1.0; }
+            if (finish === 'metalFoil') { metalness = 0.5; }
+
+            const material = new THREE.MeshPhysicalMaterial({
+                map: texture,
+                roughness: roughness,
+                metalness: metalness,
+                clearcoat: clearcoat,
+                clearcoatRoughness: 0.1
+            });
+
+            currentPackageMesh = new THREE.Mesh(geometry, material);
+            currentPackageMesh.castShadow = true;
+            currentPackageMesh.receiveShadow = true;
+            scene.add(currentPackageMesh);
+
+            evaluateDesign();
+        }
+
+        // --- VALUTAZIONE PENTAWARDS SCORE ---
+        function evaluateDesign() {
+            const poly = document.getElementById('polyhedron').value;
+            const product = document.getElementById('productType').value;
+            const mat = document.getElementById('material').value;
+
+            let visual = 60;
+            let eco = 50;
+            let coherence = 60;
+            let feedback = "";
+
+            // Logica Forme Poliedriche
+            if (poly === 'dodecahedron' || poly === 'icosahedron') {
+                visual += 30; // Altissimo shelf impact
+                eco -= 20; // Più difficile da trasportare/ottimizzare negli imballaggi secondari
+                feedback = "Forma poliedrica complessa: garantisce un impatto visivo straordinario sullo scaffale, ma riduce l'efficienza di stoccaggio.";
+            } else if (poly === 'cube' || poly === 'hexagonalPrisma') {
+                eco += 30;
+                feedback = "Geometria efficiente. Massimizza lo spazio nei cartoni di spedizione mantenendo un design pulito.";
+            } else if (poly === 'tetrahedron') {
+                visual += 20;
+                if (product === 'tech' || product === 'luxury') coherence += 20;
+                feedback = "Forma tetraedrica: eccellente per edizioni limitate e prodotti di rottura.";
+            }
+
+            if (mat === 'kraft') eco += 20;
+
+            visual = Math.min(100, visual);
+            eco = Math.max(10, Math.min(100, eco));
+            coherence = Math.min(100, coherence);
+            const total = Math.round((visual + eco + coherence) / 3);
+
+            document.getElementById('scoreVisual').textContent = visual + '%';
+            document.getElementById('barVisual').style.width = visual + '%';
+            document.getElementById('scoreEco').textContent = eco + '%';
+            document.getElementById('barEco').style.width = eco + '%';
+            document.getElementById('scoreCoherence').textContent = coherence + '%';
+            document.getElementById('barCoherence').style.width = coherence + '%';
+            document.getElementById('scoreTotal').textContent = total + '/100';
+            document.getElementById('feedbackText').textContent = feedback;
+        }
+
+        // Event Listeners
+        const inputs = ['polyhedron', 'brandName', 'productType', 'material', 'finish', 'typography', 'bgColor', 'textColor'];
+        inputs.forEach(id => {
+            document.getElementById(id).addEventListener('input', update3DModel);
+        });
+
+        // Loop di Animazione
+        function animate() {
+            requestAnimationFrame(animate);
+            if (currentPackageMesh) {
+                currentPackageMesh.rotation.y += 0.005; // Rotazione continua per preview 360°
+            }
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // Window Resize
+        window.addEventListener('resize', () => {
+            camera.aspect = canvas3D.clientWidth / canvas3D.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(canvas3D.clientWidth, canvas3D.clientHeight);
+        });
+
+        // Avvio
+        update3DModel();
+        animate();
+    </script>
+</body>
+</html>
