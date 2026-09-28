@@ -1,0 +1,2418 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulatore 3D — Musificazione, Manipolatori, Analizzatori, WAV, MIDI & JSON</title>
+<style>
+:root {
+  --bg-dark: #0f172a;
+  --panel-bg: rgba(15, 23, 42, 0.94);
+  --border-color: #33475f;
+  --accent: #38bdf8;
+  --gold: #f5c86b;
+  --danger: #ef4444;
+  --success: #22c55e;
+  --text: #f8fafc;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+body, html { width: 100%; height: 100%; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg-dark); color: var(--text); }
+
+#canvas-container { width: 100vw; height: 100vh; position: relative; }
+canvas { display: block; width: 100%; height: 100%; }
+
+/* PULSANTI AUDIO & RECORDING IN ALTO AL CENTRO */
+#audio-center-bar {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  background: var(--panel-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-color);
+  padding: 8px 16px;
+  border-radius: 30px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+  z-index: 100;
+}
+
+.btn-audio {
+  padding: 8px 14px;
+  border-radius: 20px;
+  border: none;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.btn-audio-play { background: #16a34a; color: #fff; }
+.btn-audio-play:hover { background: #22c55e; }
+
+.btn-audio-stop { background: #dc2626; color: #fff; }
+.btn-audio-stop:hover { background: #ef4444; }
+
+.btn-audio-rec { background: #e11d48; color: #fff; }
+.btn-audio-rec.recording { background: #be123c; animation: pulse 1s infinite alternate; }
+
+.btn-audio-midi { background: #8b5cf6; color: #fff; }
+.btn-audio-midi:hover { background: #a78bfa; }
+
+@keyframes pulse {
+  from { box-shadow: 0 0 4px #f43f5e; }
+  to { box-shadow: 0 0 16px #f43f5e; }
+}
+
+/* PANNELLO PENTAGRAMMA + PIANOFORTE (IN BASSO A DESTRA VICINO AI PIP) */
+#music-display-bar {
+  position: absolute;
+  bottom: 16px;
+  right: 170px;
+  background: var(--panel-bg);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--accent);
+  border-radius: 16px;
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+  z-index: 90;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+#music-display-bar.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(20px);
+}
+
+.music-title-info {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+
+#staffCanvas { background: #f8fafc; border-radius: 6px; }
+#pianoCanvas { background: #020617; border-radius: 6px; border: 1px solid var(--border-color); }
+
+/* PANNELLO TRE FINESTRE ANALISI AUDIO (IN BASSO A SINISTRA) */
+#analyzer-display-bar {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+  z-index: 85;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  max-width: calc(100vw - 32px);
+}
+
+#analyzer-display-bar.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(20px);
+}
+
+.analyzer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #1e293b;
+  padding-bottom: 4px;
+}
+
+.analyzer-main-title {
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--accent);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.analyzer-grid {
+  display: flex;
+  gap: 12px;
+}
+
+.analyzer-card {
+  background: #090d16;
+  border: 1px solid #1e293d;
+  border-radius: 10px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 280px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.card-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.card-sub {
+  font-size: 9px;
+  color: #64748b;
+}
+
+.analyzer-card canvas {
+  background: #030712;
+  border-radius: 6px;
+  border: 1px solid #111827;
+  display: block;
+}
+
+/* PANNELLO PRINCIPALE TOOLBAR (IN ALTO A DESTRA) */
+#main-toolbar {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 270px;
+  background: var(--panel-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  z-index: 10;
+}
+
+h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent); }
+.sub { font-size: 10px; color: #94a3b8; line-height: 1.2; }
+
+.btn {
+  padding: 8px 10px;
+  background: #1e293b;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.btn:hover { background: #334155; border-color: var(--accent); }
+.btn.active { background: #0284c7; border-color: var(--accent); color: #fff; }
+
+.btn-row { display: flex; gap: 6px; }
+.btn-row .btn { flex: 1; }
+
+/* CONTENITORE VISTE (IN BASSO A DESTRA) */
+#pip-views-container {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.pip-box {
+  width: 140px;
+  height: 85px;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.5);
+  position: relative;
+  overflow: hidden;
+}
+
+.pip-label {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  font-size: 8px;
+  font-weight: bold;
+  text-transform: uppercase;
+  background: rgba(0,0,0,0.65);
+  padding: 2px 5px;
+  border-radius: 4px;
+  color: var(--accent);
+}
+
+/* FINESTRA PROPRIETÀ PALLE (A SINISTRA) */
+#property-window {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  width: 310px;
+  background: var(--panel-bg);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.6);
+  z-index: 20;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+
+#property-window.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-15px);
+}
+
+.prop-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 6px;
+}
+.prop-title { font-size: 12px; font-weight: bold; color: var(--gold); }
+.close-btn { cursor: pointer; font-size: 13px; color: #94a3b8; }
+.close-btn:hover { color: #fff; }
+
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field.hidden { display: none !important; }
+.field label { font-size: 10px; color: #cbd5e1; display: flex; justify-content: space-between; font-weight: 600; }
+.field input[type=range] { accent-color: var(--accent); }
+
+.custom-select {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: #1e293b;
+  border: 1px solid var(--border-color);
+  color: #f8fafc;
+  font-size: 11px;
+  outline: none;
+  cursor: pointer;
+}
+
+#sine-visualizer-box {
+  width: 100%;
+  height: 65px;
+  background: #020617;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: hidden;
+}
+#sineCanvas { width: 100%; height: 100%; }
+
+.palette-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.swatch {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+}
+.swatch.selected { border-color: #ffffff; transform: scale(1.15); box-shadow: 0 0 8px rgba(255,255,255,0.8); }
+
+.btn-danger {
+  background: #7f1d1d;
+  border: 1px solid var(--danger);
+  color: #fff;
+  padding: 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.btn-danger:hover { background: #991b1b; }
+
+#status-badge {
+  font-size: 10px;
+  background: rgba(56, 189, 248, 0.1);
+  color: var(--accent);
+  padding: 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  line-height: 1.3;
+}
+
+#fileInputJson { display: none; }
+</style>
+<!-- THREE.JS & CONTROLS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
+</head>
+<body>
+
+<div id="canvas-container"></div>
+
+<!-- BARRA AUDIO & ESPORTAZIONI -->
+<div id="audio-center-bar">
+  <button class="btn-audio btn-audio-play" id="btnPlayAudio">🔊 Avvia Audio</button>
+  <button class="btn-audio btn-audio-stop" id="btnStopAudio">🔇 Ferma</button>
+  <button class="btn-audio btn-audio-rec" id="btnRecWav">🎙️ Registra WAV</button>
+  <button class="btn-audio btn-audio-midi" id="btnExportMidi">🎹 Esporta MIDI</button>
+</div>
+
+<!-- PENTAGRAMMA & PIANOFORTE -->
+<div id="music-display-bar" class="hidden">
+  <div class="music-title-info">
+    <span>🎹 MUSIFICAZIONE DINAMICA</span>
+    <span id="currentNoteText" style="color: var(--accent);">NOTA: -</span>
+  </div>
+  <canvas id="staffCanvas" width="360" height="75"></canvas>
+  <canvas id="pianoCanvas" width="360" height="50"></canvas>
+</div>
+
+<!-- FINESTRA VISUALIZZAZIONE ANALIZZATORE 3 BOX (DOMINIO TEMPO, FFT, SONOGRAMMA) -->
+<div id="analyzer-display-bar" class="hidden">
+  <div class="analyzer-header">
+    <span class="analyzer-main-title">Simulatore di Segnali e Analisi Audio</span>
+    <span id="analyzerStatusText" style="color: var(--success); font-size: 10px; font-weight: bold;">ATTIVO</span>
+  </div>
+  <div class="analyzer-grid">
+    <!-- 1. DOMINIO DEL TEMPO -->
+    <div class="analyzer-card">
+      <div class="card-header">
+        <span class="card-title">Dominio del Tempo</span>
+        <span class="card-sub">(Oscilloscopio)</span>
+      </div>
+      <canvas id="timeCanvas" width="280" height="130"></canvas>
+    </div>
+
+    <!-- 2. SPETTRO DI FREQUENZA (FFT) -->
+    <div class="analyzer-card">
+      <div class="card-header">
+        <span class="card-title">Spettro di Frequenza</span>
+        <span class="card-sub">(Dominio Frequenze - FFT)</span>
+      </div>
+      <canvas id="fftCanvas" width="280" height="130"></canvas>
+    </div>
+
+    <!-- 3. SONOGRAMMA 2D -->
+    <div class="analyzer-card">
+      <div class="card-header">
+        <span class="card-title">Sonogramma</span>
+        <span class="card-sub">(Tempo - Frequenza 2D)</span>
+      </div>
+      <canvas id="sonogramCanvas" width="280" height="130"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- FINESTRA PROPRIETÀ PALLE -->
+<div id="property-window" class="hidden">
+  <div class="prop-header">
+    <span class="prop-title" id="propTitle">Proprietà Palla #1</span>
+    <span class="close-btn" id="btnCloseProp">✖</span>
+  </div>
+
+  <div class="field">
+    <label>Colore Palla</label>
+    <div class="palette-grid" id="paletteGrid"></div>
+  </div>
+
+  <!-- CAMPO GESTIONE LINK E COLLEGAMENTI ATTIVI -->
+  <div class="field hidden" id="fieldLinks">
+    <label>Collegamenti Attivi (Link)</label>
+    <div id="linksList" style="display: flex; flex-direction: column; gap: 4px; max-height: 110px; overflow-y: auto;"></div>
+  </div>
+
+  <!-- CAMPO GENERATORI (PALLA ROSSA) -->
+  <div class="field hidden" id="fieldGeneratori">
+    <label>Generatori 🔴 (Output 'O')</label>
+    <select id="selectGeneratori" class="custom-select">
+      <option value="onda sinusoidale">onda sinusoidale (dinamica)</option>
+      <option value="attrattori">attrattori</option>
+      <option value="automi cellulari">automi cellulari</option>
+    </select>
+  </div>
+
+  <!-- CAMPO MANIPOLATORI (PALLA BLU) -->
+  <div class="field hidden" id="fieldManipolatori">
+    <label>Manipolatori 🔵 (Input 'I1', 'I2' ➔ Output 'O')</label>
+    <select id="selectManipolatori" class="custom-select">
+      <option value="modulatore di ampiezza">modulatore di ampiezza</option>
+      <option value="modulatore di frequenza">modulatore di frequenza</option>
+      <option value="sovrapposizione di onde">sovrapposizione di onde</option>
+    </select>
+  </div>
+
+  <!-- CAMPO ANALIZZATORI (PALLA VERDE) -->
+  <div class="field hidden" id="fieldAnalizzatori">
+    <label>Analizzatori 🟢 (Input 'I')</label>
+    <select id="selectAnalizzatori" class="custom-select">
+      <option value="spettrogramma">spettrogramma / FFT completo</option>
+    </select>
+  </div>
+
+  <!-- CAMPO GRAFICA ONDA SINUSOIDALE -->
+  <div class="field hidden" id="fieldSineWave">
+    <label>Segnale Oscillante nel Tempo</label>
+    <div id="sine-visualizer-box">
+      <canvas id="sineCanvas" width="270" height="65"></canvas>
+    </div>
+    
+    <label style="margin-top: 4px;">Freq. Centrale Base: <b id="valBaseFreq">440 Hz</b></label>
+    <input type="range" id="rangeBaseFreq" min="60" max="2000" value="440" step="10">
+
+    <label>Ampiezza Variazione Min/Max: <b id="valAmpFreq">±150 Hz</b></label>
+    <input type="range" id="rangeAmpFreq" min="0" max="400" value="150" step="5">
+
+    <label>Velocità Variazione Segnale: <b id="valModSpeed">1.0 Hz</b></label>
+    <input type="range" id="rangeModSpeed" min="0.1" max="5.0" value="1.0" step="0.1">
+
+    <label>Ampiezza Segnale (Vol): <b id="valSignalAmp">1.0</b></label>
+    <input type="range" id="rangeSignalAmp" min="0.1" max="2.0" value="1.0" step="0.05">
+  </div>
+
+  <!-- CAMPO SUONI (PALLA GIALLA) -->
+  <div class="field hidden" id="fieldSuoni">
+    <label>Suoni 🟡 (Input 'I')</label>
+    <select id="selectSuoni" class="custom-select">
+      <option value="sonificazione">sonificazione</option>
+      <option value="musificazione">musificazione</option>
+    </select>
+  </div>
+
+  <!-- CAMPO EXTRA PER MUSIFICAZIONE -->
+  <div class="field hidden" id="fieldMusificazione">
+    <label>Estensione Ottave: <b id="valOctaves">4</b></label>
+    <input type="range" id="rangeOctaves" min="2" max="8" value="4" step="1">
+
+    <label style="margin-top: 4px;">Velocità Ritmo (BPM): <b id="valSpeed">140</b></label>
+    <input type="range" id="rangeSpeed" min="40" max="300" value="140" step="5">
+  </div>
+
+  <div class="field">
+    <label>Posizione X <b id="valX">0</b></label>
+    <input type="range" id="posX" min="-8" max="8" step="0.1">
+  </div>
+
+  <div class="field">
+    <label>Posizione Y <b id="valY">0</b></label>
+    <input type="range" id="posY" min="-8" max="8" step="0.1">
+  </div>
+
+  <div class="field">
+    <label>Posizione Z <b id="valZ">0</b></label>
+    <input type="range" id="posZ" min="-8" max="8" step="0.1">
+  </div>
+
+  <button class="btn-danger" id="btnDeleteBall">🗑️ Elimina Palla</button>
+</div>
+
+<!-- TOOLBAR PRINCIPALE -->
+<div id="main-toolbar">
+  <div>
+    <h2>CONFIGURATORE 3D</h2>
+    <div class="sub">Musificazione, Manipolatori, Analizzatori & Recording</div>
+  </div>
+
+  <button class="btn" id="btnAddBall">➕ Nuova Palla</button>
+  <div class="btn-row">
+    <button class="btn" id="btnConnect">🔗 Collega</button>
+    <button class="btn" id="btnDisconnect">✂️ Scollega</button>
+  </div>
+  <button class="btn" id="btnRandomizeWalls">🎨 Rigenera Pareti</button>
+
+  <div class="btn-row">
+    <button class="btn" id="btnSaveJson">💾 Salva JSON</button>
+    <button class="btn" id="btnLoadJson">📂 Carica JSON</button>
+  </div>
+  <input type="file" id="fileInputJson" accept=".json">
+
+  <div id="status-badge">
+    Collega i Manipolatori Blu 🔵 o Analizzatori Verdi 🟢 tra Generatori 🔴 e Suoni 🟡!
+  </div>
+</div>
+
+<!-- VISTE ORTOGRAFICHE -->
+<div id="pip-views-container">
+  <div class="pip-box"><div class="pip-label">Vista dall'Alto (Top)</div></div>
+  <div class="pip-box"><div class="pip-label">Vista Frontale (Front)</div></div>
+  <div class="pip-box"><div class="pip-label">Vista Laterale (Side)</div></div>
+</div>
+
+<script>
+// ===== PALETTE COLORI =====
+const COLOR_PALETTE = [
+  '#e63946', // 0. Rosso (Generatore 'O')
+  '#ffb703', // 1. Giallo (Suono 'I')
+  '#219ebc', // 2. Blu (Manipolatore 'I1','I2','O')
+  '#023047', // 3. Blu Scuro
+  '#fb8500', // 4. Arancione
+  '#7209b7', // 5. Viola
+  '#22c55e'  // 6. Verde (Analizzatore 'I')
+];
+
+// ===== STATO GLOBALE =====
+let balls = [];
+let tubes = [];
+let roomWalls = [];
+let nextId = 1;
+
+let selectedBall = null;
+let connectMode = false;
+let disconnectMode = false;
+let connectFirstBall = null;
+let disconnectFirstBall = null;
+
+// ENGINE AUDIO & SINTESI
+let audioCtx = null;
+let musicIntervalTimer = null;
+let activeAudioNodes = [];
+let isAudioPlaying = false;
+let globalTime = 0;
+
+// RECORDING AUDIO WAV
+let isRecordingWav = false;
+let wavAudioChunks = [];
+let wavScriptProcessor = null;
+
+// RECORDING MUSICA MIDI
+let recordedMidiEvents = [];
+let midiStartTime = 0;
+
+// HISTORIC NOTES & PIANO ACTIVE
+let noteHistory = [];
+let currentActiveMidi = null;
+
+// ===== THREE.JS SCENA =====
+const container = document.getElementById('canvas-container');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a202c);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+container.appendChild(renderer.domElement);
+
+// ===== CAMERE =====
+const aspect = window.innerWidth / window.innerHeight;
+
+const cameraMain = new THREE.PerspectiveCamera(45, aspect, 0.1, 1000);
+cameraMain.position.set(0, 1, 17);
+
+const cameraTop = new THREE.OrthographicCamera(-9, 9, 6, -6, 0.1, 1000);
+cameraTop.position.set(0, 30, 0);
+cameraTop.lookAt(0, 0, 0);
+cameraTop.up.set(0, 0, -1);
+
+const cameraFront = new THREE.OrthographicCamera(-9, 9, 6, -6, 0.1, 1000);
+cameraFront.position.set(0, 0, 30);
+cameraFront.lookAt(0, 0, 0);
+
+const cameraSide = new THREE.OrthographicCamera(-9, 9, 6, -6, 0.1, 1000);
+cameraSide.position.set(30, 0, 0);
+cameraSide.lookAt(0, 0, 0);
+
+const controls = new THREE.OrbitControls(cameraMain, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+
+const transformControls = new THREE.TransformControls(cameraMain, renderer.domElement);
+scene.add(transformControls);
+
+transformControls.addEventListener('change', () => {
+  if (selectedBall) {
+    updateTubesForBall(selectedBall);
+    updateUIValues(selectedBall);
+  }
+});
+
+transformControls.addEventListener('dragging-changed', (e) => {
+  controls.enabled = !e.value;
+});
+
+// ===== ILLUMINAZIONE =====
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
+scene.add(ambientLight);
+
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+dirLight.position.set(10, 20, 15);
+dirLight.castShadow = true;
+scene.add(dirLight);
+
+// ===== PARETI MONDRIAN =====
+function generateMondrianGridTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 1024;
+  canvas.height = 1024;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#dbd6c9';
+  ctx.fillRect(0, 0, 1024, 1024);
+
+  const cols = [0, 120, 260, 420, 580, 740, 880, 1024];
+  const rows = [0, 140, 300, 480, 660, 820, 1024];
+  const accentColors = ['#a81c1c', '#d9a014', '#2d6a4f', '#4a5568', '#b8b3a5', '#dbd6c9'];
+
+  for (let i = 0; i < cols.length - 1; i++) {
+    for (let j = 0; j < rows.length - 1; j++) {
+      if (Math.random() < 0.22) {
+        ctx.fillStyle = accentColors[Math.floor(Math.random() * accentColors.length)];
+        ctx.fillRect(cols[i], rows[j], cols[i+1] - cols[i], rows[j+1] - rows[j]);
+      }
+    }
+  }
+
+  ctx.strokeStyle = '#121212';
+  ctx.lineWidth = 14;
+
+  cols.forEach(x => { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 1024); ctx.stroke(); });
+  rows.forEach(y => { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(1024, y); ctx.stroke(); });
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+  return texture;
+}
+
+function createRandomRoom() {
+  roomWalls.forEach(w => {
+    if (w.material.map) w.material.map.dispose();
+    w.material.dispose();
+    scene.remove(w);
+  });
+  roomWalls = [];
+
+  const roomSize = 20;
+  const half = roomSize / 2;
+
+  const wallConfigs = [
+    { pos: [0, -half, 0], rot: [-Math.PI / 2, 0, 0] },
+    { pos: [0, half, 0], rot: [Math.PI / 2, 0, 0] },
+    { pos: [0, 0, -half], rot: [0, 0, 0] },
+    { pos: [-half, 0, 0], rot: [0, Math.PI / 2, 0] },
+    { pos: [half, 0, 0], rot: [0, -Math.PI / 2, 0] }
+  ];
+
+  wallConfigs.forEach(cfg => {
+    const geo = new THREE.PlaneGeometry(roomSize, roomSize);
+    const texture = generateMondrianGridTexture();
+    const mat = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.4, metalness: 0.1, side: THREE.DoubleSide });
+    const wallMesh = new THREE.Mesh(geo, mat);
+    wallMesh.position.set(...cfg.pos);
+    wallMesh.rotation.set(...cfg.rot);
+    wallMesh.receiveShadow = true;
+    scene.add(wallMesh);
+    roomWalls.push(wallMesh);
+  });
+}
+
+createRandomRoom();
+
+// ===== ETICHETTE & PORTE ('O', 'I', 'I1', 'I2') =====
+function createLabelSprite(text, bgHex) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = bgHex;
+  ctx.beginPath();
+  ctx.arc(64, 64, 56, 0, 2 * Math.PI);
+  ctx.fill();
+
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = '#ffffff';
+  ctx.stroke();
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 54px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 64, 64);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  const spriteMat = new THREE.SpriteMaterial({ map: texture });
+  const sprite = new THREE.Sprite(spriteMat);
+  sprite.scale.set(0.5, 0.5, 1);
+  return sprite;
+}
+
+function createPortMesh(label, bgHex) {
+  const group = new THREE.Group();
+  const cylinderGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.3, 16);
+  cylinderGeo.rotateX(Math.PI / 2);
+
+  const portMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.3, metalness: 0.8 });
+  const portMesh = new THREE.Mesh(cylinderGeo, portMat);
+  portMesh.position.set(0, 0, 0.15);
+
+  const sprite = createLabelSprite(label, bgHex);
+  sprite.position.set(0, 0, 0.45);
+
+  group.add(portMesh);
+  group.add(sprite);
+  return group;
+}
+
+function updateBallPorts(ball) {
+  if (ball.portGroup) {
+    ball.mesh.remove(ball.portGroup);
+    ball.portGroup = null;
+  }
+
+  const color = ball.color.toLowerCase();
+  const isRed = color === COLOR_PALETTE[0].toLowerCase();
+  const isYellow = color === COLOR_PALETTE[1].toLowerCase();
+  const isBlue = color === COLOR_PALETTE[2].toLowerCase();
+  const isGreen = color === COLOR_PALETTE[6].toLowerCase();
+
+  const group = new THREE.Group();
+
+  if (isRed) {
+    const portO = createPortMesh('O', '#dc2626');
+    portO.position.set(0.8, 0, 0);
+    group.add(portO);
+  } else if (isYellow) {
+    const portI = createPortMesh('I', '#d97706');
+    portI.position.set(-0.8, 0, 0);
+    group.add(portI);
+  } else if (isBlue) {
+    const portI1 = createPortMesh('I1', '#0284c7');
+    portI1.position.set(-0.8, 0.35, 0);
+
+    const portI2 = createPortMesh('I2', '#0284c7');
+    portI2.position.set(-0.8, -0.35, 0);
+
+    const portO = createPortMesh('O', '#2563eb');
+    portO.position.set(0.8, 0, 0);
+
+    group.add(portI1);
+    group.add(portI2);
+    group.add(portO);
+  } else if (isGreen) {
+    const portI = createPortMesh('I', '#16a34a');
+    portI.position.set(-0.8, 0, 0);
+    group.add(portI);
+  }
+
+  ball.mesh.add(group);
+  ball.portGroup = group;
+}
+
+// ===== CREAZIONE PALLE E TUBI =====
+function createSphereMesh(colorHex) {
+  const geo = new THREE.SphereGeometry(0.8, 32, 32);
+  const mat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.25, metalness: 0.3 });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
+function addBall(x = 0, y = 0, z = 0, colorHex = null) {
+  if (!colorHex) {
+    colorHex = COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)];
+  }
+  
+  const mesh = createSphereMesh(colorHex);
+  mesh.position.set(x, y, z);
+  
+  const ballData = {
+    id: nextId++,
+    mesh: mesh,
+    color: colorHex,
+    generatorType: 'onda sinusoidale',
+    manipulatorType: 'modulatore di ampiezza',
+    soundType: 'sonificazione',
+    analyzerType: 'spettrogramma',
+    baseFrequency: 440, // Hz
+    ampFrequency: 150,  // Hz
+    modSpeed: 1.0,      // Hz
+    signalAmp: 1.0,     // Vol
+    octaves: 4,         // Musification octaves
+    speedBpm: 140,      // Speed BPM
+    portGroup: null
+  };
+  
+  mesh.userData = { ballId: ballData.id };
+  scene.add(mesh);
+  balls.push(ballData);
+
+  updateBallPorts(ballData);
+  selectBall(ballData);
+  return ballData;
+}
+
+function getPortWorldPosition(ball, portName) {
+  const localPos = new THREE.Vector3(0, 0, 0);
+
+  if (portName === 'O') {
+    localPos.set(0.8, 0, 0);
+  } else if (portName === 'I') {
+    localPos.set(-0.8, 0, 0);
+  } else if (portName === 'I1') {
+    localPos.set(-0.8, 0.35, 0);
+  } else if (portName === 'I2') {
+    localPos.set(-0.8, -0.35, 0);
+  }
+
+  ball.mesh.updateMatrixWorld(true);
+  return ball.mesh.localToWorld(localPos.clone());
+}
+
+function updateTubeTransform(tubeMesh, ballA, ballB, targetPort = 'I') {
+  const startPt = getPortWorldPosition(ballA, 'O');
+  const endPt = getPortWorldPosition(ballB, targetPort);
+
+  const dist = startPt.distanceTo(endPt);
+  if (dist < 0.0001) return;
+
+  const mid = new THREE.Vector3().addVectors(startPt, endPt).multiplyScalar(0.5);
+
+  tubeMesh.position.copy(mid);
+  tubeMesh.scale.set(1, dist, 1);
+
+  const dir = new THREE.Vector3().subVectors(endPt, startPt).normalize();
+  const up = new THREE.Vector3(0, 1, 0);
+  const q = new THREE.Quaternion().setFromUnitVectors(up, dir);
+  tubeMesh.quaternion.copy(q);
+}
+
+// ===== GESTIONE CONNESSONI E RIMOZIONE LINK =====
+function connectBalls(ballA, ballB) {
+  if (ballA.id === ballB.id) return;
+
+  const colorA = ballA.color.toLowerCase();
+  const colorB = ballB.color.toLowerCase();
+
+  const isRedA = colorA === COLOR_PALETTE[0].toLowerCase();
+  const isBlueA = colorA === COLOR_PALETTE[2].toLowerCase();
+
+  const isYellowB = colorB === COLOR_PALETTE[1].toLowerCase();
+  const isBlueB = colorB === COLOR_PALETTE[2].toLowerCase();
+  const isGreenB = colorB === COLOR_PALETTE[6].toLowerCase();
+
+  if (!isRedA && !isBlueA) {
+    document.getElementById('status-badge').innerHTML = `❌ La sorgente deve essere una palla Rossa ('O') o Blu ('O')!`;
+    return;
+  }
+  if (!isYellowB && !isBlueB && !isGreenB) {
+    document.getElementById('status-badge').innerHTML = `❌ La destinazione deve essere Gialla ('I'), Blu ('I1','I2') o Verde ('I')!`;
+    return;
+  }
+
+  let targetPort = 'I';
+  if (isBlueB) {
+    const existingInlets = tubes.filter(t => t.ballB.id === ballB.id);
+    if (existingInlets.length === 0) {
+      targetPort = 'I1';
+    } else if (existingInlets.length === 1) {
+      targetPort = existingInlets[0].targetPort === 'I1' ? 'I2' : 'I1';
+    } else {
+      document.getElementById('status-badge').innerHTML = `⚠️ Palla Blu #${ballB.id} ha già entrambi gli ingressi (I1 e I2) collegati!`;
+      return;
+    }
+  }
+
+  const exists = tubes.some(t => t.ballA.id === ballA.id && t.ballB.id === ballB.id && t.targetPort === targetPort);
+  if (exists) return;
+
+  const geo = new THREE.CylinderGeometry(0.14, 0.14, 1, 16);
+  const mat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.2, metalness: 0.7 });
+  const tubeMesh = new THREE.Mesh(geo, mat);
+  tubeMesh.castShadow = true;
+  scene.add(tubeMesh);
+
+  tubes.push({ id: nextId++, ballA, ballB, targetPort, mesh: tubeMesh });
+  updateTubeTransform(tubeMesh, ballA, ballB, targetPort);
+
+  if (selectedBall) updateUIValues(selectedBall);
+  updateDisplayBarsVisibility();
+
+  document.getElementById('status-badge').innerHTML = `✅ Tubo collegato: #${ballA.id} ➔ #${ballB.id} (Porta: ${targetPort}).`;
+}
+
+function removeTube(tube) {
+  if (!tube) return;
+  scene.remove(tube.mesh);
+  if (tube.mesh.geometry) tube.mesh.geometry.dispose();
+  if (tube.mesh.material) tube.mesh.material.dispose();
+
+  tubes = tubes.filter(t => t.id !== tube.id);
+
+  if (selectedBall) updateUIValues(selectedBall);
+  updateDisplayBarsVisibility();
+
+  if (isAudioPlaying) playAudioSignal();
+  document.getElementById('status-badge').innerHTML = `🗑️ Collegamento rimosso.`;
+}
+
+function disconnectBalls(ballA, ballB) {
+  const tubesToRemove = tubes.filter(t => 
+    (t.ballA.id === ballA.id && t.ballB.id === ballB.id) ||
+    (t.ballA.id === ballB.id && t.ballB.id === ballA.id)
+  );
+
+  if (tubesToRemove.length === 0) {
+    document.getElementById('status-badge').innerHTML = `⚠️ Nessun collegamento trovato tra Palla #${ballA.id} e Palla #${ballB.id}.`;
+    return;
+  }
+
+  tubesToRemove.forEach(t => removeTube(t));
+  document.getElementById('status-badge').innerHTML = `✂️ Collegamento tra Palla #${ballA.id} e Palla #${ballB.id} eliminato.`;
+}
+
+function updateTubesForBall(ball) {
+  tubes.forEach(t => {
+    if (t.ballA.id === ball.id || t.ballB.id === ball.id) {
+      updateTubeTransform(t.mesh, t.ballA, t.ballB, t.targetPort);
+    }
+  });
+}
+
+// ===== GESTIONE DINAMICA VISIBILITÀ FINESTRE DI VISUALIZZAZIONE =====
+function updateDisplayBarsVisibility() {
+  const musicBar = document.getElementById('music-display-bar');
+  const analyzerBar = document.getElementById('analyzer-display-bar');
+  if (!musicBar || !analyzerBar) return;
+
+  let showMusic = false;
+  let showAnalyzer = false;
+
+  if (selectedBall) {
+    const color = selectedBall.color.toLowerCase();
+    const isRed = color === COLOR_PALETTE[0].toLowerCase();
+    const isYellow = color === COLOR_PALETTE[1].toLowerCase();
+    const isBlue = color === COLOR_PALETTE[2].toLowerCase();
+    const isGreen = color === COLOR_PALETTE[6].toLowerCase();
+
+    if (isYellow && selectedBall.soundType === 'musificazione') {
+      showMusic = true;
+    }
+
+    if (isGreen) {
+      showAnalyzer = true;
+    }
+
+    if (isRed || isBlue) {
+      const checkDestinations = (ballId, visited = new Set()) => {
+        if (visited.has(ballId)) return;
+        visited.add(ballId);
+
+        const outgoing = tubes.filter(t => t.ballA.id === ballId);
+        outgoing.forEach(t => {
+          const destBall = t.ballB;
+          const destColor = destBall.color.toLowerCase();
+
+          if (destColor === COLOR_PALETTE[1].toLowerCase() && destBall.soundType === 'musificazione') {
+            showMusic = true;
+          }
+          if (destColor === COLOR_PALETTE[6].toLowerCase()) {
+            showAnalyzer = true;
+          }
+          if (destColor === COLOR_PALETTE[2].toLowerCase()) {
+            checkDestinations(destBall.id, visited);
+          }
+        });
+      };
+
+      checkDestinations(selectedBall.id);
+    }
+  } else if (isAudioPlaying) {
+    balls.forEach(b => {
+      const c = b.color.toLowerCase();
+      if (c === COLOR_PALETTE[1].toLowerCase() && b.soundType === 'musificazione') {
+        const hasIncoming = tubes.some(t => t.ballB.id === b.id);
+        if (hasIncoming) showMusic = true;
+      }
+      if (c === COLOR_PALETTE[6].toLowerCase()) {
+        const hasIncoming = tubes.some(t => t.ballB.id === b.id);
+        if (hasIncoming) showAnalyzer = true;
+      }
+    });
+  }
+
+  musicBar.classList.toggle('hidden', !showMusic);
+  analyzerBar.classList.toggle('hidden', !showAnalyzer);
+}
+
+// ===== VALUTAZIONE RICORSIVA DEL SEGNALE SUL GRAFO =====
+function evaluateSignal(ball, t) {
+  if (!ball) return 440;
+  const color = ball.color.toLowerCase();
+
+  // 1. PALLA ROSSA (GENERATORE)
+  if (color === COLOR_PALETTE[0].toLowerCase()) {
+    const base = ball.baseFrequency || 440;
+    const amp = ball.ampFrequency || 0;
+    const speed = ball.modSpeed || 1.0;
+    const gain = ball.signalAmp || 1.0;
+
+    const val = base + Math.sin(t * speed * 2 * Math.PI) * amp;
+    return Math.max(20, val * gain);
+  }
+
+  // 2. PALLA BLU (MANIPOLATORE)
+  if (color === COLOR_PALETTE[2].toLowerCase()) {
+    const incomingTubes = tubes.filter(tb => tb.ballB.id === ball.id);
+    const tube1 = incomingTubes.find(tb => tb.targetPort === 'I1') || incomingTubes[0];
+    const tube2 = incomingTubes.find(tb => tb.targetPort === 'I2') || incomingTubes[1];
+
+    const sig1 = tube1 ? evaluateSignal(tube1.ballA, t) : 440;
+    const sig2 = tube2 ? evaluateSignal(tube2.ballA, t) : 880;
+
+    const mode = ball.manipulatorType || 'modulatore di ampiezza';
+
+    if (mode === 'modulatore di ampiezza') {
+      const mod = Math.max(0.05, sig2 / 440);
+      return sig1 * mod;
+    } else if (mode === 'modulatore di frequenza') {
+      return Math.max(20, sig1 + (sig2 * 0.5));
+    } else if (mode === 'sovrapposizione di onde') {
+      return sig1 + sig2;
+    }
+  }
+
+  return 440;
+}
+
+// ===== CANVAS PREVIEW ONDA SINUSOIDALE SUL PANNELLO PROPRIETÀ =====
+function drawSineWavePreview(ball) {
+  const canvas = document.getElementById('sineCanvas');
+  if (!canvas || !ball) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width;
+  const h = canvas.height;
+
+  ctx.fillStyle = '#020617';
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.strokeStyle = '#1e293b';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, h / 2);
+  ctx.lineTo(w, h / 2);
+  ctx.stroke();
+
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+
+  for (let x = 0; x < w; x++) {
+    const timeOffset = globalTime + (x / w) * 0.02;
+    const val = evaluateSignal(ball, timeOffset);
+    const base = ball.baseFrequency || 440;
+    const y = h / 2 - Math.sin(timeOffset * val * 2 * Math.PI) * (h / 2 - 8);
+
+    if (x === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+}
+
+// ===== ALGORITMI AVANZATI DI ANALISI AUDIO & SPETTRO =====
+function drawOscilloscope(ctx, w, h, analyserNode, sourceBall) {
+  ctx.fillStyle = '#030712';
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.strokeStyle = '#1e293d';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, h / 2);
+  ctx.lineTo(w, h / 2);
+  ctx.stroke();
+
+  ctx.strokeStyle = '#86efac';
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+
+  if (analyserNode && isAudioPlaying) {
+    const bufferLength = analyserNode.fftSize;
+    const dataArray = new Uint8Array(bufferLength);
+    analyserNode.getByteTimeDomainData(dataArray);
+
+    const sliceWidth = w / bufferLength;
+    let x = 0;
+    for (let i = 0; i < bufferLength; i++) {
+      const v = dataArray[i] / 128.0;
+      const y = (v * h) / 2;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+      x += sliceWidth;
+    }
+  } else if (sourceBall) {
+    const points = w;
+    const f1 = evaluateSignal(sourceBall, globalTime);
+    for (let x = 0; x < points; x++) {
+      const tOffset = globalTime + (x / points) * 0.015;
+      const sineVal = Math.sin(tOffset * f1 * 2 * Math.PI);
+      const y = h / 2 - sineVal * (h / 2 - 12);
+      if (x === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+  } else {
+    ctx.moveTo(0, h / 2);
+    ctx.lineTo(w, h / 2);
+  }
+  ctx.stroke();
+}
+
+function drawFFTSpectrum(ctx, w, h, analyserNode, sourceBall) {
+  ctx.fillStyle = '#030712';
+  ctx.fillRect(0, 0, w, h);
+
+  const maxFreq = 10000;
+  const ticks = [0, 2000, 4000, 6000, 8000, 10000];
+
+  const marginBottom = 16;
+  const graphH = h - marginBottom;
+
+  ctx.strokeStyle = '#1a2333';
+  ctx.fillStyle = '#64748b';
+  ctx.font = '9px sans-serif';
+  ctx.lineWidth = 1;
+
+  ticks.forEach(f => {
+    const x = (f / maxFreq) * w;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, graphH);
+    ctx.stroke();
+
+    const label = `${f}Hz`;
+    const textWidth = ctx.measureText(label).width;
+    let textX = x - textWidth / 2;
+    if (x === 0) textX = 2;
+    if (x >= w - 10) textX = w - textWidth - 2;
+    ctx.fillText(label, textX, h - 3);
+  });
+
+  const numPoints = w;
+  const magArray = new Float32Array(numPoints);
+
+  if (analyserNode && isAudioPlaying) {
+    const bufferLength = analyserNode.frequencyBinCount;
+    const freqData = new Uint8Array(bufferLength);
+    analyserNode.getByteFrequencyData(freqData);
+
+    const sampleRate = audioCtx ? audioCtx.sampleRate : 44100;
+    const nyquist = sampleRate / 2;
+
+    for (let i = 0; i < numPoints; i++) {
+      const currentF = (i / numPoints) * maxFreq;
+      const binIdx = Math.floor((currentF / nyquist) * bufferLength);
+      if (binIdx < bufferLength) {
+        magArray[i] = freqData[binIdx] / 255.0;
+      }
+    }
+  } else if (sourceBall) {
+    const f1 = evaluateSignal(sourceBall, globalTime);
+    const f2 = f1 * 2;
+
+    for (let i = 0; i < numPoints; i++) {
+      const currentF = (i / numPoints) * maxFreq;
+      
+      const d1 = currentF - f1;
+      const p1 = Math.exp(-(d1 * d1) / (2 * 60 * 60));
+
+      const d2 = currentF - f2;
+      const p2 = Math.exp(-(d2 * d2) / (2 * 60 * 60)) * 0.4;
+
+      magArray[i] = Math.min(1.0, p1 + p2);
+    }
+  }
+
+  const grad = ctx.createLinearGradient(0, 0, 0, graphH);
+  grad.addColorStop(0, 'rgba(56, 189, 248, 0.35)');
+  grad.addColorStop(1, 'rgba(56, 189, 248, 0.0)');
+
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.moveTo(0, graphH);
+
+  for (let i = 0; i < numPoints; i++) {
+    const x = i;
+    const y = graphH - magArray[i] * (graphH - 6);
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(w, graphH);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  for (let i = 0; i < numPoints; i++) {
+    const x = i;
+    const y = graphH - magArray[i] * (graphH - 6);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+}
+
+function getSonogramColor(val) {
+  const norm = val / 255.0;
+  if (norm < 0.2) {
+    return `rgb(0, 0, ${Math.floor(norm * 5 * 200)})`;
+  } else if (norm < 0.5) {
+    const r = Math.floor((norm - 0.2) * 3.33 * 255);
+    return `rgb(${r}, 0, ${255 - r})`;
+  } else if (norm < 0.8) {
+    const g = Math.floor((norm - 0.5) * 3.33 * 255);
+    return `rgb(255, ${g}, 0)`;
+  } else {
+    const b = Math.floor((norm - 0.8) * 5 * 255);
+    return `rgb(255, 255, ${b})`;
+  }
+}
+
+function drawSonogramWaterfall(ctx, w, h, analyserNode, sourceBall) {
+  const imageData = ctx.getImageData(2, 0, w - 2, h);
+  ctx.putImageData(imageData, 0, 0);
+
+  ctx.fillStyle = '#030712';
+  ctx.fillRect(w - 2, 0, 2, h);
+
+  const maxFreq = 10000;
+  let freqData = null;
+  let f1 = 0, f2 = 0;
+
+  if (analyserNode && isAudioPlaying) {
+    const bufferLength = analyserNode.frequencyBinCount;
+    freqData = new Uint8Array(bufferLength);
+    analyserNode.getByteFrequencyData(freqData);
+  } else if (sourceBall) {
+    f1 = evaluateSignal(sourceBall, globalTime);
+    f2 = f1 * 2;
+  } else {
+    return;
+  }
+
+  const sampleRate = audioCtx ? audioCtx.sampleRate : 44100;
+  const nyquist = sampleRate / 2;
+
+  for (let y = 0; y < h; y++) {
+    const currentF = ((h - 1 - y) / h) * maxFreq;
+    let val = 0;
+
+    if (freqData) {
+      const binIdx = Math.floor((currentF / nyquist) * freqData.length);
+      if (binIdx < freqData.length) {
+        val = freqData[binIdx];
+      }
+    } else {
+      const d1 = Math.abs(currentF - f1);
+      const d2 = Math.abs(currentF - f2);
+
+      if (d1 < 120) val = Math.max(val, 255 - (d1 / 120) * 255);
+      if (d2 < 120) val = Math.max(val, 180 - (d2 / 120) * 180);
+    }
+
+    if (val > 12) {
+      ctx.fillStyle = getSonogramColor(val);
+      ctx.fillRect(w - 2, y, 2, 1);
+    }
+  }
+}
+
+function drawAudioVisualizations() {
+  const timeCanvas = document.getElementById('timeCanvas');
+  const fftCanvas = document.getElementById('fftCanvas');
+  const sonogramCanvas = document.getElementById('sonogramCanvas');
+
+  if (!timeCanvas || !fftCanvas || !sonogramCanvas) return;
+
+  const timeCtx = timeCanvas.getContext('2d');
+  const fftCtx = fftCanvas.getContext('2d');
+  const sonoCtx = sonogramCanvas.getContext('2d');
+
+  let activeAnalyserNode = null;
+  let sourceBall = null;
+
+  if (isAudioPlaying) {
+    const activeAnalyzer = activeAudioNodes.find(n => n.isAnalyzer && n.analyser);
+    if (activeAnalyzer) {
+      activeAnalyserNode = activeAnalyzer.analyser;
+      sourceBall = activeAnalyzer.sourceBall;
+    } else if (activeAudioNodes.length > 0) {
+      sourceBall = activeAudioNodes[0].sourceBall;
+    }
+  }
+
+  if (!sourceBall && selectedBall) {
+    const color = selectedBall.color.toLowerCase();
+    if (color === COLOR_PALETTE[0].toLowerCase() || color === COLOR_PALETTE[2].toLowerCase()) {
+      sourceBall = selectedBall;
+    } else if (color === COLOR_PALETTE[6].toLowerCase()) {
+      const incoming = tubes.find(t => t.ballB.id === selectedBall.id);
+      if (incoming) sourceBall = incoming.ballA;
+    }
+  }
+
+  if (!sourceBall && balls.length > 0) {
+    sourceBall = balls[0];
+  }
+
+  drawOscilloscope(timeCtx, timeCanvas.width, timeCanvas.height, activeAnalyserNode, sourceBall);
+  drawFFTSpectrum(fftCtx, fftCanvas.width, fftCanvas.height, activeAnalyserNode, sourceBall);
+  drawSonogramWaterfall(sonoCtx, sonogramCanvas.width, sonogramCanvas.height, activeAnalyserNode, sourceBall);
+}
+
+// ===== MAPATURA IN NOTE DISCRETE =====
+const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+function hzToPianoNote(freq, maxOctaves = 4) {
+  let midi = Math.round(12 * Math.log2(freq / 440) + 69);
+  const centerMidi = 60;
+  const halfRange = Math.floor((maxOctaves * 12) / 2);
+  const minMidi = centerMidi - halfRange;
+  const maxMidi = centerMidi + halfRange;
+
+  midi = Math.min(Math.max(midi, minMidi), maxMidi);
+
+  const noteName = NOTE_NAMES[midi % 12];
+  const octave = Math.floor(midi / 12) - 1;
+  const exactFreq = 440 * Math.pow(2, (midi - 69) / 12);
+  const isBlack = noteName.includes('#');
+
+  return { midi, noteName, octave, exactFreq, fullName: `${noteName}${octave}`, isBlack };
+}
+
+// ===== PENTAGRAMMA DINAMICO =====
+function drawScrollingStaff() {
+  const canvas = document.getElementById('staffCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width;
+  const h = canvas.height;
+
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = '#f8fafc';
+  ctx.fillRect(0, 0, w, h);
+
+  const lineSpacing = 6;
+  const startY = 22;
+  ctx.strokeStyle = '#94a3b8';
+  ctx.lineWidth = 1;
+
+  for (let i = 0; i < 5; i++) {
+    const y = startY + i * lineSpacing;
+    ctx.beginPath(); ctx.moveTo(10, y); ctx.lineTo(w - 10, y); ctx.stroke();
+  }
+
+  ctx.fillStyle = '#0f172a';
+  ctx.font = 'bold 24px serif';
+  ctx.fillText('🎼', 10, startY + 20);
+
+  const speed = 1.2;
+  const now = performance.now();
+
+  noteHistory.forEach(item => {
+    const ageMs = now - item.timestamp;
+    const x = (w - 40) - (ageMs / 1000) * 80 * speed;
+
+    if (x > 35 && x < w) {
+      const midi = item.noteInfo.midi;
+      const stepsFromE4 = (midi - 64);
+      const noteY = (startY + 4 * lineSpacing) - (stepsFromE4 * (lineSpacing / 2));
+
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 1.2;
+      if (midi <= 60) {
+        for (let y = startY + 4 * lineSpacing + lineSpacing; y <= noteY + 1; y += lineSpacing) {
+          ctx.beginPath(); ctx.moveTo(x - 6, y); ctx.lineTo(x + 6, y); ctx.stroke();
+        }
+      } else if (midi >= 77) {
+        for (let y = startY - lineSpacing; y >= noteY - 1; y -= lineSpacing) {
+          ctx.beginPath(); ctx.moveTo(x - 6, y); ctx.lineTo(x + 6, y); ctx.stroke();
+        }
+      }
+
+      ctx.fillStyle = (item.noteInfo.midi === currentActiveMidi) ? '#0284c7' : '#334155';
+      ctx.beginPath();
+      ctx.ellipse(x, noteY, 4.5, 3.2, -Math.PI / 6, 0, 2 * Math.PI);
+      ctx.fill();
+
+      ctx.strokeStyle = (item.noteInfo.midi === currentActiveMidi) ? '#0284c7' : '#334155';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      if (midi >= 71) {
+        ctx.moveTo(x - 3.5, noteY); ctx.lineTo(x - 3.5, noteY + 16);
+      } else {
+        ctx.moveTo(x + 3.5, noteY); ctx.lineTo(x + 3.5, noteY - 16);
+      }
+      ctx.stroke();
+    }
+  });
+
+  noteHistory = noteHistory.filter(item => (now - item.timestamp) < 5000);
+}
+
+// ===== TASTIERA PIANOFORTE =====
+function drawPianoKeyboard(activeMidiNote) {
+  const canvas = document.getElementById('pianoCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width;
+  const h = canvas.height;
+
+  ctx.clearRect(0, 0, w, h);
+
+  let startMidi = 48;
+  if (activeMidiNote) {
+    const oct = Math.floor(activeMidiNote / 12) - 1;
+    startMidi = Math.max(24, (oct - 1) * 12);
+  }
+  const totalWhiteKeys = 14; 
+  const whiteWidth = w / totalWhiteKeys;
+
+  let whiteIndex = 0;
+  for (let m = startMidi; whiteIndex < totalWhiteKeys; m++) {
+    const name = NOTE_NAMES[m % 12];
+    if (!name.includes('#')) {
+      const x = whiteIndex * whiteWidth;
+      const isPressed = (m === activeMidiNote);
+
+      ctx.fillStyle = isPressed ? '#38bdf8' : '#ffffff';
+      ctx.fillRect(x + 1, 2, whiteWidth - 2, h - 4);
+
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x + 1, 2, whiteWidth - 2, h - 4);
+
+      if (isPressed) {
+        ctx.fillStyle = '#0284c7';
+        ctx.fillRect(x + 1, h - 8, whiteWidth - 2, 6);
+      }
+
+      if (name === 'C') {
+        ctx.fillStyle = isPressed ? '#ffffff' : '#64748b';
+        ctx.font = 'bold 8px sans-serif';
+        ctx.fillText(`C${Math.floor(m/12)-1}`, x + 2, h - 4);
+      }
+      whiteIndex++;
+    }
+  }
+
+  whiteIndex = 0;
+  for (let m = startMidi; whiteIndex < totalWhiteKeys; m++) {
+    const name = NOTE_NAMES[m % 12];
+    if (!name.includes('#')) {
+      const nextMidi = m + 1;
+      const nextName = NOTE_NAMES[nextMidi % 12];
+      
+      if (nextName && nextName.includes('#')) {
+        const x = (whiteIndex + 1) * whiteWidth - (whiteWidth * 0.3);
+        const bw = whiteWidth * 0.6;
+        const bh = h * 0.58;
+        const isPressed = (nextMidi === activeMidiNote);
+
+        ctx.fillStyle = isPressed ? '#f5c86b' : '#0f172a';
+        ctx.fillRect(x, 2, bw, bh);
+
+        ctx.strokeStyle = isPressed ? '#ffffff' : '#475569';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x, 2, bw, bh);
+      }
+      whiteIndex++;
+    }
+  }
+}
+
+// ===== UPDATE UI E LISTA LINK PROPRIETÀ =====
+function updateLinksList(ball) {
+  const container = document.getElementById('linksList');
+  const fieldLinks = document.getElementById('fieldLinks');
+  if (!container || !fieldLinks) return;
+
+  container.innerHTML = '';
+  const ballTubes = tubes.filter(t => t.ballA.id === ball.id || t.ballB.id === ball.id);
+
+  if (ballTubes.length === 0) {
+    fieldLinks.classList.add('hidden');
+    return;
+  }
+
+  fieldLinks.classList.remove('hidden');
+
+  ballTubes.forEach(t => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 4px 8px; border-radius: 6px; font-size: 10px; border: 1px solid #1e293b;';
+
+    const isSource = t.ballA.id === ball.id;
+    const otherBall = isSource ? t.ballB : t.ballA;
+    const directionStr = isSource ? `➔ Palla #${otherBall.id} (${t.targetPort})` : `⬅️ Palla #${otherBall.id}`;
+
+    const text = document.createElement('span');
+    text.textContent = `${isSource ? 'Uscita (O)' : 'Ingresso (' + t.targetPort + ')'}: ${directionStr}`;
+    text.style.color = isSource ? '#38bdf8' : '#f5c86b';
+
+    const delBtn = document.createElement('button');
+    delBtn.textContent = '🗑️';
+    delBtn.title = 'Elimina questo collegamento';
+    delBtn.style.cssText = 'background: #7f1d1d; border: none; color: #fff; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-size: 10px; transition: background 0.2s;';
+    delBtn.onmouseover = () => delBtn.style.background = '#dc2626';
+    delBtn.onmouseout = () => delBtn.style.background = '#7f1d1d';
+    delBtn.onclick = (e) => {
+      e.stopPropagation();
+      removeTube(t);
+    };
+
+    row.appendChild(text);
+    row.appendChild(delBtn);
+    container.appendChild(row);
+  });
+}
+
+function updateDynamicFields(ball) {
+  const fieldGen = document.getElementById('fieldGeneratori');
+  const fieldMan = document.getElementById('fieldManipolatori');
+  const fieldSine = document.getElementById('fieldSineWave');
+  const fieldSuoni = document.getElementById('fieldSuoni');
+  const fieldMus = document.getElementById('fieldMusificazione');
+  const fieldAna = document.getElementById('fieldAnalizzatori');
+
+  const color = ball.color.toLowerCase();
+  const isRed = color === COLOR_PALETTE[0].toLowerCase();
+  const isYellow = color === COLOR_PALETTE[1].toLowerCase();
+  const isBlue = color === COLOR_PALETTE[2].toLowerCase();
+  const isGreen = color === COLOR_PALETTE[6].toLowerCase();
+
+  fieldGen.classList.toggle('hidden', !isRed);
+  fieldMan.classList.toggle('hidden', !isBlue);
+  fieldSuoni.classList.toggle('hidden', !isYellow);
+  if (fieldAna) fieldAna.classList.toggle('hidden', !isGreen);
+
+  if (isRed) {
+    document.getElementById('selectGeneratori').value = ball.generatorType || 'onda sinusoidale';
+    fieldSine.classList.remove('hidden');
+
+    document.getElementById('rangeBaseFreq').value = ball.baseFrequency || 440;
+    document.getElementById('valBaseFreq').textContent = `${ball.baseFrequency || 440} Hz`;
+    document.getElementById('rangeAmpFreq').value = ball.ampFrequency || 0;
+    document.getElementById('valAmpFreq').textContent = `±${ball.ampFrequency || 0} Hz`;
+    document.getElementById('rangeModSpeed').value = ball.modSpeed || 1.0;
+    document.getElementById('valModSpeed').textContent = `${ball.modSpeed || 1.0} Hz`;
+    document.getElementById('rangeSignalAmp').value = ball.signalAmp || 1.0;
+    document.getElementById('valSignalAmp').textContent = ball.signalAmp || 1.0;
+  } else {
+    fieldSine.classList.add('hidden');
+  }
+
+  if (isBlue) {
+    document.getElementById('selectManipolatori').value = ball.manipulatorType || 'modulatore di ampiezza';
+  }
+
+  if (isGreen) {
+    document.getElementById('selectAnalizzatori').value = ball.analyzerType || 'spettrogramma';
+  }
+
+  if (isYellow) {
+    document.getElementById('selectSuoni').value = ball.soundType || 'sonificazione';
+    if (ball.soundType === 'musificazione') {
+      fieldMus.classList.remove('hidden');
+      document.getElementById('rangeOctaves').value = ball.octaves || 4;
+      document.getElementById('valOctaves').textContent = ball.octaves || 4;
+      document.getElementById('rangeSpeed').value = ball.speedBpm || 140;
+      document.getElementById('valSpeed').textContent = ball.speedBpm || 140;
+    } else {
+      fieldMus.classList.add('hidden');
+    }
+  } else {
+    fieldMus.classList.add('hidden');
+  }
+}
+
+function updateUIValues(ball) {
+  document.getElementById('posX').value = ball.mesh.position.x;
+  document.getElementById('posY').value = ball.mesh.position.y;
+  document.getElementById('posZ').value = ball.mesh.position.z;
+  
+  document.getElementById('valX').textContent = ball.mesh.position.x.toFixed(1);
+  document.getElementById('valY').textContent = ball.mesh.position.y.toFixed(1);
+  document.getElementById('valZ').textContent = ball.mesh.position.z.toFixed(1);
+
+  document.querySelectorAll('.swatch').forEach(sw => {
+    sw.classList.toggle('selected', sw.dataset.color.toLowerCase() === ball.color.toLowerCase());
+  });
+
+  updateDynamicFields(ball);
+  updateLinksList(ball);
+}
+
+function selectBall(ball) {
+  selectedBall = ball;
+
+  if (!ball) {
+    transformControls.detach();
+    document.getElementById('property-window').classList.add('hidden');
+    updateDisplayBarsVisibility();
+    return;
+  }
+
+  transformControls.attach(ball.mesh);
+  document.getElementById('propTitle').textContent = `Proprietà Palla #${ball.id}`;
+  updateUIValues(ball);
+  document.getElementById('property-window').classList.remove('hidden');
+  updateDisplayBarsVisibility();
+}
+
+// ===== MOTORE AUDIO & RECORDER =====
+function playAudioSignal() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+
+  stopAudioSignal();
+  isAudioPlaying = true;
+  recordedMidiEvents = [];
+  midiStartTime = performance.now();
+
+  let activeCount = 0;
+
+  balls.forEach(b => {
+    const color = b.color.toLowerCase();
+    const isYellow = color === COLOR_PALETTE[1].toLowerCase();
+    const isGreen = color === COLOR_PALETTE[6].toLowerCase();
+
+    if (isYellow) {
+      const incomingTubes = tubes.filter(t => t.ballB.id === b.id);
+      incomingTubes.forEach(t => {
+        const sourceBall = t.ballA;
+        activeCount++;
+
+        if (b.soundType === 'musificazione') {
+          const bpm = b.speedBpm || 140;
+          const intervalMs = (60 / bpm) * 1000;
+
+          const triggerStep = () => {
+            if (!isAudioPlaying) return;
+
+            const currentFreq = evaluateSignal(sourceBall, globalTime);
+            const noteInfo = hzToPianoNote(currentFreq, b.octaves || 4);
+            currentActiveMidi = noteInfo.midi;
+
+            const evtTime = (performance.now() - midiStartTime) / 1000;
+            recordedMidiEvents.push({ midi: noteInfo.midi, time: evtTime, duration: (intervalMs / 1000) * 0.9 });
+
+            noteHistory.push({ noteInfo, timestamp: performance.now() });
+
+            document.getElementById('currentNoteText').textContent = `NOTA: ${noteInfo.fullName} (${Math.round(noteInfo.exactFreq)} Hz)`;
+            drawPianoKeyboard(noteInfo.midi);
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(noteInfo.exactFreq, audioCtx.currentTime);
+
+            gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (intervalMs / 1000) * 0.95);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start();
+            osc.stop(audioCtx.currentTime + (intervalMs / 1000));
+          };
+
+          triggerStep();
+          musicIntervalTimer = setInterval(triggerStep, intervalMs);
+
+        } else {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(evaluateSignal(sourceBall, globalTime), audioCtx.currentTime);
+          gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+
+          osc.start();
+          activeAudioNodes.push({ osc, gain, sourceBall });
+        }
+      });
+    } else if (isGreen) {
+      const incomingTubes = tubes.filter(t => t.ballB.id === b.id);
+      incomingTubes.forEach(t => {
+        const sourceBall = t.ballA;
+        activeCount++;
+
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        const analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 2048;
+        analyser.smoothingTimeConstant = 0.6;
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(evaluateSignal(sourceBall, globalTime), audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+
+        osc.connect(gain);
+        gain.connect(analyser);
+        analyser.connect(audioCtx.destination);
+
+        osc.start();
+        activeAudioNodes.push({ osc, gain, sourceBall, analyser, isAnalyzer: true, analyzerBall: b });
+      });
+    }
+  });
+
+  updateDisplayBarsVisibility();
+
+  if (activeCount > 0) {
+    document.getElementById('status-badge').innerHTML = `🔊 <b>Audio Attivo</b>: Sintesi e analisi in esecuzione!`;
+  } else {
+    document.getElementById('status-badge').innerHTML = `⚠️ Collega una palla Rossa/Blu a una Gialla o Verde per ascoltare!`;
+  }
+}
+
+function stopAudioSignal() {
+  isAudioPlaying = false;
+  currentActiveMidi = null;
+
+  if (musicIntervalTimer) {
+    clearInterval(musicIntervalTimer);
+    musicIntervalTimer = null;
+  }
+
+  activeAudioNodes.forEach(node => {
+    try {
+      node.osc.stop();
+      node.osc.disconnect();
+      node.gain.disconnect();
+      if (node.analyser) node.analyser.disconnect();
+    } catch(e) {}
+  });
+  activeAudioNodes = [];
+
+  updateDisplayBarsVisibility();
+  document.getElementById('status-badge').innerHTML = `🔇 <b>Audio fermato</b>.`;
+}
+
+// ===== REGISTRAZIONE AUDIO WAV =====
+document.getElementById('btnRecWav').onclick = () => {
+  if (!isRecordingWav) {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (!isAudioPlaying) playAudioSignal();
+
+    wavAudioChunks = [];
+    const bufferSize = 4096;
+    wavScriptProcessor = audioCtx.createScriptProcessor(bufferSize, 1, 1);
+
+    wavScriptProcessor.onaudioprocess = (e) => {
+      if (!isRecordingWav) return;
+      const samples = e.inputBuffer.getChannelData(0);
+      wavAudioChunks.push(new Float32Array(samples));
+    };
+
+    const dummyOsc = audioCtx.createOscillator();
+    dummyOsc.connect(wavScriptProcessor);
+    wavScriptProcessor.connect(audioCtx.destination);
+
+    isRecordingWav = true;
+    const btn = document.getElementById('btnRecWav');
+    btn.classList.add('recording');
+    btn.innerHTML = `⏹️ Salva WAV`;
+    document.getElementById('status-badge').innerHTML = `🎙️ <b>Registrazione WAV in corso...</b> Clicca 'Salva WAV' per terminare.`;
+  } else {
+    isRecordingWav = false;
+    const btn = document.getElementById('btnRecWav');
+    btn.classList.remove('recording');
+    btn.innerHTML = `🎙️ Registra WAV`;
+
+    if (wavScriptProcessor) {
+      wavScriptProcessor.disconnect();
+      wavScriptProcessor = null;
+    }
+
+    const sampleRate = audioCtx.sampleRate;
+    let totalLength = 0;
+    wavAudioChunks.forEach(c => totalLength += c.length);
+
+    let mergedSamples = new Float32Array(totalLength);
+    let offset = 0;
+    wavAudioChunks.forEach(c => {
+      mergedSamples.set(c, offset);
+      offset += c.length;
+    });
+
+    const wavBuffer = new ArrayBuffer(44 + mergedSamples.length * 2);
+    const view = new DataView(wavBuffer);
+
+    const writeString = (v, o, str) => {
+      for (let i = 0; i < str.length; i++) v.setUint8(o + i, str.charCodeAt(i));
+    };
+
+    writeString(view, 0, 'RIFF');
+    view.setUint32(4, 36 + mergedSamples.length * 2, true);
+    writeString(view, 8, 'WAVE');
+    writeString(view, 12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeString(view, 36, 'data');
+    view.setUint32(40, mergedSamples.length * 2, true);
+
+    let idx = 44;
+    for (let i = 0; i < mergedSamples.length; i++) {
+      let s = Math.max(-1, Math.min(1, mergedSamples[i]));
+      view.setInt16(idx, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+      idx += 2;
+    }
+
+    const blob = new Blob([view], { type: 'audio/wav' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `simulazione_audio_${Date.now()}.wav`;
+    a.click();
+
+    document.getElementById('status-badge').innerHTML = `✅ <b>File Audio WAV scaricato con successo!</b>`;
+  }
+};
+
+// ===== ESPORTAZIONE MUSICA MIDI =====
+document.getElementById('btnExportMidi').onclick = () => {
+  if (recordedMidiEvents.length === 0) {
+    document.getElementById('status-badge').innerHTML = `⚠️ Nessun evento MIDI registrato. Avvia l'audio prima di esportare!`;
+    return;
+  }
+
+  const ticksPerSec = 960;
+  let midiEvents = [];
+
+  recordedMidiEvents.forEach(e => {
+    midiEvents.push({ type: 'on', midi: e.midi, tick: Math.round(e.time * ticksPerSec) });
+    midiEvents.push({ type: 'off', midi: e.midi, tick: Math.round((e.time + e.duration) * ticksPerSec) });
+  });
+
+  midiEvents.sort((a, b) => a.tick - b.tick);
+
+  let trackBytes = [];
+  let lastTick = 0;
+
+  const writeVarLen = (arr, val) => {
+    let buffer = val & 0x7F;
+    while ((val >>= 7) > 0) {
+      buffer <<= 8;
+      buffer |= (val & 0x7F) | 0x80;
+    }
+    while (true) {
+      arr.push(buffer & 0xFF);
+      if (buffer & 0x80) buffer >>= 8;
+      else break;
+    }
+  };
+
+  midiEvents.forEach(ev => {
+    let delta = Math.max(0, ev.tick - lastTick);
+    lastTick = ev.tick;
+    writeVarLen(trackBytes, delta);
+
+    if (ev.type === 'on') {
+      trackBytes.push(0x90, ev.midi, 0x64);
+    } else {
+      trackBytes.push(0x80, ev.midi, 0x00);
+    }
+  });
+
+  writeVarLen(trackBytes, 0);
+  trackBytes.push(0xFF, 0x2F, 0x00);
+
+  let fileBytes = [
+    0x4D, 0x54, 0x68, 0x64,
+    0x00, 0x00, 0x00, 0x06,
+    0x00, 0x00,
+    0x00, 0x01,
+    0x01, 0xE0,
+    0x4D, 0x54, 0x72, 0x6B,
+    (trackBytes.length >> 24) & 0xFF,
+    (trackBytes.length >> 16) & 0xFF,
+    (trackBytes.length >> 8) & 0xFF,
+    trackBytes.length & 0xFF,
+    ...trackBytes
+  ];
+
+  const blob = new Blob([new Uint8Array(fileBytes)], { type: 'audio/midi' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `sequenza_musicale_${Date.now()}.mid`;
+  a.click();
+
+  document.getElementById('status-badge').innerHTML = `✅ <b>File MIDI scaricato con successo!</b>`;
+};
+
+// ===== SALVATAGGIO & CARICAMENTO CONFIGURAZIONE JSON =====
+document.getElementById('btnSaveJson').onclick = () => {
+  const data = {
+    nextId,
+    balls: balls.map(b => ({
+      id: b.id,
+      color: b.color,
+      x: b.mesh.position.x,
+      y: b.mesh.position.y,
+      z: b.mesh.position.z,
+      generatorType: b.generatorType,
+      manipulatorType: b.manipulatorType,
+      soundType: b.soundType,
+      analyzerType: b.analyzerType,
+      baseFrequency: b.baseFrequency,
+      ampFrequency: b.ampFrequency,
+      modSpeed: b.modSpeed,
+      signalAmp: b.signalAmp,
+      octaves: b.octaves,
+      speedBpm: b.speedBpm
+    })),
+    tubes: tubes.map(t => ({
+      id: t.id,
+      ballAId: t.ballA.id,
+      ballBId: t.ballB.id,
+      targetPort: t.targetPort
+    }))
+  };
+
+  const jsonStr = JSON.stringify(data, null, 2);
+  const blob = new Blob([jsonStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `configurazione_simulatore_${Date.now()}.json`;
+  a.click();
+
+  document.getElementById('status-badge').innerHTML = `💾 <b>Configurazione JSON salvata su disco!</b>`;
+};
+
+document.getElementById('btnLoadJson').onclick = () => {
+  document.getElementById('fileInputJson').click();
+};
+
+document.getElementById('fileInputJson').onchange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    try {
+      const data = JSON.parse(evt.target.result);
+      stopAudioSignal();
+
+      tubes.forEach(t => scene.remove(t.mesh));
+      balls.forEach(b => scene.remove(b.mesh));
+      tubes = [];
+      balls = [];
+      selectBall(null);
+
+      nextId = data.nextId || 1;
+
+      data.balls.forEach(bData => {
+        const ball = addBall(bData.x, bData.y, bData.z, bData.color);
+        ball.id = bData.id;
+        ball.generatorType = bData.generatorType;
+        ball.manipulatorType = bData.manipulatorType;
+        ball.soundType = bData.soundType;
+        ball.analyzerType = bData.analyzerType || 'spettrogramma';
+        ball.baseFrequency = bData.baseFrequency;
+        ball.ampFrequency = bData.ampFrequency;
+        ball.modSpeed = bData.modSpeed;
+        ball.signalAmp = bData.signalAmp || 1.0;
+        ball.octaves = bData.octaves;
+        ball.speedBpm = bData.speedBpm;
+        updateBallPorts(ball);
+      });
+
+      data.tubes.forEach(tData => {
+        const ballA = balls.find(b => b.id === tData.ballAId);
+        const ballB = balls.find(b => b.id === tData.ballBId);
+        if (ballA && ballB) {
+          const geo = new THREE.CylinderGeometry(0.14, 0.14, 1, 16);
+          const mat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.2, metalness: 0.7 });
+          const tubeMesh = new THREE.Mesh(geo, mat);
+          scene.add(tubeMesh);
+
+          const targetPort = tData.targetPort || 'I';
+          tubes.push({ id: tData.id, ballA, ballB, targetPort, mesh: tubeMesh });
+          updateTubeTransform(tubeMesh, ballA, ballB, targetPort);
+        }
+      });
+
+      document.getElementById('status-badge').innerHTML = `📂 <b>Configurazione JSON caricata con successo!</b>`;
+    } catch(err) {
+      document.getElementById('status-badge').innerHTML = `❌ Errore nel caricamento del file JSON!`;
+    }
+  };
+  reader.readAsText(file);
+};
+
+// ===== EVENTI INTERFACCIA =====
+const paletteGrid = document.getElementById('paletteGrid');
+COLOR_PALETTE.forEach(c => {
+  const swatch = document.createElement('div');
+  swatch.className = 'swatch';
+  swatch.style.backgroundColor = c;
+  swatch.dataset.color = c;
+  swatch.onclick = () => {
+    if (selectedBall) {
+      selectedBall.color = c;
+      selectedBall.mesh.material.color.set(c);
+      updateBallPorts(selectedBall);
+      updateUIValues(selectedBall);
+      updateDisplayBarsVisibility();
+    }
+  };
+  paletteGrid.appendChild(swatch);
+});
+
+document.getElementById('selectGeneratori').onchange = (e) => {
+  if (selectedBall) {
+    selectedBall.generatorType = e.target.value;
+    updateDynamicFields(selectedBall);
+  }
+};
+
+document.getElementById('selectManipolatori').onchange = (e) => {
+  if (selectedBall) {
+    selectedBall.manipulatorType = e.target.value;
+    updateDynamicFields(selectedBall);
+  }
+};
+
+document.getElementById('selectAnalizzatori').onchange = (e) => {
+  if (selectedBall) {
+    selectedBall.analyzerType = e.target.value;
+    updateDynamicFields(selectedBall);
+    updateDisplayBarsVisibility();
+  }
+};
+
+document.getElementById('rangeBaseFreq').oninput = (e) => {
+  if (selectedBall) {
+    selectedBall.baseFrequency = parseInt(e.target.value);
+    document.getElementById('valBaseFreq').textContent = `${e.target.value} Hz`;
+  }
+};
+
+document.getElementById('rangeAmpFreq').oninput = (e) => {
+  if (selectedBall) {
+    selectedBall.ampFrequency = parseInt(e.target.value);
+    document.getElementById('valAmpFreq').textContent = `±${e.target.value} Hz`;
+  }
+};
+
+document.getElementById('rangeModSpeed').oninput = (e) => {
+  if (selectedBall) {
+    selectedBall.modSpeed = parseFloat(e.target.value);
+    document.getElementById('valModSpeed').textContent = `${e.target.value} Hz`;
+  }
+};
+
+document.getElementById('rangeSignalAmp').oninput = (e) => {
+  if (selectedBall) {
+    selectedBall.signalAmp = parseFloat(e.target.value);
+    document.getElementById('valSignalAmp').textContent = e.target.value;
+  }
+};
+
+document.getElementById('selectSuoni').onchange = (e) => {
+  if (selectedBall) {
+    selectedBall.soundType = e.target.value;
+    updateDynamicFields(selectedBall);
+    updateDisplayBarsVisibility();
+    if (isAudioPlaying) playAudioSignal();
+  }
+};
+
+document.getElementById('rangeOctaves').oninput = (e) => {
+  if (selectedBall) {
+    selectedBall.octaves = parseInt(e.target.value);
+    document.getElementById('valOctaves').textContent = e.target.value;
+  }
+};
+
+document.getElementById('rangeSpeed').oninput = (e) => {
+  if (selectedBall) {
+    selectedBall.speedBpm = parseInt(e.target.value);
+    document.getElementById('valSpeed').textContent = e.target.value;
+    if (isAudioPlaying) playAudioSignal();
+  }
+};
+
+document.getElementById('btnPlayAudio').onclick = playAudioSignal;
+document.getElementById('btnStopAudio').onclick = stopAudioSignal;
+
+// SELEZIONE RAYCASTING & CLICK SU TUBI O PALLE
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+window.addEventListener('pointermove', (e) => {
+  mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, cameraMain);
+  const ballIntersects = raycaster.intersectObjects(balls.map(b => b.mesh));
+  const tubeIntersects = raycaster.intersectObjects(tubes.map(t => t.mesh));
+
+  document.body.style.cursor = (ballIntersects.length > 0 || tubeIntersects.length > 0) ? 'pointer' : 'default';
+});
+
+window.addEventListener('pointerdown', (e) => {
+  if (e.target.closest('#main-toolbar') || e.target.closest('#property-window') || e.target.closest('#audio-center-bar') || e.target.closest('#music-display-bar') || e.target.closest('#analyzer-display-bar')) return;
+
+  mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, cameraMain);
+  const ballIntersects = raycaster.intersectObjects(balls.map(b => b.mesh));
+
+  if (ballIntersects.length > 0) {
+    const hitMesh = ballIntersects[0].object;
+    const hitBall = balls.find(b => b.id === hitMesh.userData.ballId);
+
+    if (connectMode) {
+      if (!connectFirstBall) {
+        connectFirstBall = hitBall;
+        document.getElementById('status-badge').innerHTML = `Selezionata Sorgente #${hitBall.id}. Ora clicca sulla Palla Destinazione.`;
+      } else {
+        connectBalls(connectFirstBall, hitBall);
+        connectFirstBall = null;
+        connectMode = false;
+        document.getElementById('btnConnect').classList.remove('active');
+        selectBall(hitBall);
+      }
+    } else if (disconnectMode) {
+      if (!disconnectFirstBall) {
+        disconnectFirstBall = hitBall;
+        document.getElementById('status-badge').innerHTML = `Selezionata Palla #${hitBall.id}. Ora clicca sulla Palla a cui è collegata.`;
+      } else {
+        disconnectBalls(disconnectFirstBall, hitBall);
+        disconnectFirstBall = null;
+        disconnectMode = false;
+        document.getElementById('btnDisconnect').classList.remove('active');
+        selectBall(hitBall);
+      }
+    } else {
+      selectBall(hitBall);
+    }
+  } else {
+    // SELECTIONE E RIMOZIONE DIRETTA DEI TUBI/LINK FACENDO CLICK SUL TUBO 3D
+    const tubeIntersects = raycaster.intersectObjects(tubes.map(t => t.mesh));
+    if (tubeIntersects.length > 0) {
+      const hitTubeMesh = tubeIntersects[0].object;
+      const targetTube = tubes.find(t => t.mesh === hitTubeMesh);
+      if (targetTube) {
+        removeTube(targetTube);
+        return;
+      }
+    }
+    // CLICK SULLO SFONDO VACUO -> DESELEZIONA
+    if (!connectMode && !disconnectMode) {
+      selectBall(null);
+    }
+  }
+});
+
+// TOOLBAR
+document.getElementById('btnAddBall').onclick = () => {
+  const b = addBall((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6);
+  document.getElementById('status-badge').textContent = `Aggiunta Palla #${b.id}`;
+};
+
+document.getElementById('btnConnect').onclick = () => {
+  connectMode = !connectMode;
+  disconnectMode = false;
+  connectFirstBall = null;
+  disconnectFirstBall = null;
+
+  document.getElementById('btnConnect').classList.toggle('active', connectMode);
+  document.getElementById('btnDisconnect').classList.remove('active');
+
+  if (connectMode) {
+    document.getElementById('status-badge').innerHTML = `<b>Modalità Collegamento</b>: Clicca sulla Palla Sorgente ('O').`;
+  } else {
+    document.getElementById('status-badge').textContent = `Modalità selezione attiva.`;
+  }
+};
+
+document.getElementById('btnDisconnect').onclick = () => {
+  disconnectMode = !disconnectMode;
+  connectMode = false;
+  connectFirstBall = null;
+  disconnectFirstBall = null;
+
+  document.getElementById('btnDisconnect').classList.toggle('active', disconnectMode);
+  document.getElementById('btnConnect').classList.remove('active');
+
+  if (disconnectMode) {
+    document.getElementById('status-badge').innerHTML = `<b>Modalità Scollegamento</b>: Clicca sulla prima Palla da scollegare.`;
+  } else {
+    document.getElementById('status-badge').textContent = `Modalità selezione attiva.`;
+  }
+};
+
+document.getElementById('btnRandomizeWalls').onclick = () => {
+  createRandomRoom();
+  document.getElementById('status-badge').textContent = `Pareti rigenerate!`;
+};
+
+document.getElementById('btnCloseProp').onclick = () => {
+  selectBall(null);
+};
+
+['X', 'Y', 'Z'].forEach(axis => {
+  document.getElementById('pos' + axis).oninput = (e) => {
+    if (selectedBall) {
+      selectedBall.mesh.position[axis.toLowerCase()] = parseFloat(e.target.value);
+      updateUIValues(selectedBall);
+      updateTubesForBall(selectedBall);
+    }
+  };
+});
+
+document.getElementById('btnDeleteBall').onclick = () => {
+  if (!selectedBall) return;
+
+  tubes = tubes.filter(t => {
+    if (t.ballA.id === selectedBall.id || t.ballB.id === selectedBall.id) {
+      scene.remove(t.mesh);
+      return false;
+    }
+    return true;
+  });
+
+  scene.remove(selectedBall.mesh);
+  balls = balls.filter(b => b.id !== selectedBall.id);
+  selectBall(null);
+  stopAudioSignal();
+};
+
+window.addEventListener('resize', () => {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  renderer.setSize(w, h);
+  cameraMain.aspect = w / h;
+  cameraMain.updateProjectionMatrix();
+});
+
+// DEMO INIZIALE
+function initDemo() {
+  const b1 = addBall(-4.0, 1.8, 0, COLOR_PALETTE[0]);  // Rossa 1 (440 Hz)
+  const b2 = addBall(-4.0, -1.8, 0, COLOR_PALETTE[0]); // Rossa 2 (880 Hz)
+  const b3 = addBall(0.0, 0, 0, COLOR_PALETTE[2]);     // Blu (Manipolatore)
+  const b4 = addBall(4.0, 1.8, 0, COLOR_PALETTE[1]);   // Gialla (Suono)
+  const b5 = addBall(4.0, -1.8, 0, COLOR_PALETTE[6]);  // Verde (Analizzatore)
+
+  b1.baseFrequency = 440;
+  b1.ampFrequency = 0;
+
+  b2.baseFrequency = 880;
+  b2.ampFrequency = 0;
+
+  b4.soundType = 'sonificazione';
+  b5.analyzerType = 'spettrogramma';
+
+  connectBalls(b1, b3); // b1 -> b3
+  connectBalls(b2, b3); // b2 -> b3
+  connectBalls(b3, b4); // b3 -> b4
+  connectBalls(b3, b5); // b3 -> b5
+
+  selectBall(b5);
+  drawPianoKeyboard(60);
+}
+
+// LOOP RENDERING & ANIMAZIONE
+let lastClock = performance.now();
+
+function render() {
+  requestAnimationFrame(render);
+  controls.update();
+
+  const now = performance.now();
+  const delta = (now - lastClock) / 1000;
+  lastClock = now;
+  globalTime += delta;
+
+  if (selectedBall && selectedBall.color.toLowerCase() === COLOR_PALETTE[0].toLowerCase()) {
+    drawSineWavePreview(selectedBall);
+  }
+
+  if (isAudioPlaying) {
+    activeAudioNodes.forEach(node => {
+      const curVal = evaluateSignal(node.sourceBall, globalTime);
+      node.osc.frequency.setValueAtTime(curVal, audioCtx.currentTime);
+    });
+  }
+
+  drawAudioVisualizations();
+  drawScrollingStaff();
+
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+
+  renderer.setScissorTest(true);
+
+  // Vista Principale
+  renderer.setViewport(0, 0, w, h);
+  renderer.setScissor(0, 0, w, h);
+  renderer.render(scene, cameraMain);
+
+  // Viste Ortografiche
+  const pipW = 140;
+  const pipH = 85;
+  const rightMargin = 16;
+
+  renderer.setViewport(w - pipW - rightMargin, 198, pipW, pipH);
+  renderer.setScissor(w - pipW - rightMargin, 198, pipW, pipH);
+  renderer.render(scene, cameraTop);
+
+  renderer.setViewport(w - pipW - rightMargin, 107, pipW, pipH);
+  renderer.setScissor(w - pipW - rightMargin, 107, pipW, pipH);
+  renderer.render(scene, cameraFront);
+
+  renderer.setViewport(w - pipW - rightMargin, 16, pipW, pipH);
+  renderer.setScissor(w - pipW - rightMargin, 16, pipW, pipH);
+  renderer.render(scene, cameraSide);
+
+  renderer.setScissorTest(false);
+}
+
+initDemo();
+render();
+</script>
+</body>
+</html>

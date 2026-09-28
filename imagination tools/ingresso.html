@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Città dell'Immaginazione - Ambienti di Apprendimento Immersivi</title>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(22, 30, 49, 0.7);
+            --accent-blue: #00d2ff;
+            --accent-purple: #9d4edd;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 15% 15%, rgba(0, 210, 255, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 85% 85%, rgba(157, 78, 221, 0.08) 0%, transparent 40%);
+        }
+
+        header {
+            padding: 80px 20px 60px;
+            text-align: center;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 16px;
+            background: linear-gradient(135deg, rgba(0, 210, 255, 0.15), rgba(157, 78, 221, 0.15));
+            border: 1px solid rgba(0, 210, 255, 0.3);
+            border-radius: 20px;
+            color: var(--accent-blue);
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffffff 30%, var(--accent-blue) 70%, var(--accent-purple) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+        }
+
+        p.subtitle {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            max-width: 750px;
+            margin: 0 auto 30px;
+        }
+
+        .meta-author {
+            font-size: 0.95rem;
+            color: #cbd5e1;
+            font-style: italic;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 30px;
+            display: inline-block;
+        }
+
+        main {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 20px 80px;
+        }
+
+        section {
+            margin-bottom: 60px;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            position: relative;
+            display: inline-block;
+            color: #fff;
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: -6px;
+            width: 40px;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+            border-radius: 2px;
+        }
+
+        .content-box {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            margin-bottom: 30px;
+        }
+
+        .content-box p {
+            margin-bottom: 15px;
+            color: #cbd5e1;
+        }
+
+        .content-box p:last-child {
+            margin-bottom: 0;
+        }
+
+        .grid-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .interactive-card {
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8));
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            padding: 24px;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            text-decoration: none;
+            color: inherit;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .interactive-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .interactive-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(0, 210, 255, 0.4);
+            box-shadow: 0 12px 25px rgba(0, 210, 255, 0.15);
+        }
+
+        .interactive-card:hover::before {
+            opacity: 1;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-desc {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            flex-grow: 1;
+        }
+
+        .btn-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--accent-blue);
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .features-list {
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .features-list li {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 3px solid var(--accent-purple);
+            font-size: 0.95rem;
+            color: #cbd5e1;
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 2rem; }
+            .content-box { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <span class="badge">Ambienti di Apprendimento Interattivi e Immersivi</span>
+        <h1>La Città dell'Immaginazione</h1>
+        <p class="subtitle">Esplorazione didattica, architettura virtuale e teoria del caos attraverso la realtà 3D costruttivista</p>
+        <p class="meta-author">Estratto dalla Tesi Magistrale della Prof.ssa Francesca Bertacchini[cite: 16]</p>
+    </header>
+
+    <main>
+        <!-- SEZIONE 1: MODULI INTERATTIVI -->
+        <section>
+            <h2 class="section-title">Ambienti Virtuali Navigabili</h2>
+            <p style="color: var(--text-muted); margin-top: 10px; margin-bottom: 20px;">
+                Accedi direttamente alle simulazioni HTML3D e ai laboratori sviluppati per la sperimentazione didattica:
+            </p>
+            
+            <div class="grid-links">
+                <a href="citta_v1.html" class="interactive-card">
+                    <div>
+                        <div class="card-title">
+                            <span>🏙️</span> Mappa della Città
+                        </div>
+                        <div class="card-desc">
+                            Navigazione 3D nell'ambiente urbano virtuale dove gli attrattori strani del circuito di Chua diventano strutture architettoniche[cite: 16].
+                        </div>
+                    </div>
+                    <span class="btn-link">Apri citta_v1.html &rarr;</span>
+                </a>
+
+                <a href="imagination tool_v1.html" class="interactive-card">
+                    <div>
+                        <div class="card-title">
+                            <span>🛠️</span> Imagination Tools
+                        </div>
+                        <div class="card-desc">
+                            Laboratorio per la simulazione del circuito di Chua, esplorazione della dinamica non lineare e musica generativa[cite: 16].
+                        </div>
+                    </div>
+                    <span class="btn-link">Apri imagination tool_v1.html &rarr;</span>
+                </a>
+
+                <a href="museo attrattori con suoni e musica.html" class="interactive-card">
+                    <div>
+                        <div class="card-title">
+                            <span>🎵</span> Museo degli Attrattori
+                        </div>
+                        <div class="card-desc">
+                            Galleria espositiva immersiva con integrazione di pattern visivi caotici e sintesi sonora 3D spazializzata[cite: 16].
+                        </div>
+                    </div>
+                    <span class="btn-link">Apri Museo Suoni & Musica &rarr;</span>
+                </a>
+
+                <a href="museo_dei_frattali_simulatore_3d (4).html" class="interactive-card">
+                    <div>
+                        <div class="card-title">
+                            <span>🌀</span> Simulatore 3D Frattali
+                        </div>
+                        <div class="card-desc">
+                            Ambiente di sperimentazione hands-on per la manipolazione di parametri caotici, biforcazioni e forme tridimensionali[cite: 16].
+                        </div>
+                    </div>
+                    <span class="btn-link">Apri Simulatore Frattali 3D &rarr;</span>
+                </a>
+            </div>
+        </section>
+
+        <!-- SEZIONE 2: DALL'UTOPIA AL POEMA ELETTRONICO -->
+        <section>
+            <h2 class="section-title">Arte, Scienza e Architettura</h2>
+            <div class="content-box">
+                <p>
+                    La costruzione di città immaginarie è un rituale creativo utopico che risponde all'esigenza di allestire nuove forme di vita ed elevarsi dal grigiore quotidiano[cite: 16]. Nella <strong>Città dell'Immaginazione</strong>, l'educazione diventa divertimento in una cornice costruttivista e tecnologica dove la scuola supera i limiti della monomedialità tradizionale[cite: 16].
+                </p>
+                <p>
+                    L'ispirazione fondante risale al 1958 con il <strong>Padiglione Philips</strong> all'Expo di Bruxelles, ideato da <strong>Le Corbusier</strong> come un vero e proprio <em>"Poema Elettronico"</em>[cite: 16]. L'opera, progettata con la collaborazione dell'architetto-musicista <strong>Iannis Xenakis</strong> (che introdusse i paraboloidi iperbolici) e le composizioni di <strong>Edgar Varèse</strong>, fuse per la prima volta architettura, proiezioni visive e oltre 400 altoparlanti in un'unica esperienza immersiva[cite: 16].
+                </p>
+            </div>
+        </section>
+
+        <!-- SEZIONE 3: LA TEORIA DEL CAOS E GLI ATTRATTORI STRANI -->
+        <section>
+            <h2 class="section-title">Architettura Caotica e Circuito di Chua</h2>
+            <div class="content-box">
+                <p>
+                    Nella Città dell'Immaginazione, l'armonia cosmica non è predeterminata ma <strong>emergente</strong>, riflettendo il "disordine ordinato" dei sistemi caotici[cite: 16]. Gli edifici sono modellati a partire dagli <strong>attrattori strani generati dal circuito di Chua</strong>, disposti nel paesaggio virtuale 3D come grattacieli, case galleggianti o strutture montane[cite: 16].
+                </p>
+                <p>
+                    Per rendere gestibile l'ambiente immersivo creato con <em>3D Studio Max</em> e motori grafici come <em>Irrlicht</em>, si è applicata una riduzione poligonale avanzata che consente una navigazione fluida in tempo reale[cite: 16].
+                </p>
+            </div>
+        </section>
+
+        <!-- SEZIONE 4: SCENARIO EDUCATIVO E SOTTOSEZIONI -->
+        <section>
+            <h2 class="section-title">Lo Scenario Educativo Virtuale</h2>
+            <div class="content-box">
+                <p>
+                    L'ambiente è strutturato per trasferire al grande pubblico e agli studenti i concetti chiave della Teoria del Caos e della Complessità attraverso l'approccio <em>hands-on</em>[cite: 16]:
+                </p>
+                <ul class="features-list">
+                    <li>
+                        <strong>Materiali Multimediali Interattivi:</strong> Virtual Educational Objects, interviste al Prof. Chua, attrattori stereoscopici e narrazione guidata da mentori virtuali (Galileo, Newton, Leonardo, Pitagora, Buddah)[cite: 16].
+                    </li>
+                    <li>
+                        <strong>Simulazione Circuito di Chua:</strong> Assemblaggio virtuale del circuito, collegamento ad oscilloscopi simulati e sperimentazione sulla sensibilità alle condizioni iniziali[cite: 16].
+                    </li>
+                    <li>
+                        <strong>Laboratorio di Esplorazione Caotica:</strong> Strumento per variare i parametri di controllo, osservare le biforcazioni e creare oggetti 3D personalizzati individualmente o in gruppo[cite: 16].
+                    </li>
+                    <li>
+                        <strong>Performance Audio-Visiva Spaziale:</strong> Integrazione con la piattaforma <em>Audioscape</em> (McGill University) per mappare movimenti gestuali e sensori wireless su attrattori caotici commutati in musica 3D[cite: 16].
+                    </li>
+                </ul>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>Sintesi multimediale basata sulle ricerche della Prof.ssa Francesca Bertacchini — Edutainment & Virtual Reality Learning Systems[cite: 16].</p>
+    </footer>
+
+</body>
+</html>

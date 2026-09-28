@@ -1,0 +1,2202 @@
+<!DOCTYPE html>
+<html lang="it" class="h-full w-full overflow-hidden select-none">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>La Città dell'Immaginazione - Simulatore 3D (Stromboli, Link & Trasformazioni)</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Three.js, OrbitControls, TransformControls & Rhino 3DM Loader CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/rhino3dm@0.15.0/rhino3dm.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/3DMLoader.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;600;700&display=swap');
+
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background-color: #030712;
+            color: #f3f4f6;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .font-orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        /* Glassmorphism Styling */
+        .glass-panel {
+            background: rgba(10, 16, 30, 0.82);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(245, 158, 11, 0.28);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.65), inset 0 0 16px rgba(245, 158, 11, 0.05);
+        }
+
+        .glass-panel-accent {
+            background: rgba(22, 28, 55, 0.88);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(236, 72, 153, 0.4);
+            box-shadow: 0 0 25px rgba(236, 72, 153, 0.25);
+        }
+
+        .glass-modal {
+            background: rgba(7, 11, 22, 0.94);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(59, 130, 246, 0.4);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+        }
+
+        /* Neon Glow Effects */
+        .neon-gold {
+            text-shadow: 0 0 8px rgba(245, 158, 11, 0.7), 0 0 20px rgba(245, 158, 11, 0.4);
+        }
+        .neon-cyan {
+            text-shadow: 0 0 8px rgba(6, 182, 212, 0.8), 0 0 20px rgba(6, 182, 212, 0.4);
+        }
+
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.4);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(245, 158, 11, 0.5);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(245, 158, 11, 0.8);
+        }
+
+        #webgl-container {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        #link-badges-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 8;
+            pointer-events: none;
+        }
+
+        .interactive-ui {
+            pointer-events: auto;
+        }
+
+        /* Floating Object Link Marker Badges */
+        .obj-link-badge {
+            position: absolute;
+            transform: translate(-50%, -100%);
+            pointer-events: auto;
+            cursor: pointer;
+            transition: transform 0.15s ease, opacity 0.2s ease;
+        }
+        .obj-link-badge:hover {
+            transform: translate(-50%, -110%) scale(1.1);
+        }
+
+        /* Custom Range Sliders */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: rgba(255, 255, 255, 0.15);
+            height: 5px;
+            border-radius: 3px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 15px;
+            width: 15px;
+            border-radius: 50%;
+            background: #f59e0b;
+            cursor: pointer;
+            box-shadow: 0 0 10px #f59e0b;
+        }
+    </style>
+</head>
+<body class="h-full w-full">
+
+    <!-- 3D Canvas Rendering Container -->
+    <div id="webgl-container"></div>
+
+    <!-- Floating 3D Link Badges Container -->
+    <div id="link-badges-container"></div>
+
+    <!-- UI Overlay Layer -->
+    <div id="ui-layer" class="flex flex-col justify-between p-3 md:p-5">
+
+        <!-- Top Navigation Bar -->
+        <header class="flex flex-wrap items-center justify-between gap-3 interactive-ui">
+            <div class="glass-panel px-4 py-2.5 rounded-2xl flex items-center gap-3">
+                <div class="w-3.5 h-3.5 rounded-full bg-amber-400 animate-pulse shadow-[0_0_12px_#f59e0b]"></div>
+                <div>
+                    <h1 class="font-orbitron text-base md:text-lg font-bold tracking-wider text-amber-400 neon-gold">
+                        LA CITTÀ DELL'IMMAGINAZIONE
+                    </h1>
+                    <p class="text-xs text-amber-200/80 font-medium">Simulatore 3D (Stromboli, Link & Manipolazione Oggetti)</p>
+                </div>
+            </div>
+
+            <!-- View Angle Preset Controls -->
+            <div class="flex items-center gap-2 flex-wrap">
+                <div class="glass-panel px-2.5 py-1.5 rounded-xl flex items-center gap-1.5 text-xs flex-wrap">
+                    <span class="text-amber-200/70 font-semibold pl-1">Viste:</span>
+                    <button id="btn-view-stromboli" class="bg-red-500/30 hover:bg-red-500/50 text-red-200 border border-red-500/50 px-2.5 py-1 rounded-lg transition font-bold shadow-[0_0_10px_rgba(239,68,68,0.3)]">
+                        🌋 Tramonto Stromboli
+                    </button>
+                    <button id="btn-view-top" class="bg-amber-500/20 hover:bg-amber-500/40 text-amber-300 border border-amber-500/40 px-2.5 py-1 rounded-lg transition font-medium">
+                        🗺️ Vista Alto
+                    </button>
+                    <button id="btn-view-sunset" class="bg-amber-500/20 hover:bg-amber-500/40 text-amber-300 border border-amber-500/40 px-2.5 py-1 rounded-lg transition font-medium">
+                        🌅 Tramonto (trt)
+                    </button>
+                    <button id="btn-view-towers" class="bg-blue-500/20 hover:bg-blue-500/40 text-blue-300 border border-blue-500/40 px-2.5 py-1 rounded-lg transition font-medium">
+                        🗼 Torri Pagoda
+                    </button>
+                    <button id="btn-view-pyramid" class="bg-purple-500/20 hover:bg-purple-500/40 text-purple-300 border border-purple-500/40 px-2.5 py-1 rounded-lg transition font-medium">
+                        🔺 Piramide
+                    </button>
+                    <button id="btn-view-rock" class="bg-stone-500/20 hover:bg-stone-500/40 text-stone-300 border border-stone-500/40 px-2.5 py-1 rounded-lg transition font-medium">
+                        🪨 Faraglione
+                    </button>
+                </div>
+
+                <!-- 3DM/OBJ Model Cleaner Modal Trigger -->
+                <button id="btn-open-obj-modal" class="glass-panel hover:bg-blue-500/30 text-blue-300 border-blue-400/40 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
+                    <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                    <span>Importa Modelli 3DM / OBJ</span>
+                </button>
+
+                <!-- Sidebar Toggle -->
+                <button id="btn-toggle-panel" class="glass-panel hover:bg-amber-500/30 text-amber-300 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                    <span>Controlli</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Notification Toast -->
+        <div id="toast" class="self-center glass-panel-accent px-5 py-2 rounded-2xl text-xs font-bold text-amber-300 opacity-0 transition-all duration-300 transform translate-y-3 pointer-events-none">
+            Vista Aggiornata
+        </div>
+
+        <!-- Center & Bottom Floating Panels -->
+        <div class="flex flex-col md:flex-row justify-between items-end gap-4 min-h-0 pointer-events-none">
+            
+            <!-- Left Inspector & Link Editor Panel -->
+            <div id="inspector-card" class="glass-panel rounded-2xl p-4 w-full md:w-80 interactive-ui transition-all duration-300 transform translate-y-4 opacity-0 pointer-events-none">
+                <div class="flex justify-between items-center border-b border-amber-500/30 pb-2 mb-2">
+                    <h2 id="inspect-title" class="font-orbitron text-sm font-bold text-amber-300">Piramide Viola</h2>
+                    <button id="btn-close-inspect" class="text-amber-400 hover:text-white font-bold">&times;</button>
+                </div>
+                <p id="inspect-desc" class="text-xs text-gray-300 leading-relaxed mb-3">
+                    Struttura monumentale posta alla transizione tra le dune di sabbia dorata e la dorsale della collina verde.
+                </p>
+                <div class="flex gap-2 mb-3">
+                    <button id="btn-focus-obj" class="w-full bg-amber-500/30 hover:bg-amber-500/50 text-amber-200 border border-amber-400/40 py-1.5 rounded-xl text-xs font-bold transition">
+                        🔍 Inquadra
+                    </button>
+                    <button id="btn-play-sound" class="w-full bg-purple-600/40 hover:bg-purple-600/60 text-purple-200 border border-purple-400/40 py-1.5 rounded-xl text-xs font-bold transition">
+                        🎵 Suono
+                    </button>
+                </div>
+
+                <!-- Object Link Editor Section -->
+                <div class="border-t border-amber-500/20 pt-2.5">
+                    <label class="block font-orbitron text-xs font-bold text-amber-300 mb-1 flex items-center gap-1">
+                        <span>🔗 Link Attivo per l'Oggetto</span>
+                    </label>
+                    <input type="url" id="input-inspect-link" placeholder="https://esempio.it" class="w-full bg-black/60 border border-amber-500/40 rounded-lg px-2.5 py-1 text-xs text-amber-200 focus:outline-none focus:border-amber-400 mb-2">
+                    <div class="flex gap-2">
+                        <button id="btn-save-inspect-link" class="w-full bg-emerald-600/40 hover:bg-emerald-600/70 text-emerald-200 border border-emerald-500/40 py-1 rounded-lg text-xs font-bold transition">
+                            💾 Salva Link
+                        </button>
+                        <button id="btn-remove-inspect-link" class="w-full bg-red-600/30 hover:bg-red-600/60 text-red-200 border border-red-500/40 py-1 rounded-lg text-xs font-bold transition">
+                            🗑️ Rimuovi
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Interactive Settings Sidebar Panel -->
+            <aside id="main-control-panel" class="glass-panel rounded-2xl p-4 w-full md:w-80 interactive-ui flex flex-col gap-3.5 max-h-[75vh] overflow-y-auto">
+                
+                <!-- Stromboli & Dynamic Sun Simulation -->
+                <div class="border-b border-amber-500/20 pb-3 space-y-2">
+                    <h3 class="font-orbitron text-xs font-bold text-amber-300 flex items-center justify-between">
+                        <span class="flex items-center gap-1.5">🌋 Tramonto sullo Stromboli</span>
+                        <button id="btn-toggle-sun-anim" class="bg-red-500/30 hover:bg-red-500/60 text-red-200 border border-red-400/40 px-2 py-0.5 rounded text-[10px] font-bold transition">
+                            ▶️ Anima
+                        </button>
+                    </h3>
+                    <div class="flex items-center justify-between text-xs text-gray-300">
+                        <span>Ciclo Solare:</span>
+                        <input type="range" id="slider-sun-cycle" min="0" max="100" step="0.2" value="73" class="w-32">
+                    </div>
+                    <div class="text-[11px] text-amber-200/70 italic leading-tight">
+                        Al 73% il sole tramonta esattamente nella bocca dello Stromboli producendo fumo vulcanico.
+                    </div>
+                </div>
+
+                <!-- Imported Objects Transform & Selection Controls -->
+                <div class="border-b border-amber-500/20 pb-3 space-y-2">
+                    <h3 class="font-orbitron text-xs font-bold text-amber-300 flex items-center justify-between">
+                        <span class="flex items-center gap-1.5">📦 Modelli Importati</span>
+                        <span id="imported-count-badge" class="bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded text-[10px]">0</span>
+                    </h3>
+                    <select id="select-imported-objects" class="w-full bg-black/60 border border-amber-500/40 rounded-lg p-1.5 text-xs text-amber-200 focus:outline-none">
+                        <option value="">-- Nessun oggetto importato --</option>
+                    </select>
+
+                    <!-- Transform Mode Selector Buttons -->
+                    <div id="transform-mode-group" class="grid grid-cols-3 gap-1 pt-1 opacity-50 pointer-events-none transition-all">
+                        <button id="btn-mode-translate" class="bg-amber-500 text-gray-950 font-bold py-1 rounded text-xs transition">
+                            ✢ Sposta
+                        </button>
+                        <button id="btn-mode-rotate" class="bg-gray-800 hover:bg-amber-500/30 text-amber-200 border border-gray-700 py-1 rounded text-xs transition">
+                            🔄 Ruota
+                        </button>
+                        <button id="btn-mode-scale" class="bg-gray-800 hover:bg-amber-500/30 text-amber-200 border border-gray-700 py-1 rounded text-xs transition">
+                            🔍 Scala
+                        </button>
+                    </div>
+
+                    <div class="flex gap-2 pt-1">
+                        <button id="btn-delete-selected" disabled class="w-full bg-red-600/30 hover:bg-red-600/60 disabled:opacity-40 text-red-200 border border-red-500/40 py-1 rounded-lg text-xs font-bold transition">
+                            🗑️ Elimina Selezionato
+                        </button>
+                        <button id="btn-deselect-all" class="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600/40 py-1 rounded-lg text-xs font-bold transition">
+                            ✖️ Deseleziona
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Links Visibility Toggle -->
+                <div class="border-b border-amber-500/20 pb-3 space-y-2">
+                    <h3 class="font-orbitron text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                        <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                        Gestione Visualizzazione Link
+                    </h3>
+                    <label class="flex items-center justify-between text-xs text-gray-300 cursor-pointer">
+                        <span>Mostra Icone Link 🔗 sulla Scena</span>
+                        <input type="checkbox" id="chk-show-links" checked class="accent-amber-500">
+                    </label>
+                </div>
+
+                <!-- Atmosphere & Lighting Preset -->
+                <div class="border-b border-amber-500/20 pb-3">
+                    <h3 class="font-orbitron text-xs font-bold text-amber-300 mb-2 flex items-center gap-1.5">
+                        Atmosphera & Presets
+                    </h3>
+                    <div class="grid grid-cols-3 gap-1.5 text-xs">
+                        <button id="env-sunset" class="bg-amber-500/40 text-amber-100 border border-amber-400 py-1.5 rounded-lg font-semibold text-[11px] transition">
+                            Tramonto
+                        </button>
+                        <button id="env-day" class="bg-gray-800/80 hover:bg-amber-500/20 text-gray-300 border border-gray-700 py-1.5 rounded-lg font-semibold text-[11px] transition">
+                            Giorno
+                        </button>
+                        <button id="env-night" class="bg-gray-800/80 hover:bg-amber-500/20 text-gray-300 border border-gray-700 py-1.5 rounded-lg font-semibold text-[11px] transition">
+                            Notte Cyber
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Ocean Waves Controls -->
+                <div class="border-b border-amber-500/20 pb-3 space-y-2">
+                    <h3 class="font-orbitron text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                        Dinamica del Mare
+                    </h3>
+                    <div class="flex items-center justify-between text-xs text-gray-300">
+                        <span>Altezza Onde:</span>
+                        <input type="range" id="slider-wave-height" min="0" max="2.5" step="0.1" value="0.8" class="w-32">
+                    </div>
+                    <div class="flex items-center justify-between text-xs text-gray-300">
+                        <span>Velocità Mare:</span>
+                        <input type="range" id="slider-wave-speed" min="0.2" max="3.0" step="0.2" value="1.2" class="w-32">
+                    </div>
+                </div>
+
+                <!-- Focus Quick Selector -->
+                <div class="border-b border-amber-500/20 pb-3">
+                    <h3 class="font-orbitron text-xs font-bold text-amber-300 mb-2 flex items-center gap-1.5">
+                        Elementi Architetturali
+                    </h3>
+                    <div class="grid grid-cols-2 gap-1.5 text-xs">
+                        <button id="focus-pyramid" class="bg-purple-950/50 hover:bg-purple-800/60 text-purple-200 border border-purple-500/40 p-1.5 rounded-lg text-left transition font-medium">
+                            🔺 Piramide Viola
+                        </button>
+                        <button id="focus-towers" class="bg-blue-950/50 hover:bg-blue-800/60 text-blue-200 border border-blue-500/40 p-1.5 rounded-lg text-left transition font-medium">
+                            🗼 Torri Pagoda Blu
+                        </button>
+                        <button id="focus-pavements" class="bg-amber-950/50 hover:bg-amber-800/60 text-amber-200 border border-amber-500/40 p-1.5 rounded-lg text-left transition font-medium">
+                            🪜 Passerelle Terracotta
+                        </button>
+                        <button id="focus-rock" class="bg-stone-900/80 hover:bg-stone-800 text-stone-200 border border-stone-600/40 p-1.5 rounded-lg text-left transition font-medium">
+                            🪨 Faraglione Roccioso
+                        </button>
+                        <button id="focus-wall" class="bg-emerald-950/50 hover:bg-emerald-800/60 text-emerald-200 border border-emerald-500/40 p-1.5 rounded-lg text-left transition font-medium col-span-2">
+                            🏛️ Mura ad Archi della Collina
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Visibility Toggles -->
+                <div class="border-b border-amber-500/20 pb-3 space-y-1.5">
+                    <h3 class="font-orbitron text-xs font-bold text-amber-300 mb-1">Filtri Visualizzazione</h3>
+                    <label class="flex items-center justify-between text-xs text-gray-300 cursor-pointer">
+                        <span>Edifici & Pagode</span>
+                        <input type="checkbox" id="chk-buildings" checked class="accent-amber-500">
+                    </label>
+                    <label class="flex items-center justify-between text-xs text-gray-300 cursor-pointer">
+                        <span>Passerelle Terracotta</span>
+                        <input type="checkbox" id="chk-walkways" checked class="accent-amber-500">
+                    </label>
+                    <label class="flex items-center justify-between text-xs text-gray-300 cursor-pointer">
+                        <span>Superficie Marina</span>
+                        <input type="checkbox" id="chk-water" checked class="accent-amber-500">
+                    </label>
+                    <label class="flex items-center justify-between text-xs text-gray-300 cursor-pointer">
+                        <span>Modelli Importati</span>
+                        <input type="checkbox" id="chk-imported" checked class="accent-amber-500">
+                    </label>
+                    <label class="flex items-center justify-between text-xs text-gray-300 cursor-pointer">
+                        <span>Isola dello Stromboli</span>
+                        <input type="checkbox" id="chk-stromboli" checked class="accent-amber-500">
+                    </label>
+                </div>
+
+                <!-- Web Audio Synthesizer -->
+                <div>
+                    <h3 class="font-orbitron text-xs font-bold text-amber-300 mb-2 flex items-center gap-1.5">
+                        Sintetizzatore Audio Spaziale
+                    </h3>
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs text-gray-300">Rumore Mare & Vento:</span>
+                        <button id="btn-audio-toggle" class="bg-amber-500/30 hover:bg-amber-500/50 text-amber-200 border border-amber-400/40 px-2.5 py-1 rounded-lg text-xs font-bold transition">
+                            Attiva Audio
+                        </button>
+                    </div>
+                    <div class="flex items-center justify-between text-xs text-gray-400">
+                        <span>Volume Generale:</span>
+                        <input type="range" id="slider-volume" min="0" max="1" step="0.05" value="0.4" class="w-32">
+                    </div>
+                </div>
+            </aside>
+        </div>
+
+        <!-- Footer Coordinates & Hints -->
+        <footer class="flex items-center justify-between text-[11px] text-amber-200/60 pt-2 interactive-ui">
+            <div>💡 Trascina col mouse per ruotare. Clicca sugli oggetti per selezionare/trasformare ed accedere ai Link.</div>
+            <div id="cam-info" class="font-mono">Cam: X:0 Y:45 Z:110</div>
+        </footer>
+    </div>
+
+    <!-- 3DM & OBJ Cleaner & Loader Modal Dialog -->
+    <div id="obj-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md opacity-0 pointer-events-none transition-all duration-300 interactive-ui">
+        <div class="glass-modal rounded-3xl p-6 w-full max-w-2xl border border-blue-500/40 text-gray-200 shadow-2xl relative flex flex-col gap-4">
+            
+            <div class="flex justify-between items-center border-b border-blue-500/30 pb-3">
+                <div class="flex items-center gap-2">
+                    <div class="p-2 rounded-xl bg-blue-500/20 text-blue-400">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                    </div>
+                    <div>
+                        <h2 class="font-orbitron text-base font-bold text-blue-400 neon-cyan">Importatore Modelli Rhino (.3dm) & OBJ</h2>
+                        <p class="text-xs text-gray-400">Caricamento multiplo e manipolazione in tempo reale degli oggetti 3D</p>
+                    </div>
+                </div>
+                <button id="btn-close-obj-modal" class="text-gray-400 hover:text-white text-2xl font-bold px-2">&times;</button>
+            </div>
+
+            <!-- Drag & Drop Zone -->
+            <div id="obj-drop-zone" class="border-2 border-dashed border-blue-500/40 hover:border-blue-400 rounded-2xl p-6 text-center cursor-pointer transition bg-blue-950/20 hover:bg-blue-900/30 flex flex-col items-center justify-center gap-2">
+                <svg class="w-10 h-10 text-blue-400 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                <div class="text-sm font-semibold text-blue-200">Trascina qui il file <span class="text-amber-400 font-mono">.3dm</span> o <span class="text-amber-400 font-mono">.obj</span></div>
+                <div class="text-xs text-gray-400">Genera entità indipendenti e selezionabili sulla scena</div>
+                <input type="file" id="file-input-obj" accept=".3dm,.obj" class="hidden">
+            </div>
+
+            <!-- Cleaning Options Checkboxes -->
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 bg-gray-900/60 p-3.5 rounded-xl border border-gray-800 text-xs">
+                <label class="flex items-center gap-2 text-gray-300 cursor-pointer">
+                    <input type="checkbox" id="opt-clean-vertices" checked class="accent-blue-500">
+                    <span>Rimuovi Vertici Isolati</span>
+                </label>
+                <label class="flex items-center gap-2 text-gray-300 cursor-pointer">
+                    <input type="checkbox" id="opt-clean-faces" checked class="accent-blue-500">
+                    <span>Elimina Facce Degenerate</span>
+                </label>
+                <label class="flex items-center gap-2 text-gray-300 cursor-pointer">
+                    <input type="checkbox" id="opt-recompute-normals" checked class="accent-blue-500">
+                    <span>Ricalcola Normali Smooth</span>
+                </label>
+                <label class="flex items-center gap-2 text-gray-300 cursor-pointer">
+                    <input type="checkbox" id="opt-autocenter" checked class="accent-blue-500">
+                    <span>Centra Baricentro (0,0,0)</span>
+                </label>
+                <label class="flex items-center gap-2 text-gray-300 cursor-pointer">
+                    <input type="checkbox" id="opt-autoscale" checked class="accent-blue-500">
+                    <span>Ridimensiona Adattivo</span>
+                </label>
+            </div>
+
+            <!-- Terminal Output -->
+            <div id="obj-stats-box" class="bg-black/80 rounded-xl p-3 border border-gray-800 font-mono text-[11px] text-green-400 max-h-36 overflow-y-auto space-y-1">
+                <div>> Pronto per l'importazione modelli. In attesa di un file...</div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex justify-end gap-3 pt-2">
+                <button id="btn-import-replace" disabled class="bg-blue-600/40 hover:bg-blue-600/80 disabled:opacity-40 text-blue-100 border border-blue-400/50 px-4 py-2 rounded-xl text-xs font-bold transition">
+                    🔄 Sostituisci Tutti
+                </button>
+                <button id="btn-import-add" disabled class="bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-gray-950 font-extrabold px-5 py-2 rounded-xl text-xs transition shadow-[0_0_15px_rgba(245,158,11,0.4)]">
+                    ➕ Aggiungi alla Scena 3D
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application JavaScript -->
+    <script>
+        class CoastalAudioEngine {
+            constructor() {
+                this.ctx = null;
+                this.isInit = false;
+                this.isPlaying = false;
+                this.masterGain = null;
+                this.waveGain = null;
+                this.lfo = null;
+            }
+
+            init() {
+                if (this.isInit) return;
+                try {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+
+                    this.masterGain = this.ctx.createGain();
+                    this.masterGain.gain.value = 0.4;
+                    this.masterGain.connect(this.ctx.destination);
+
+                    const bufferSize = 2 * this.ctx.sampleRate;
+                    const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                    const output = noiseBuffer.getChannelData(0);
+                    let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+
+                    for (let i = 0; i < bufferSize; i++) {
+                        const white = Math.random() * 2 - 1;
+                        b0 = 0.99886 * b0 + white * 0.0555179;
+                        b1 = 0.99332 * b1 + white * 0.0750759;
+                        b2 = 0.96900 * b2 + white * 0.1538520;
+                        b3 = 0.86650 * b3 + white * 0.3104856;
+                        b4 = 0.55000 * b4 + white * 0.5329522;
+                        b5 = -0.7616 * b5 - white * 0.0168980;
+                        output[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+                        output[i] *= 0.11;
+                        b6 = white * 0.115926;
+                    }
+
+                    const noiseSource = this.ctx.createBufferSource();
+                    noiseSource.buffer = noiseBuffer;
+                    noiseSource.loop = true;
+
+                    const filter = this.ctx.createBiquadFilter();
+                    filter.type = 'lowpass';
+                    filter.frequency.value = 380;
+
+                    this.waveGain = this.ctx.createGain();
+                    this.waveGain.gain.value = 0.2;
+
+                    this.lfo = this.ctx.createOscillator();
+                    this.lfo.frequency.value = 0.14;
+                    const lfoGain = this.ctx.createGain();
+                    lfoGain.gain.value = 0.18;
+
+                    this.lfo.connect(lfoGain);
+                    lfoGain.connect(this.waveGain.gain);
+
+                    noiseSource.connect(filter);
+                    filter.connect(this.waveGain);
+                    this.waveGain.connect(this.masterGain);
+
+                    noiseSource.start();
+                    this.lfo.start();
+
+                    this.isInit = true;
+                } catch(e) {
+                    console.warn("Audio non supportato:", e);
+                }
+            }
+
+            toggle() {
+                if (!this.isInit) this.init();
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+
+                this.isPlaying = !this.isPlaying;
+                if (this.masterGain) {
+                    this.masterGain.gain.setTargetAtTime(this.isPlaying ? 0.4 : 0, this.ctx.currentTime, 0.1);
+                }
+                return this.isPlaying;
+            }
+
+            setVolume(val) {
+                if (this.masterGain) {
+                    this.masterGain.gain.setTargetAtTime(val, this.ctx.currentTime, 0.05);
+                }
+            }
+
+            playResonantNote(freq = 220, type = 'sine') {
+                if (!this.isInit) this.init();
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, now);
+
+                gain.gain.setValueAtTime(0.01, now);
+                gain.gain.linearRampToValueAtTime(0.3, now + 0.08);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.8);
+
+                osc.connect(gain);
+                gain.connect(this.masterGain);
+
+                osc.start(now);
+                osc.stop(now + 2.8);
+            }
+        }
+
+        class OBJCleanerEngine {
+            static parseAndCleanOBJ(objText, options = {}) {
+                const lines = objText.split('\n');
+                const rawPositions = [];
+                const rawFaces = [];
+                
+                let stats = {
+                    rawVerticesCount: 0,
+                    rawFacesCount: 0,
+                    removedDegenerateFaces: 0,
+                    removedUnusedVertices: 0,
+                    recomputedNormals: false,
+                    cleanedVerticesCount: 0,
+                    cleanedFacesCount: 0
+                };
+
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line || line.startsWith('#')) continue;
+
+                    const parts = line.split(/\s+/);
+                    const type = parts[0];
+
+                    if (type === 'v') {
+                        rawPositions.push([
+                            parseFloat(parts[1]),
+                            parseFloat(parts[2]),
+                            parseFloat(parts[3])
+                        ]);
+                    } else if (type === 'f') {
+                        const faceIndices = [];
+                        for (let j = 1; j < parts.length; j++) {
+                            const idx = parseInt(parts[j].split('/')[0]) - 1;
+                            if (!isNaN(idx)) faceIndices.push(idx);
+                        }
+
+                        if (faceIndices.length >= 3) {
+                            for (let t = 1; t < faceIndices.length - 1; t++) {
+                                rawFaces.push([faceIndices[0], faceIndices[t], faceIndices[t + 1]]);
+                            }
+                        }
+                    }
+                }
+
+                stats.rawVerticesCount = rawPositions.length;
+                stats.rawFacesCount = rawFaces.length;
+
+                const validFaces = [];
+                for (let f of rawFaces) {
+                    const [a, b, c] = f;
+                    
+                    if (a === b || b === c || a === c) {
+                        stats.removedDegenerateFaces++;
+                        continue;
+                    }
+
+                    if (options.cleanFaces !== false && rawPositions[a] && rawPositions[b] && rawPositions[c]) {
+                        const pA = new THREE.Vector3(...rawPositions[a]);
+                        const pB = new THREE.Vector3(...rawPositions[b]);
+                        const pC = new THREE.Vector3(...rawPositions[c]);
+
+                        const edge1 = new THREE.Vector3().subVectors(pB, pA);
+                        const edge2 = new THREE.Vector3().subVectors(pC, pA);
+                        const cross = new THREE.Vector3().crossVectors(edge1, edge2);
+
+                        if (cross.lengthSq() < 1e-8) {
+                            stats.removedDegenerateFaces++;
+                            continue;
+                        }
+                    }
+
+                    validFaces.push(f);
+                }
+
+                const usedVertexIndices = new Set();
+                validFaces.forEach(f => {
+                    usedVertexIndices.add(f[0]);
+                    usedVertexIndices.add(f[1]);
+                    usedVertexIndices.add(f[2]);
+                });
+
+                const indexRemap = new Map();
+                const cleanedPositions = [];
+
+                for (let i = 0; i < rawPositions.length; i++) {
+                    if (options.cleanVertices === false || usedVertexIndices.has(i)) {
+                        indexRemap.set(i, cleanedPositions.length);
+                        cleanedPositions.push(rawPositions[i]);
+                    } else {
+                        stats.removedUnusedVertices++;
+                    }
+                }
+
+                const cleanedFaces = validFaces.map(f => [
+                    indexRemap.get(f[0]),
+                    indexRemap.get(f[1]),
+                    indexRemap.get(f[2])
+                ]);
+
+                stats.cleanedVerticesCount = cleanedPositions.length;
+                stats.cleanedFacesCount = cleanedFaces.length;
+
+                const geometry = new THREE.BufferGeometry();
+                const posArray = new Float32Array(cleanedFaces.length * 9);
+
+                for (let i = 0; i < cleanedFaces.length; i++) {
+                    const [a, b, c] = cleanedFaces[i];
+                    const pA = cleanedPositions[a];
+                    const pB = cleanedPositions[b];
+                    const pC = cleanedPositions[c];
+
+                    posArray[i * 9 + 0] = pA[0];
+                    posArray[i * 9 + 1] = pA[1];
+                    posArray[i * 9 + 2] = pA[2];
+
+                    posArray[i * 9 + 3] = pB[0];
+                    posArray[i * 9 + 4] = pB[1];
+                    posArray[i * 9 + 5] = pB[2];
+
+                    posArray[i * 9 + 6] = pC[0];
+                    posArray[i * 9 + 7] = pC[1];
+                    posArray[i * 9 + 8] = pC[2];
+                }
+
+                geometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+
+                if (options.autocenter !== false) {
+                    geometry.center();
+                }
+
+                if (options.autoscale !== false) {
+                    geometry.computeBoundingBox();
+                    const box = geometry.boundingBox;
+                    const maxDim = Math.max(
+                        box.max.x - box.min.x,
+                        box.max.y - box.min.y,
+                        box.max.z - box.min.z
+                    );
+                    if (maxDim > 0) {
+                        const scaleFactor = 25 / maxDim;
+                        geometry.scale(scaleFactor, scaleFactor, scaleFactor);
+                    }
+                }
+
+                if (options.recomputeNormals !== false) {
+                    geometry.computeVertexNormals();
+                    stats.recomputedNormals = true;
+                }
+
+                return { geometry, stats };
+            }
+        }
+
+        const audio = new CoastalAudioEngine();
+
+        let scene, camera, renderer, controls, transformControls;
+        let oceanMesh, terrainMesh, skyMesh, skyCanvas, skyCtx, skyTexture;
+        let sunLight, ambientLight, hemiLight, sunMesh;
+        let stromboliGroup, smokeParticles = [];
+        
+        let buildingsGroup = new THREE.Group();
+        let walkwaysGroup = new THREE.Group();
+        let importedGroup = new THREE.Group();
+        
+        let raycaster = new THREE.Raycaster();
+        let mouse = new THREE.Vector2();
+        let interactiveObjects = [];
+        let activeSelectedObject = null; // Currently targeted object (builtin or imported)
+        let importedObjectsList = []; // List of loaded imported 3D objects [{ id, name, object }]
+        let importedCounter = 0;
+
+        let showLinkBadges = true;
+        let isSunAnimActive = false;
+        let sunCycleVal = 73; // Default Stromboli Sunset position (0-100)
+
+        let loadedCleanedGeometry = null;
+        let loadedImportedObject = null;
+        let rhinoLoader = null;
+        let waveParams = { height: 0.8, speed: 1.2 };
+
+        const STRUCTURE_INFO = {
+            pyramid: {
+                title: "Piramide Viola (Sabbia)",
+                desc: "Piramide tetragona color viola/indaco brillante adagiata sulla striscia di sabbia dorata.",
+                pos: new THREE.Vector3(26, 12, -5),
+                lookAt: new THREE.Vector3(26, 6, -5),
+                freq: 146.83
+            },
+            towers: {
+                title: "Torri Pagoda Blu Scuro / Ciano",
+                desc: "Torri a più livelli sovrapposti formate da coni e tronchi di cono impilati su palafitte.",
+                pos: new THREE.Vector3(-18, 16, 12),
+                lookAt: new THREE.Vector3(-18, 8, 12),
+                freq: 293.66
+            },
+            pavements: {
+                title: "Passerelle Terracotta e Palafitte",
+                desc: "Rete articolata di camminamenti e ponti sopraelevati color ruggine/terracotta.",
+                pos: new THREE.Vector3(0, 14, 10),
+                lookAt: new THREE.Vector3(0, 5, 0),
+                freq: 220.00
+            },
+            rock: {
+                title: "Faraglione / Scoglio Scuro",
+                desc: "Imponente e frastagliato monolite roccioso scuro che emerge solitario dalle acque.",
+                pos: new THREE.Vector3(-38, 14, 28),
+                lookAt: new THREE.Vector3(-38, 6, 28),
+                freq: 110.00
+            },
+            wall: {
+                title: "Muro ad Archi della Scogliera",
+                desc: "Struttura muraria in pietra con arcate e finestre ad arco incastonata lungo la collina.",
+                pos: new THREE.Vector3(42, 22, -28),
+                lookAt: new THREE.Vector3(42, 18, -28),
+                freq: 329.63
+            },
+            stromboli: {
+                title: "Isola Vulcano di Stromboli",
+                desc: "Iconico vulcano attivo dell'arcipelago delle Eolie. Il sole tramonta direttamente nel suo cratere esalando un pennacchio di fumo vulcanico.",
+                pos: new THREE.Vector3(0, 45, -120),
+                lookAt: new THREE.Vector3(0, 35, -310),
+                freq: 98.00
+            }
+        };
+
+        function init3D() {
+            const container = document.getElementById('webgl-container');
+
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0xd97706, 0.0028);
+
+            camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.5, 1200);
+            camera.position.set(0, 45, 110);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.2;
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            // Orbit Controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2 - 0.01;
+            controls.minDistance = 6;
+            controls.maxDistance = 450;
+            controls.target.set(0, 5, 0);
+
+            // Transform Controls (Gizmo for moving, scaling, rotating)
+            transformControls = new THREE.TransformControls(camera, renderer.domElement);
+            transformControls.size = 0.85;
+            transformControls.addEventListener('dragging-changed', function (event) {
+                controls.enabled = !event.value;
+            });
+            scene.add(transformControls);
+
+            // Lights
+            ambientLight = new THREE.AmbientLight(0x451a03, 1.2);
+            scene.add(ambientLight);
+
+            hemiLight = new THREE.HemisphereLight(0xfba518, 0x0f172a, 1.0);
+            scene.add(hemiLight);
+
+            sunLight = new THREE.DirectionalLight(0xffedd5, 2.3);
+            sunLight.position.set(0, 35, -310);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 2048;
+            sunLight.shadow.mapSize.height = 2048;
+            sunLight.shadow.camera.near = 10;
+            sunLight.shadow.camera.far = 400;
+            sunLight.shadow.camera.left = -150;
+            sunLight.shadow.camera.right = 150;
+            sunLight.shadow.camera.top = 150;
+            sunLight.shadow.camera.bottom = -150;
+            scene.add(sunLight);
+
+            // Sun Mesh Sphere
+            const sunGeo = new THREE.SphereGeometry(14, 32, 32);
+            const sunMat = new THREE.MeshBasicMaterial({ color: 0xfff7ed });
+            sunMesh = new THREE.Mesh(sunGeo, sunMat);
+            scene.add(sunMesh);
+
+            createSunsetSky();
+            createTerrain();
+            createOcean();
+            createStromboliVolcano();
+
+            scene.add(buildingsGroup);
+            scene.add(walkwaysGroup);
+            scene.add(importedGroup);
+
+            buildCityArchitecture();
+            init3DMLoader();
+
+            // Set default initial lighting based on sunCycleVal (73%)
+            updateSunAndLighting(sunCycleVal);
+
+            window.addEventListener('resize', onResize);
+            window.addEventListener('click', handleRaycastClick);
+        }
+
+        function init3DMLoader() {
+            if (typeof THREE['3DMLoader'] !== 'undefined') {
+                rhinoLoader = new THREE['3DMLoader']();
+                rhinoLoader.setLibraryPath('https://cdn.jsdelivr.net/npm/rhino3dm@0.15.0/');
+            }
+        }
+
+        function createSunsetSky() {
+            const skyGeo = new THREE.SphereGeometry(600, 32, 32);
+            
+            skyCanvas = document.createElement('canvas');
+            skyCanvas.width = 512;
+            skyCanvas.height = 512;
+            skyCtx = skyCanvas.getContext('2d');
+
+            skyTexture = new THREE.CanvasTexture(skyCanvas);
+            const skyMat = new THREE.MeshBasicMaterial({
+                map: skyTexture,
+                side: THREE.BackSide
+            });
+
+            skyMesh = new THREE.Mesh(skyGeo, skyMat);
+            scene.add(skyMesh);
+        }
+
+        /* Dynamic Sun Cycle & Stromboli Sunset Sky */
+        function updateSunAndLighting(progressVal) {
+            sunCycleVal = progressVal;
+            const norm = progressVal / 100; // 0 (Alba) -> 0.5 (Giorno) -> 0.73 (Tramonto Stromboli) -> 1.0 (Notte)
+
+            // Sun Position Arc directly intersecting Stromboli crater at x=0, z=-310
+            const angle = Math.PI * (norm - 0.1); 
+            const sunDist = 340;
+            const sunY = Math.sin(angle) * 160 - 20;
+            const sunZ = -Math.cos(angle) * sunDist - 100;
+            const sunX = (norm - 0.73) * 120; // Passes right over crater center (x=0) at norm ~0.73
+
+            sunLight.position.set(sunX, Math.max(-10, sunY), sunZ);
+            sunMesh.position.copy(sunLight.position);
+
+            // Redraw Sky Gradient dynamically
+            if (skyCtx) {
+                const grad = skyCtx.createLinearGradient(0, 0, 0, 512);
+                if (norm < 0.3) { // Sunrise
+                    grad.addColorStop(0.0, '#0284c7');
+                    grad.addColorStop(0.5, '#f97316');
+                    grad.addColorStop(1.0, '#fef08a');
+                } else if (norm < 0.65) { // Daylight
+                    grad.addColorStop(0.0, '#0284c7');
+                    grad.addColorStop(0.6, '#38bdf8');
+                    grad.addColorStop(1.0, '#bae6fd');
+                } else if (norm < 0.85) { // Volcano Sunset (Stromboli)
+                    const sunsetBlend = (norm - 0.65) / 0.2;
+                    grad.addColorStop(0.0, '#090d16');
+                    grad.addColorStop(0.35, '#31122a');
+                    grad.addColorStop(0.65, '#991b1b');
+                    grad.addColorStop(0.85, '#ea580c');
+                    grad.addColorStop(1.0, '#fef08a');
+                } else { // Cyber Night
+                    grad.addColorStop(0.0, '#020617');
+                    grad.addColorStop(0.6, '#0f172a');
+                    grad.addColorStop(1.0, '#1e1b4b');
+                }
+
+                skyCtx.fillStyle = grad;
+                skyCtx.fillRect(0, 0, 512, 512);
+                skyTexture.needsUpdate = true;
+            }
+
+            // Adjust scene lighting and fog intensity
+            if (norm >= 0.65 && norm <= 0.85) { // Sunset
+                sunLight.color.setHex(0xff7733);
+                sunLight.intensity = 2.6;
+                ambientLight.color.setHex(0x521b08);
+                ambientLight.intensity = 1.3;
+                scene.fog.color.setHex(0xb91c1c);
+                scene.fog.density = 0.0032;
+            } else if (norm < 0.65) { // Day / Sunrise
+                sunLight.color.setHex(0xffffff);
+                sunLight.intensity = 2.8;
+                ambientLight.color.setHex(0x38bdf8);
+                ambientLight.intensity = 1.2;
+                scene.fog.color.setHex(0xbae6fd);
+                scene.fog.density = 0.0020;
+            } else { // Night
+                sunLight.color.setHex(0x818cf8);
+                sunLight.intensity = 0.3;
+                ambientLight.color.setHex(0x1e1b4b);
+                ambientLight.intensity = 0.6;
+                scene.fog.color.setHex(0x0f172a);
+                scene.fog.density = 0.0035;
+            }
+        }
+
+        /* Stromboli Volcano Creation */
+        function createStromboliVolcano() {
+            stromboliGroup = new THREE.Group();
+            stromboliGroup.position.set(0, 0, -310);
+
+            // Island Volcano Cone Mountain Mesh
+            const volcanoGeo = new THREE.CylinderGeometry(18, 95, 50, 48, 16, true);
+            const pos = volcanoGeo.attributes.position;
+
+            // Deform cone vertices to make realistic volcanic topography and crater dip
+            for (let i = 0; i < pos.count; i++) {
+                let x = pos.getX(i);
+                let y = pos.getY(i);
+                let z = pos.getZ(i);
+
+                const angle = Math.atan2(z, x);
+                const noise = Math.sin(angle * 7) * 3 + Math.cos(angle * 13) * 2;
+
+                // Volcano Sciara del Fuoco slope on one side
+                if (z > 0) {
+                    y -= (z / 95) * 6;
+                }
+
+                pos.setX(i, x + noise);
+                pos.setY(i, y);
+                pos.setZ(i, z + noise);
+            }
+            volcanoGeo.computeVertexNormals();
+
+            const volcanoMat = new THREE.MeshStandardMaterial({
+                color: 0x241d1a,
+                roughness: 0.95,
+                metalness: 0.1,
+                flatShading: true
+            });
+
+            const volcanoMesh = new THREE.Mesh(volcanoGeo, volcanoMat);
+            volcanoMesh.position.y = 18;
+            volcanoMesh.castShadow = true;
+            volcanoMesh.receiveShadow = true;
+            volcanoMesh.name = "stromboli";
+            volcanoMesh.userData.infoKey = "stromboli";
+            stromboliGroup.add(volcanoMesh);
+
+            // Inner Crater Pit
+            const craterGeo = new THREE.ConeGeometry(18, 12, 32, 1, true);
+            const craterMat = new THREE.MeshStandardMaterial({ color: 0x110b09, roughness: 1.0 });
+            const craterMesh = new THREE.Mesh(craterGeo, craterMat);
+            craterMesh.position.y = 38;
+            craterMesh.rotation.x = Math.PI;
+            stromboliGroup.add(craterMesh);
+
+            // Volcanic Crater Smoke Particles System
+            const smokeGeo = new THREE.SphereGeometry(1.6, 8, 8);
+            const smokeMat = new THREE.MeshStandardMaterial({
+                color: 0x64748b,
+                roughness: 1.0,
+                transparent: true,
+                opacity: 0.45
+            });
+
+            for (let i = 0; i < 35; i++) {
+                const particle = new THREE.Mesh(smokeGeo, smokeMat.clone());
+                resetSmokeParticle(particle, true);
+                smokeParticles.push(particle);
+                stromboliGroup.add(particle);
+            }
+
+            scene.add(stromboliGroup);
+            interactiveObjects.push(volcanoMesh);
+        }
+
+        function resetSmokeParticle(p, initial = false) {
+            p.position.set(
+                (Math.random() - 0.5) * 6,
+                initial ? 38 + Math.random() * 35 : 38,
+                (Math.random() - 0.5) * 6
+            );
+            p.scale.setScalar(0.8 + Math.random() * 0.8);
+            p.material.opacity = 0.5;
+            p.userData.speedY = 0.22 + Math.random() * 0.25;
+            p.userData.driftX = (Math.random() - 0.3) * 0.12;
+            p.userData.driftZ = (Math.random() - 0.5) * 0.08;
+        }
+
+        function animateVolcanoSmoke() {
+            smokeParticles.forEach(p => {
+                p.position.y += p.userData.speedY;
+                p.position.x += p.userData.driftX;
+                p.position.z += p.userData.driftZ;
+                p.scale.addScalar(0.018);
+
+                // Fade out near top
+                if (p.position.y > 60) {
+                    p.material.opacity -= 0.01;
+                }
+
+                if (p.position.y > 90 || p.material.opacity <= 0) {
+                    resetSmokeParticle(p);
+                }
+            });
+        }
+
+        function createTerrain() {
+            const geo = new THREE.PlaneGeometry(220, 220, 120, 120);
+            geo.rotateX(-Math.PI / 2);
+
+            const pos = geo.attributes.position;
+            const colors = [];
+
+            const cGreen = new THREE.Color(0x386628);
+            const cSand = new THREE.Color(0xd9ab68);
+            const cDarkSand = new THREE.Color(0x8a6433);
+
+            for (let i = 0; i < pos.count; i++) {
+                const x = pos.getX(i);
+                const z = pos.getZ(i);
+
+                let height = 0;
+                let col = cSand.clone();
+
+                if (x > 10 && z < 30) {
+                    const hillDist = Math.sqrt(Math.pow(x - 50, 2) + Math.pow(z + 40, 2));
+                    height = Math.max(0, 40 - hillDist * 0.58) + Math.sin(x * 0.1) * 3 + Math.cos(z * 0.1) * 2;
+                    if (height > 3) col.lerp(cGreen, Math.min(1, height / 12));
+                }
+                
+                if (x <= 10 || z >= 20) {
+                    height = Math.sin(x * 0.06) * 2.8 + Math.cos(z * 0.05) * 2.2;
+
+                    const lagoon1 = Math.sqrt(Math.pow(x + 10, 2) + Math.pow(z - 15, 2));
+                    const lagoon2 = Math.sqrt(Math.pow(x - 15, 2) + Math.pow(z - 35, 2));
+
+                    if (lagoon1 < 22) height -= (22 - lagoon1) * 0.35;
+                    if (lagoon2 < 18) height -= (18 - lagoon2) * 0.4;
+
+                    if (z > 35) height -= (z - 35) * 0.5;
+
+                    if (height < 0.5) col.lerp(cDarkSand, 0.8);
+                }
+
+                pos.setY(i, height);
+                colors.push(col.r, col.g, col.b);
+            }
+
+            geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            geo.computeVertexNormals();
+
+            const mat = new THREE.MeshStandardMaterial({
+                vertexColors: true,
+                roughness: 0.85,
+                metalness: 0.15,
+                flatShading: true
+            });
+
+            terrainMesh = new THREE.Mesh(geo, mat);
+            terrainMesh.receiveShadow = true;
+            terrainMesh.castShadow = true;
+            scene.add(terrainMesh);
+
+            createFaraglioneRock();
+        }
+
+        function createFaraglioneRock() {
+            const geo = new THREE.DodecahedronGeometry(13, 2);
+            const pos = geo.attributes.position;
+
+            for(let i=0; i<pos.count; i++) {
+                pos.setY(i, pos.getY(i) * 1.7 + Math.sin(i)*0.9);
+                pos.setX(i, pos.getX(i) + Math.cos(i)*0.6);
+            }
+            geo.computeVertexNormals();
+
+            const mat = new THREE.MeshStandardMaterial({
+                color: 0x2b2825,
+                roughness: 0.9,
+                metalness: 0.2,
+                flatShading: true
+            });
+
+            const rock = new THREE.Mesh(geo, mat);
+            rock.position.set(-38, 6, 28);
+            rock.scale.set(1.1, 1.35, 1.1);
+            rock.castShadow = true;
+            rock.receiveShadow = true;
+            rock.name = "rock";
+            rock.userData.infoKey = "rock";
+            
+            scene.add(rock);
+            interactiveObjects.push(rock);
+        }
+
+        function createOcean() {
+            const geo = new THREE.PlaneGeometry(450, 350, 85, 85);
+            geo.rotateX(-Math.PI / 2);
+
+            const mat = new THREE.MeshStandardMaterial({
+                color: 0x1d4ed8,
+                emissive: 0x061129,
+                roughness: 0.1,
+                metalness: 0.88,
+                transparent: true,
+                opacity: 0.85,
+                flatShading: true
+            });
+
+            oceanMesh = new THREE.Mesh(geo, mat);
+            oceanMesh.position.set(0, 1.2, -30);
+            scene.add(oceanMesh);
+        }
+
+        function buildCityArchitecture() {
+            const pyrGeo = new THREE.ConeGeometry(11, 16, 4);
+            pyrGeo.rotateY(Math.PI / 4);
+            const pyrMat = new THREE.MeshStandardMaterial({
+                color: 0x6b21a8,
+                emissive: 0x3b0764,
+                emissiveIntensity: 0.45,
+                roughness: 0.25,
+                metalness: 0.75
+            });
+            const pyramid = new THREE.Mesh(pyrGeo, pyrMat);
+            pyramid.position.set(26, 12, -5);
+            pyramid.castShadow = true;
+            pyramid.name = "pyramid";
+            pyramid.userData.infoKey = "pyramid";
+            buildingsGroup.add(pyramid);
+            interactiveObjects.push(pyramid);
+
+            createBluePagodaTower(-18, 0, 12, 1.0);
+            createBluePagodaTower(-30, -2, -10, 0.85);
+
+            createOrangePavilion(0, 2, 0, 7.5);
+            createOrangePavilion(12, 1, 22, 6.0);
+
+            createCliffArchWall();
+            buildTerracottaWalkwayNetwork();
+        }
+
+        function createBluePagodaTower(x, groundY, z, scale = 1.0) {
+            const towerGroup = new THREE.Group();
+            towerGroup.position.set(x, groundY, z);
+
+            const blueMat = new THREE.MeshStandardMaterial({
+                color: 0x0284c7,
+                emissive: 0x0369a1,
+                emissiveIntensity: 0.35,
+                roughness: 0.2,
+                metalness: 0.85
+            });
+
+            const cyanGlassMat = new THREE.MeshStandardMaterial({
+                color: 0x06b6d4,
+                roughness: 0.1,
+                metalness: 0.9,
+                transparent: true,
+                opacity: 0.85
+            });
+
+            for(let i=0; i<4; i++) {
+                const angle = (i / 4) * Math.PI * 2;
+                const stilt = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.3, 0.3, 14, 8),
+                    new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 })
+                );
+                stilt.position.set(Math.cos(angle)*3, 7, Math.sin(angle)*3);
+                stilt.castShadow = true;
+                towerGroup.add(stilt);
+            }
+
+            const tier1 = new THREE.Mesh(new THREE.ConeGeometry(6 * scale, 4 * scale, 16), blueMat);
+            tier1.position.y = 12 * scale;
+            towerGroup.add(tier1);
+
+            const glassRing = new THREE.Mesh(new THREE.CylinderGeometry(3 * scale, 3 * scale, 1.5 * scale, 16), cyanGlassMat);
+            glassRing.position.y = 14.5 * scale;
+            towerGroup.add(glassRing);
+
+            const tier2 = new THREE.Mesh(new THREE.CylinderGeometry(4.5 * scale, 1.8 * scale, 4.5 * scale, 16), blueMat);
+            tier2.position.y = 17.5 * scale;
+            towerGroup.add(tier2);
+
+            const tier3 = new THREE.Mesh(new THREE.ConeGeometry(4 * scale, 3.5 * scale, 16), cyanGlassMat);
+            tier3.position.y = 21 * scale;
+            towerGroup.add(tier3);
+
+            towerGroup.name = "towers";
+            towerGroup.userData.infoKey = "towers";
+            buildingsGroup.add(towerGroup);
+
+            towerGroup.traverse(child => {
+                if(child.isMesh) {
+                    child.name = "towers";
+                    child.userData.infoKey = "towers";
+                    child.userData.parentGroup = towerGroup;
+                    interactiveObjects.push(child);
+                }
+            });
+        }
+
+        function createOrangePavilion(x, groundY, z, radius) {
+            const pavGroup = new THREE.Group();
+            pavGroup.position.set(x, groundY, z);
+
+            const orangeMat = new THREE.MeshStandardMaterial({
+                color: 0xea580c,
+                roughness: 0.4,
+                metalness: 0.6
+            });
+
+            const roof = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, 1.2, 24), orangeMat);
+            roof.position.y = 8;
+            roof.castShadow = true;
+            pavGroup.add(roof);
+
+            for(let i=0; i<6; i++) {
+                const a = (i / 6) * Math.PI * 2;
+                const stilt = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.25, 0.25, 8, 8),
+                    new THREE.MeshStandardMaterial({ color: 0x431407 })
+                );
+                stilt.position.set(Math.cos(a)*(radius-0.8), 4, Math.sin(a)*(radius-0.8));
+                stilt.castShadow = true;
+                pavGroup.add(stilt);
+            }
+
+            buildingsGroup.add(pavGroup);
+            roof.name = "pavements";
+            roof.userData.infoKey = "pavements";
+            interactiveObjects.push(roof);
+        }
+
+        function createCliffArchWall() {
+            const wallGroup = new THREE.Group();
+            wallGroup.position.set(42, 18, -28);
+            wallGroup.rotation.y = -Math.PI / 4;
+
+            const stoneMat = new THREE.MeshStandardMaterial({
+                color: 0x57534e,
+                roughness: 0.9,
+                metalness: 0.1
+            });
+
+            const wallMesh = new THREE.Mesh(new THREE.BoxGeometry(34, 15, 6), stoneMat);
+            wallMesh.castShadow = true;
+            wallMesh.receiveShadow = true;
+            wallGroup.add(wallMesh);
+
+            const archMat = new THREE.MeshBasicMaterial({ color: 0x0f172a });
+            for(let i = -12; i <= 12; i += 8) {
+                const arch = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.5, 7, 16), archMat);
+                arch.rotation.x = Math.PI / 2;
+                arch.position.set(i, -1, 0);
+                wallGroup.add(arch);
+            }
+
+            wallGroup.name = "wall";
+            wallGroup.userData.infoKey = "wall";
+            buildingsGroup.add(wallGroup);
+            wallMesh.name = "wall";
+            wallMesh.userData.infoKey = "wall";
+            interactiveObjects.push(wallMesh);
+        }
+
+        function buildTerracottaWalkwayNetwork() {
+            const nodes = [
+                new THREE.Vector3(26, 7.5, -5),
+                new THREE.Vector3(12, 6.5, -12),
+                new THREE.Vector3(0, 7.0, 0),
+                new THREE.Vector3(-18, 7.5, 12),
+                new THREE.Vector3(-38, 7.5, 28),
+                new THREE.Vector3(12, 6.5, 22),
+                new THREE.Vector3(38, 12.0, -22)
+            ];
+
+            const terracottaMat = new THREE.MeshStandardMaterial({
+                color: 0xc2410c,
+                roughness: 0.5,
+                metalness: 0.3
+            });
+
+            const stiltMat = new THREE.MeshStandardMaterial({ color: 0x431407, roughness: 0.8 });
+
+            const connections = [
+                [0, 1], [1, 2], [2, 3], [3, 4], [2, 5], [1, 6]
+            ];
+
+            connections.forEach(([i1, i2]) => {
+                const p1 = nodes[i1];
+                const p2 = nodes[i2];
+
+                const dist = p1.distanceTo(p2);
+                const walkway = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.45, dist), terracottaMat);
+                
+                walkway.position.copy(p1).clone().add(p2).multiplyScalar(0.5);
+                walkway.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), p2.clone().sub(p1).normalize());
+                walkway.castShadow = true;
+                walkway.receiveShadow = true;
+                walkway.name = "pavements";
+                walkway.userData.infoKey = "pavements";
+
+                walkwaysGroup.add(walkway);
+                interactiveObjects.push(walkway);
+
+                const stiltCount = Math.floor(dist / 5.5);
+                for(let s = 1; s <= stiltCount; s++) {
+                    const stiltPos = p1.clone().lerp(p2, s / (stiltCount + 1));
+                    const height = stiltPos.y;
+
+                    const stilt = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, height, 8), stiltMat);
+                    stilt.position.set(stiltPos.x, height / 2, stiltPos.z);
+                    stilt.castShadow = true;
+                    walkwaysGroup.add(stilt);
+                }
+            });
+        }
+
+        /* Raycast Click Handling: Select, Inspect & Transform */
+        function handleRaycastClick(event) {
+            if (event.target.closest('.interactive-ui') || event.target.closest('.obj-link-badge')) return;
+
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(interactiveObjects, true);
+
+            if (intersects.length > 0) {
+                let hitObj = intersects[0].object;
+                
+                // If part of an imported group or structured group, find its parent entity
+                let targetEntity = hitObj;
+                while (targetEntity.parent && targetEntity.parent !== scene && targetEntity.parent !== importedGroup && targetEntity.parent !== buildingsGroup) {
+                    targetEntity = targetEntity.parent;
+                }
+
+                // Check if hit object is an imported object
+                if (targetEntity.userData.isImported || targetEntity.parent === importedGroup) {
+                    selectImportedObject(targetEntity);
+                    return;
+                }
+
+                // Builtin structure inspector
+                const key = targetEntity.userData.infoKey || hitObj.name;
+                if (STRUCTURE_INFO[key]) {
+                    selectBuiltinObject(targetEntity, key);
+                }
+            } else {
+                // Clicked empty space
+                if (transformControls.object) {
+                    transformControls.detach();
+                }
+            }
+        }
+
+        function selectBuiltinObject(obj, key) {
+            activeSelectedObject = obj;
+            transformControls.attach(obj);
+            showInspectorCard(key, obj);
+            
+            if (STRUCTURE_INFO[key]) {
+                audio.playResonantNote(STRUCTURE_INFO[key].freq, 'triangle');
+            }
+        }
+
+        function selectImportedObject(obj) {
+            activeSelectedObject = obj;
+            transformControls.attach(obj);
+
+            // Update UI Dropdown selection
+            const selectEl = document.getElementById('select-imported-objects');
+            const foundOption = importedObjectsList.find(item => item.object === obj || item.object === obj.userData.rootObject);
+            
+            if (foundOption) {
+                selectEl.value = foundOption.id;
+            }
+
+            // Enable transform UI buttons
+            document.getElementById('transform-mode-group').classList.remove('opacity-50', 'pointer-events-none');
+            document.getElementById('btn-delete-selected').disabled = false;
+
+            // Show Link inspector
+            showInspectorCardCustom(obj.userData.importedName || "Modello Importato", "Oggetto 3D personalizzato caricato nella scena.", obj);
+            showToast(`Selezionato: ${obj.userData.importedName || 'Oggetto Importato'}`);
+        }
+
+        function showInspectorCard(key, targetObj) {
+            const info = STRUCTURE_INFO[key];
+            if (!info) return;
+
+            document.getElementById('inspect-title').innerText = info.title;
+            document.getElementById('inspect-desc').innerText = info.desc;
+
+            // Load existing link if any
+            const existingLink = targetObj.userData.urlLink || "";
+            document.getElementById('input-inspect-link').value = existingLink;
+
+            const card = document.getElementById('inspector-card');
+            card.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+
+            showToast(`Selezionato: ${info.title}`);
+        }
+
+        function showInspectorCardCustom(title, desc, targetObj) {
+            document.getElementById('inspect-title').innerText = title;
+            document.getElementById('inspect-desc').innerText = desc;
+
+            const existingLink = targetObj.userData.urlLink || "";
+            document.getElementById('input-inspect-link').value = existingLink;
+
+            const card = document.getElementById('inspector-card');
+            card.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+        }
+
+        function focusOnStructure(key) {
+            const info = STRUCTURE_INFO[key];
+            if (!info) return;
+
+            const startPos = camera.position.clone();
+            const startTarget = controls.target.clone();
+            const duration = 1000;
+            const startTime = performance.now();
+
+            function animateCam(now) {
+                const elapsed = now - startTime;
+                const t = Math.min(elapsed / duration, 1.0);
+                const ease = 0.5 - Math.cos(t * Math.PI) / 2;
+
+                camera.position.lerpVectors(startPos, info.pos, ease);
+                controls.target.lerpVectors(startTarget, info.lookAt, ease);
+                controls.update();
+
+                if (t < 1.0) requestAnimationFrame(animateCam);
+            }
+            requestAnimationFrame(animateCam);
+        }
+
+        function setPresetView(viewType) {
+            let targetPos, targetLook;
+
+            if (viewType === 'stromboli') {
+                targetPos = new THREE.Vector3(0, 35, 90);
+                targetLook = new THREE.Vector3(0, 30, -310);
+                updateSunAndLighting(73); // Stromboli Sunset alignment
+                document.getElementById('slider-sun-cycle').value = 73;
+            } else if (viewType === 'top') {
+                targetPos = new THREE.Vector3(0, 180, 0.1);
+                targetLook = new THREE.Vector3(0, 0, 0);
+            } else if (viewType === 'sunset') {
+                targetPos = new THREE.Vector3(-65, 30, 85);
+                targetLook = new THREE.Vector3(10, 8, -10);
+                updateSunAndLighting(75);
+            } else if (viewType === 'towers') {
+                targetPos = new THREE.Vector3(-18, 22, 45);
+                targetLook = new THREE.Vector3(-18, 12, 12);
+            } else if (viewType === 'pyramid') {
+                targetPos = new THREE.Vector3(26, 18, 28);
+                targetLook = new THREE.Vector3(26, 10, -5);
+            } else if (viewType === 'rock') {
+                targetPos = new THREE.Vector3(-38, 20, 65);
+                targetLook = new THREE.Vector3(-38, 10, 28);
+            }
+
+            const startPos = camera.position.clone();
+            const startTarget = controls.target.clone();
+            const startTime = performance.now();
+
+            function animateView(now) {
+                const elapsed = now - startTime;
+                const t = Math.min(elapsed / 1200, 1.0);
+                const ease = 0.5 - Math.cos(t * Math.PI) / 2;
+
+                camera.position.lerpVectors(startPos, targetPos, ease);
+                controls.target.lerpVectors(startTarget, targetLook, ease);
+                controls.update();
+
+                if (t < 1.0) requestAnimationFrame(animateView);
+            }
+            requestAnimationFrame(animateView);
+        }
+
+        /* Add imported object to scene and management registry */
+        function registerAndAddImportedObject(obj, name = "Modello Importato") {
+            importedCounter++;
+            const objId = `imp_obj_${importedCounter}`;
+            const displayName = `${name} #${importedCounter}`;
+
+            obj.userData.importedId = objId;
+            obj.userData.importedName = displayName;
+            obj.userData.isImported = true;
+
+            obj.traverse(c => {
+                if (c.isMesh) {
+                    c.userData.importedId = objId;
+                    c.userData.importedName = displayName;
+                    c.userData.isImported = true;
+                    c.userData.rootObject = obj;
+                    interactiveObjects.push(c);
+                }
+            });
+
+            importedGroup.add(obj);
+            importedObjectsList.push({ id: objId, name: displayName, object: obj });
+
+            // Update UI Select
+            updateImportedObjectsSelect();
+            selectImportedObject(obj);
+        }
+
+        function updateImportedObjectsSelect() {
+            const selectEl = document.getElementById('select-imported-objects');
+            selectEl.innerHTML = '';
+
+            if (importedObjectsList.length === 0) {
+                selectEl.innerHTML = '<option value="">-- Nessun oggetto importato --</option>';
+                document.getElementById('imported-count-badge').innerText = "0";
+                document.getElementById('transform-mode-group').classList.add('opacity-50', 'pointer-events-none');
+                document.getElementById('btn-delete-selected').disabled = true;
+                return;
+            }
+
+            document.getElementById('imported-count-badge').innerText = importedObjectsList.length;
+
+            importedObjectsList.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.id;
+                opt.innerText = item.name;
+                selectEl.appendChild(opt);
+            });
+        }
+
+        function deleteSelectedImportedObject() {
+            if (!activeSelectedObject) return;
+
+            const targetObj = activeSelectedObject.userData.rootObject || activeSelectedObject;
+            const objId = targetObj.userData.importedId;
+
+            transformControls.detach();
+            importedGroup.remove(targetObj);
+
+            // Remove from interactive raycast list
+            interactiveObjects = interactiveObjects.filter(item => item !== targetObj && item.userData.rootObject !== targetObj);
+            
+            // Remove from management array
+            importedObjectsList = importedObjectsList.filter(item => item.id !== objId);
+
+            activeSelectedObject = null;
+            updateImportedObjectsSelect();
+
+            document.getElementById('inspector-card').classList.add('opacity-0', 'pointer-events-none');
+            showToast("Oggetto eliminato dalla scena.");
+        }
+
+        /* Floating 3D Link Badges Renderer */
+        function update3DLinkBadges() {
+            const container = document.getElementById('link-badges-container');
+            
+            if (!showLinkBadges) {
+                container.innerHTML = '';
+                return;
+            }
+
+            // Find all objects with urlLink assigned
+            const linkedObjects = [];
+            scene.traverse(child => {
+                if (child.userData && child.userData.urlLink && child.userData.urlLink.trim() !== "") {
+                    // Avoid duplicate badges for child meshes of the same group
+                    const root = child.userData.rootObject || child;
+                    if (!linkedObjects.includes(root)) {
+                        linkedObjects.push(root);
+                    }
+                }
+            });
+
+            // Sync HTML badges with screen coordinates
+            const currentBadgeIds = new Set();
+
+            linkedObjects.forEach((obj, idx) => {
+                const badgeId = `badge_${obj.id || idx}`;
+                currentBadgeIds.add(badgeId);
+
+                let badgeEl = document.getElementById(badgeId);
+                if (!badgeEl) {
+                    badgeEl = document.createElement('div');
+                    badgeEl.id = badgeId;
+                    badgeEl.className = 'obj-link-badge glass-panel px-2.5 py-1 rounded-full text-xs font-bold text-amber-300 border border-amber-400/60 shadow-[0_0_12px_rgba(245,158,11,0.5)] flex items-center gap-1.5';
+                    badgeEl.onclick = (e) => {
+                        e.stopPropagation();
+                        if (obj.userData.urlLink) {
+                            window.open(obj.userData.urlLink, '_blank');
+                        }
+                    };
+                    container.appendChild(badgeEl);
+                }
+
+                // Compute world center of object bounding box or position
+                const worldPos = new THREE.Vector3();
+                obj.getWorldPosition(worldPos);
+                worldPos.y += 12; // Height offset above object
+
+                const screenPos = worldPos.clone().project(camera);
+
+                // Is object in front of camera view frustum?
+                if (screenPos.z < 1.0) {
+                    const x = (screenPos.x * 0.5 + 0.5) * window.innerWidth;
+                    const y = (-(screenPos.y * 0.5) + 0.5) * window.innerHeight;
+
+                    badgeEl.style.left = `${x}px`;
+                    badgeEl.style.top = `${y}px`;
+                    badgeEl.style.opacity = '1';
+                    
+                    const objName = obj.userData.importedName || STRUCTURE_INFO[obj.userData.infoKey]?.title || "Oggetto";
+                    badgeEl.innerHTML = `🔗 <span class="max-w-[120px] truncate">${objName}</span>`;
+                } else {
+                    badgeEl.style.opacity = '0';
+                }
+            });
+
+            // Clean up old removed badges
+            Array.from(container.children).forEach(child => {
+                if (!currentBadgeIds.has(child.id)) {
+                    container.removeChild(child);
+                }
+            });
+        }
+
+        function setupOBJCleanerEvents() {
+            const modal = document.getElementById('obj-modal');
+            const dropZone = document.getElementById('obj-drop-zone');
+            const fileInput = document.getElementById('file-input-obj');
+            const statsBox = document.getElementById('obj-stats-box');
+            const btnAdd = document.getElementById('btn-import-add');
+            const btnReplace = document.getElementById('btn-import-replace');
+
+            document.getElementById('btn-open-obj-modal').addEventListener('click', () => {
+                modal.classList.remove('opacity-0', 'pointer-events-none');
+            });
+
+            document.getElementById('btn-close-obj-modal').addEventListener('click', () => {
+                modal.classList.add('opacity-0', 'pointer-events-none');
+            });
+
+            dropZone.addEventListener('click', () => fileInput.click());
+
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('border-amber-400', 'bg-blue-900/50');
+            });
+
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('border-amber-400', 'bg-blue-900/50');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('border-amber-400', 'bg-blue-900/50');
+                if (e.dataTransfer.files.length > 0) {
+                    processFile(e.dataTransfer.files[0]);
+                }
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    processFile(e.target.files[0]);
+                }
+            });
+
+            function logTerminal(msg, isSuccess = false) {
+                const div = document.createElement('div');
+                if (isSuccess) div.className = 'text-green-400 font-bold';
+                div.innerText = `> ${msg}`;
+                statsBox.appendChild(div);
+                statsBox.scrollTop = statsBox.scrollHeight;
+            }
+
+            function processFile(file) {
+                const fileName = file.name.toLowerCase();
+                if (fileName.endsWith('.3dm')) {
+                    process3DMFile(file);
+                } else if (fileName.endsWith('.obj')) {
+                    processOBJFile(file);
+                } else {
+                    logTerminal("ERRORE: Selezionare un file .3dm (Rhino) o .obj valido!", false);
+                }
+            }
+
+            function process3DMFile(file) {
+                logTerminal(`Lettura file 3DM Rhino: ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)...`);
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const buffer = e.target.result;
+                    logTerminal("Decodifica geometria Rhino (.3dm) in corso...");
+                    
+                    if (!rhinoLoader && typeof THREE['3DMLoader'] !== 'undefined') {
+                        rhinoLoader = new THREE['3DMLoader']();
+                        rhinoLoader.setLibraryPath('https://cdn.jsdelivr.net/npm/rhino3dm@0.15.0/');
+                    }
+
+                    if (!rhinoLoader) {
+                        logTerminal("ERRORE: Inizializzazione 3DMLoader fallita.", false);
+                        return;
+                    }
+
+                    try {
+                        rhinoLoader.parse(buffer, function(object) {
+                            let meshCount = 0;
+                            let totalVertices = 0;
+
+                            const box = new THREE.Box3().setFromObject(object);
+                            const size = new THREE.Vector3();
+                            box.getSize(size);
+
+                            const maxDim = Math.max(size.x, size.y, size.z);
+                            const targetScale = maxDim > 0 ? 30 / maxDim : 1;
+                            object.scale.set(targetScale, targetScale, targetScale);
+
+                            object.position.set(0, 15, 0);
+
+                            object.traverse(child => {
+                                if (child.isMesh) {
+                                    meshCount++;
+                                    if (child.geometry && child.geometry.attributes.position) {
+                                        totalVertices += child.geometry.attributes.position.count;
+                                    }
+                                    child.castShadow = true;
+                                    child.receiveShadow = true;
+                                    
+                                    if (!child.material || child.material.isMeshBasicMaterial) {
+                                        child.material = new THREE.MeshStandardMaterial({
+                                            color: 0x38bdf8,
+                                            roughness: 0.3,
+                                            metalness: 0.6,
+                                            side: THREE.DoubleSide
+                                        });
+                                    } else {
+                                        child.material.side = THREE.DoubleSide;
+                                    }
+                                }
+                            });
+
+                            loadedImportedObject = object;
+                            loadedImportedObject.userData.fileName = file.name;
+                            loadedCleanedGeometry = null;
+
+                            logTerminal(`Statistiche 3DM (${file.name}):`);
+                            logTerminal(`- Mesh processate: ${meshCount}`);
+                            logTerminal(`- Vertici totali: ${totalVertices}`);
+                            logTerminal(`Modello 3DM pronto per l'inserimento!`, true);
+
+                            btnAdd.disabled = false;
+                            btnReplace.disabled = false;
+                        }, function(err) {
+                            logTerminal("ERRORE durante la decodifica del file 3DM.", false);
+                        });
+                    } catch(err) {
+                        logTerminal("ECCEZIONE durante il caricamento 3DM: " + err.message, false);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            }
+
+            function processOBJFile(file) {
+                logTerminal(`Lettura file OBJ: ${file.name} (${(file.size / 1024).toFixed(1)} KB)...`);
+
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const text = e.target.result;
+                    
+                    const options = {
+                        cleanVertices: document.getElementById('opt-clean-vertices').checked,
+                        cleanFaces: document.getElementById('opt-clean-faces').checked,
+                        recomputeNormals: document.getElementById('opt-recompute-normals').checked,
+                        autocenter: document.getElementById('opt-autocenter').checked,
+                        autoscale: document.getElementById('opt-autoscale').checked
+                    };
+
+                    logTerminal("Esecuzione algoritmo di pulizia mesh OBJ...");
+
+                    const { geometry, stats } = OBJCleanerEngine.parseAndCleanOBJ(text, options);
+                    loadedCleanedGeometry = geometry;
+                    loadedCleanedGeometry.userData = { fileName: file.name };
+                    loadedImportedObject = null;
+
+                    logTerminal(`Analisi completata: ${stats.rawVerticesCount} vertici, ${stats.rawFacesCount} facce.`);
+                    logTerminal(`Eliminati ${stats.removedUnusedVertices} vertici isolati e ${stats.removedDegenerateFaces} facce degenerate.`);
+                    logTerminal("Modello OBJ igienizzato con successo!", true);
+
+                    btnAdd.disabled = false;
+                    btnReplace.disabled = false;
+                };
+
+                reader.readAsText(file);
+            }
+
+            btnAdd.addEventListener('click', () => {
+                if (loadedImportedObject) {
+                    const name = loadedImportedObject.userData.fileName || "Modello 3DM";
+                    registerAndAddImportedObject(loadedImportedObject.clone(), name);
+                    showToast("Modello 3DM aggiunto alla Scena!");
+                    modal.classList.add('opacity-0', 'pointer-events-none');
+                } else if (loadedCleanedGeometry) {
+                    const mat = new THREE.MeshStandardMaterial({
+                        color: 0xf59e0b,
+                        roughness: 0.3,
+                        metalness: 0.7,
+                        side: THREE.DoubleSide
+                    });
+
+                    const mesh = new THREE.Mesh(loadedCleanedGeometry, mat);
+                    mesh.position.set(0, 15, 0);
+                    mesh.castShadow = true;
+                    mesh.receiveShadow = true;
+
+                    const name = loadedCleanedGeometry.userData.fileName || "Modello OBJ";
+                    registerAndAddImportedObject(mesh, name);
+
+                    showToast("Modello OBJ Pulito aggiunto alla Scena!");
+                    modal.classList.add('opacity-0', 'pointer-events-none');
+                }
+            });
+
+            btnReplace.addEventListener('click', () => {
+                // Clear existing imported objects
+                importedObjectsList.forEach(item => {
+                    importedGroup.remove(item.object);
+                });
+                importedObjectsList = [];
+                interactiveObjects = interactiveObjects.filter(item => !item.userData.isImported);
+
+                if (loadedImportedObject) {
+                    const name = loadedImportedObject.userData.fileName || "Modello 3DM";
+                    registerAndAddImportedObject(loadedImportedObject, name);
+                    showToast("Scena aggiornata con il Modello 3DM!");
+                    modal.classList.add('opacity-0', 'pointer-events-none');
+                } else if (loadedCleanedGeometry) {
+                    const mat = new THREE.MeshStandardMaterial({
+                        color: 0x06b6d4,
+                        roughness: 0.2,
+                        metalness: 0.8,
+                        side: THREE.DoubleSide
+                    });
+
+                    const mesh = new THREE.Mesh(loadedCleanedGeometry, mat);
+                    mesh.position.set(0, 15, 0);
+                    mesh.castShadow = true;
+                    mesh.receiveShadow = true;
+
+                    const name = loadedCleanedGeometry.userData.fileName || "Modello OBJ";
+                    registerAndAddImportedObject(mesh, name);
+
+                    showToast("Scena aggiornata con il Modello OBJ igienizzato!");
+                    modal.classList.add('opacity-0', 'pointer-events-none');
+                }
+            });
+        }
+
+        function setupUI() {
+            // View preset buttons
+            document.getElementById('btn-view-stromboli').addEventListener('click', () => { setPresetView('stromboli'); showToast("Vista: Tramonto sullo Stromboli"); });
+            document.getElementById('btn-view-top').addEventListener('click', () => { setPresetView('top'); showToast("Vista dall'Alto (Mappa)"); });
+            document.getElementById('btn-view-sunset').addEventListener('click', () => { setPresetView('sunset'); showToast("Vista Tramonto (trt)"); });
+            document.getElementById('btn-view-towers').addEventListener('click', () => { setPresetView('towers'); showToast("Primo Piano Torri Pagoda"); });
+            document.getElementById('btn-view-pyramid').addEventListener('click', () => { setPresetView('pyramid'); showToast("Primo Piano Piramide"); });
+            document.getElementById('btn-view-rock').addEventListener('click', () => { setPresetView('rock'); showToast("Vista Faraglione"); });
+
+            // Stromboli Dynamic Sun slider and auto animation
+            const sunSlider = document.getElementById('slider-sun-cycle');
+            sunSlider.addEventListener('input', (e) => {
+                updateSunAndLighting(parseFloat(e.target.value));
+            });
+
+            const btnSunAnim = document.getElementById('btn-toggle-sun-anim');
+            btnSunAnim.addEventListener('click', () => {
+                isSunAnimActive = !isSunAnimActive;
+                btnSunAnim.innerText = isSunAnimActive ? "⏸️ Pausa" : "▶️ Anima";
+                btnSunAnim.className = isSunAnimActive 
+                    ? "bg-amber-500 text-gray-950 font-bold px-2 py-0.5 rounded text-[10px] transition shadow-[0_0_10px_#f59e0b]"
+                    : "bg-red-500/30 text-red-200 border border-red-400/40 px-2 py-0.5 rounded text-[10px] font-bold transition";
+            });
+
+            // Panel toggle
+            const panel = document.getElementById('main-control-panel');
+            document.getElementById('btn-toggle-panel').addEventListener('click', () => {
+                panel.classList.toggle('hidden');
+            });
+
+            // Inspector Card Controls
+            document.getElementById('btn-close-inspect').addEventListener('click', () => {
+                document.getElementById('inspector-card').classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                transformControls.detach();
+                activeSelectedObject = null;
+            });
+
+            document.getElementById('btn-focus-obj').addEventListener('click', () => {
+                if (activeSelectedObject) {
+                    const key = activeSelectedObject.userData.infoKey;
+                    if (key && STRUCTURE_INFO[key]) {
+                        focusOnStructure(key);
+                    } else {
+                        // Focus on imported object position
+                        const pos = new THREE.Vector3();
+                        activeSelectedObject.getWorldPosition(pos);
+                        camera.position.set(pos.x, pos.y + 15, pos.z + 30);
+                        controls.target.copy(pos);
+                        controls.update();
+                    }
+                }
+            });
+
+            document.getElementById('btn-play-sound').addEventListener('click', () => {
+                if (activeSelectedObject && activeSelectedObject.userData.infoKey) {
+                    audio.playResonantNote(STRUCTURE_INFO[activeSelectedObject.userData.infoKey].freq, 'sawtooth');
+                } else {
+                    audio.playResonantNote(330, 'sine');
+                }
+            });
+
+            // Inspector Link Editor
+            document.getElementById('btn-save-inspect-link').addEventListener('click', () => {
+                if (activeSelectedObject) {
+                    const url = document.getElementById('input-inspect-link').value.trim();
+                    const rootObj = activeSelectedObject.userData.rootObject || activeSelectedObject;
+                    rootObj.userData.urlLink = url;
+                    
+                    showToast(url ? "Link associato con successo!" : "Link svuotato.");
+                    update3DLinkBadges();
+                }
+            });
+
+            document.getElementById('btn-remove-inspect-link').addEventListener('click', () => {
+                if (activeSelectedObject) {
+                    const rootObj = activeSelectedObject.userData.rootObject || activeSelectedObject;
+                    rootObj.userData.urlLink = "";
+                    document.getElementById('input-inspect-link').value = "";
+                    showToast("Link rimosso dall'oggetto.");
+                    update3DLinkBadges();
+                }
+            });
+
+            // Imported Objects Dropdown & Transform Mode Buttons
+            const selectEl = document.getElementById('select-imported-objects');
+            selectEl.addEventListener('change', (e) => {
+                const selectedId = e.target.value;
+                const found = importedObjectsList.find(item => item.id === selectedId);
+                if (found) {
+                    selectImportedObject(found.object);
+                } else {
+                    transformControls.detach();
+                    activeSelectedObject = null;
+                    document.getElementById('transform-mode-group').classList.add('opacity-50', 'pointer-events-none');
+                }
+            });
+
+            const btnTranslate = document.getElementById('btn-mode-translate');
+            const btnRotate = document.getElementById('btn-mode-rotate');
+            const btnScale = document.getElementById('btn-mode-scale');
+
+            function setTransformMode(mode, activeBtn) {
+                transformControls.setMode(mode);
+                [btnTranslate, btnRotate, btnScale].forEach(b => {
+                    b.className = "bg-gray-800 hover:bg-amber-500/30 text-amber-200 border border-gray-700 py-1 rounded text-xs transition";
+                });
+                activeBtn.className = "bg-amber-500 text-gray-950 font-bold py-1 rounded text-xs transition shadow-[0_0_10px_#f59e0b]";
+            }
+
+            btnTranslate.addEventListener('click', () => setTransformMode('translate', btnTranslate));
+            btnRotate.addEventListener('click', () => setTransformMode('rotate', btnRotate));
+            btnScale.addEventListener('click', () => setTransformMode('scale', btnScale));
+
+            document.getElementById('btn-delete-selected').addEventListener('click', deleteSelectedImportedObject);
+            document.getElementById('btn-deselect-all').addEventListener('click', () => {
+                transformControls.detach();
+                activeSelectedObject = null;
+                document.getElementById('inspector-card').classList.add('opacity-0', 'pointer-events-none');
+            });
+
+            // Links visibility toggle
+            document.getElementById('chk-show-links').addEventListener('change', (e) => {
+                showLinkBadges = e.target.checked;
+                update3DLinkBadges();
+            });
+
+            // Architectural focus shortcuts
+            document.getElementById('focus-pyramid').addEventListener('click', () => { focusOnStructure('pyramid'); });
+            document.getElementById('focus-towers').addEventListener('click', () => { focusOnStructure('towers'); });
+            document.getElementById('focus-pavements').addEventListener('click', () => { focusOnStructure('pavements'); });
+            document.getElementById('focus-rock').addEventListener('click', () => { focusOnStructure('rock'); });
+            document.getElementById('focus-wall').addEventListener('click', () => { focusOnStructure('wall'); });
+
+            // Environment lighting presets
+            document.getElementById('env-sunset').addEventListener('click', () => {
+                updateSunAndLighting(75);
+                sunSlider.value = 75;
+                showToast("Illuminazione: Tramonto Dorato");
+            });
+            document.getElementById('env-day').addEventListener('click', () => {
+                updateSunAndLighting(50);
+                sunSlider.value = 50;
+                showToast("Illuminazione: Giorno Luminoso");
+            });
+            document.getElementById('env-night').addEventListener('click', () => {
+                updateSunAndLighting(95);
+                sunSlider.value = 95;
+                showToast("Illuminazione: Notte Cyberpunk");
+            });
+
+            // Wave sliders
+            document.getElementById('slider-wave-height').addEventListener('input', (e) => { waveParams.height = parseFloat(e.target.value); });
+            document.getElementById('slider-wave-speed').addEventListener('input', (e) => { waveParams.speed = parseFloat(e.target.value); });
+
+            // Filter checkboxes
+            document.getElementById('chk-buildings').addEventListener('change', (e) => { buildingsGroup.visible = e.target.checked; });
+            document.getElementById('chk-walkways').addEventListener('change', (e) => { walkwaysGroup.visible = e.target.checked; });
+            document.getElementById('chk-water').addEventListener('change', (e) => { oceanMesh.visible = e.target.checked; });
+            document.getElementById('chk-imported').addEventListener('change', (e) => { importedGroup.visible = e.target.checked; });
+            document.getElementById('chk-stromboli').addEventListener('change', (e) => { stromboliGroup.visible = e.target.checked; });
+
+            // Audio synth controls
+            document.getElementById('btn-audio-toggle').addEventListener('click', () => {
+                const playing = audio.toggle();
+                const btn = document.getElementById('btn-audio-toggle');
+                btn.innerText = playing ? "Disattiva Audio" : "Attiva Audio";
+                btn.className = playing 
+                    ? "bg-amber-500 text-gray-950 border border-amber-300 px-2.5 py-1 rounded-lg text-xs font-bold transition shadow-[0_0_10px_#f59e0b]"
+                    : "bg-amber-500/30 text-amber-200 border border-amber-400/40 px-2.5 py-1 rounded-lg text-xs font-bold transition";
+                showToast(playing ? "Audio d'Ambiente Attivato" : "Audio Messo in Pausa");
+            });
+
+            document.getElementById('slider-volume').addEventListener('input', (e) => {
+                audio.setVolume(parseFloat(e.target.value));
+            });
+
+            setupOBJCleanerEvents();
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.classList.remove('opacity-0', 'translate-y-3');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-3');
+            }, 2200);
+        }
+
+        function onResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        let clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const elapsed = clock.getElapsedTime();
+
+            // Auto Sun Sunset Cycle animation
+            if (isSunAnimActive) {
+                sunCycleVal = (sunCycleVal + 0.08) % 100;
+                document.getElementById('slider-sun-cycle').value = sunCycleVal;
+                updateSunAndLighting(sunCycleVal);
+            }
+
+            // Animate Volcano Smoke
+            if (stromboliGroup && stromboliGroup.visible) {
+                animateVolcanoSmoke();
+            }
+
+            // Ocean Wave Animation
+            if (oceanMesh && oceanMesh.visible) {
+                const pos = oceanMesh.geometry.attributes.position;
+                for (let i = 0; i < pos.count; i++) {
+                    const u = pos.getX(i);
+                    const v = pos.getZ(i);
+                    const y = Math.sin(u * 0.08 + elapsed * waveParams.speed * 1.5) * waveParams.height 
+                            + Math.cos(v * 0.08 + elapsed * waveParams.speed * 1.2) * waveParams.height;
+                    pos.setY(i, y);
+                }
+                oceanMesh.geometry.attributes.position.needsUpdate = true;
+            }
+
+            controls.update();
+
+            // Update floating 3D link badges
+            update3DLinkBadges();
+
+            document.getElementById('cam-info').innerText = 
+                `Cam: X:${Math.round(camera.position.x)} Y:${Math.round(camera.position.y)} Z:${Math.round(camera.position.z)}`;
+
+            renderer.render(scene, camera);
+        }
+
+        window.onload = function () {
+            init3D();
+            setupUI();
+            animate();
+            showToast("Simulatore 3D Inizializzato (Tramonto Stromboli & Link Attivi)");
+        };
+    </script>
+</body>
+</html>
