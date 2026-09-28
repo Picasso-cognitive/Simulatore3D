@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+<html lang="it" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Genesi del Circuito di Chua - Scena III: L'Iper-Spazio dei Matematici</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        zenRed: '#d9381e',
+                        zenGold: '#d4af37',
+                        zenDark: '#0a0b0e',
+                        zenLacquer: '#12141a',
+                        mathCantor: '#9333ea', // Purple
+                        mathJulia: '#ec4899',  // Pink
+                        mathLorenz: '#06b6d4', // Cyan
+                        mathPoincare: '#eab308', // Gold
+                        labGreen: '#00ff66',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Courier Prime', 'Consolas', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            background-color: #0a0b0e;
+            color: #e2e8f0;
+            font-family: system-ui, -apple-system, sans-serif;
+            overflow-x: hidden;
+        }
+
+        .tab-btn.active {
+            border-bottom: 3px solid #d4af37;
+            color: #ffffff;
+            background-color: rgba(212, 175, 55, 0.12);
+        }
+
+        .glow-purple { box-shadow: 0 0 20px rgba(147, 51, 234, 0.4); }
+        .glow-pink { box-shadow: 0 0 20px rgba(236, 72, 153, 0.4); }
+        .glow-cyan { box-shadow: 0 0 20px rgba(6, 182, 212, 0.4); }
+        .glow-gold { box-shadow: 0 0 20px rgba(234, 179, 8, 0.4); }
+
+        /* Karaoke Active Text Glow */
+        .karaoke-word {
+            transition: all 0.15s ease-in-out;
+            display: inline-block;
+            margin: 0 2px;
+        }
+        .karaoke-word.active {
+            color: #ffd700;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.8), 0 0 20px rgba(217, 56, 30, 0.6);
+            transform: scale(1.08);
+            font-weight: 700;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0f1117; }
+        ::-webkit-scrollbar-thumb { background: #262a36; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #d4af37; }
+
+        /* CRT Scanline Effect */
+        .crt-scanlines::after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 10;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col bg-zenDark text-slate-200 antialiased selection:bg-zenGold selection:text-black">
+
+    <header class="border-b border-slate-800 bg-zenLacquer/90 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-600 via-pink-600 to-amber-500 flex items-center justify-center font-bold text-xl text-white shadow-lg shadow-purple-900/30">
+                    Ⅲ
+                </div>
+                <div>
+                    <h1 class="text-lg md:text-xl font-bold tracking-wide text-white flex items-center gap-2">
+                        La Genesi del Circuito di Chua
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-purple-900/40 border border-purple-500/50 text-purple-300 font-normal">Scena III</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">L'Iper-Spazio dei 4 Matematici — Cantor, Julia, Lorenz &amp; Poincaré</p>
+                </div>
+            </div>
+
+            <!-- Global Audio Synth Controls -->
+            <div class="flex items-center gap-2 bg-slate-900/90 p-2 rounded-lg border border-slate-800 text-xs">
+                <button id="btn-ambient-sound" onclick="toggleAmbientSound()" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition flex items-center gap-1.5">
+                    <i data-lucide="cloud-rain" class="w-4 h-4 text-mathLorenz"></i>
+                    <span id="ambient-sound-text">Sfondo Spettrale: OFF</span>
+                </button>
+                <button id="btn-sfx-toggle" onclick="toggleSFX()" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition flex items-center gap-1.5">
+                    <i data-lucide="volume-2" id="sfx-icon" class="w-4 h-4 text-zenGold"></i>
+                    <span id="sfx-text">Effetti: ON</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <nav class="max-w-7xl mx-auto px-4 flex gap-1 overflow-x-auto text-sm border-t border-slate-800/50">
+            <button onclick="switchTab('tab-stage')" id="tab-btn-stage" class="tab-btn active px-4 py-3 font-medium text-slate-400 hover:text-white transition flex items-center gap-2 whitespace-nowrap">
+                <i data-lucide="clapperboard" class="w-4 h-4 text-zenGold"></i>
+                1. Teatro Interattivo &amp; Dialoghi Karaoke
+            </button>
+            <button onclick="switchTab('tab-lab')" id="tab-btn-lab" class="tab-btn px-4 py-3 font-medium text-slate-400 hover:text-white transition flex items-center gap-2 whitespace-nowrap">
+                <i data-lucide="flask-conical" class="w-4 h-4 text-mathJulia"></i>
+                2. Laboratorio dei 4 Matematici
+            </button>
+            <button onclick="switchTab('tab-script')" id="tab-btn-script" class="tab-btn px-4 py-3 font-medium text-slate-400 hover:text-white transition flex items-center gap-2 whitespace-nowrap">
+                <i data-lucide="book-open" class="w-4 h-4 text-mathLorenz"></i>
+                3. Analisi Concettuale e Copione
+            </button>
+        </nav>
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto p-4 md:p-6">
+
+        <!-- ================= TAB 1: INTERACTIVE THEATER ================= -->
+        <section id="tab-stage" class="tab-content block space-y-6">
+            <!-- Stage Bar Info -->
+            <div class="bg-zenLacquer p-4 rounded-xl border border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i data-lucide="sparkles" class="text-zenGold w-5 h-5"></i>
+                        Proscenio dell'Iper-Spazio: Le Quattro Ombre della Matematica
+                    </h2>
+                    <p class="text-sm text-slate-400 mt-1">
+                        Sopra la nuvola dell'esperimento fallito a Tokyo, si librano Cantor, Julia, Lorenz e Poincaré. Ciascuno apporta la sua chiave teorica.
+                    </p>
+                </div>
+
+                <!-- Sync Controls & Speed Select -->
+                <div class="flex items-center gap-2 bg-slate-950 p-2 rounded-lg border border-slate-800">
+                    <span class="text-xs text-slate-400 font-mono">Velocità:</span>
+                    <button onclick="setSpeed(0.5)" class="speed-btn px-2 py-1 rounded text-xs bg-slate-800 hover:bg-slate-700 text-slate-300">0.5x</button>
+                    <button onclick="setSpeed(1.0)" class="speed-btn px-2 py-1 rounded text-xs bg-zenGold text-black font-bold">1x</button>
+                    <button onclick="setSpeed(1.5)" class="speed-btn px-2 py-1 rounded text-xs bg-slate-800 hover:bg-slate-700 text-slate-300">1.5x</button>
+                    <button onclick="setSpeed(2.0)" class="speed-btn px-2 py-1 rounded text-xs bg-slate-800 hover:bg-slate-700 text-slate-300">2x</button>
+                </div>
+            </div>
+
+            <!-- Stage & Interactive Dialogue Container -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Canvas Stage (Interactive Floating Heads & Special FX) -->
+                <div class="lg:col-span-12 xl:col-span-7 bg-black rounded-xl border border-slate-800 overflow-hidden relative shadow-2xl flex flex-col crt-scanlines">
+                    <div class="bg-slate-900/90 px-4 py-2 border-b border-slate-800 flex justify-between items-center text-xs">
+                        <span class="font-mono text-zenGold flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-zenGold animate-ping"></span>
+                            VISIONI SPETTRALI SCENA III — TOKYO / IPER-SPAZIO
+                        </span>
+                        <span class="text-slate-400 font-mono" id="stage-action-indicator">Azione: Nuvola del Collasso su Tokyo</span>
+                    </div>
+
+                    <!-- Canvas Frame -->
+                    <div class="relative aspect-[16/10] w-full bg-black overflow-hidden">
+                        <canvas id="stage-canvas" class="w-full h-full block cursor-pointer"></canvas>
+
+                        <!-- Floating Heads Hotspot Overlay Text -->
+                        <div id="head-tooltip" class="hidden absolute top-4 left-4 bg-slate-900/95 border border-zenGold text-slate-200 text-xs p-3 rounded-lg shadow-xl max-w-xs z-30 backdrop-blur pointer-events-none">
+                            <h4 id="head-title" class="font-bold text-zenGold mb-1"></h4>
+                            <p id="head-desc" class="text-slate-300"></p>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Talking Heads Status Grid -->
+                    <div class="p-3 bg-zenLacquer border-t border-slate-800 grid grid-cols-5 gap-2 text-center text-xs">
+                        <div id="head-card-cantor" onclick="triggerHeadAction('cantor')" class="p-2 rounded-lg border border-purple-900/40 bg-purple-950/20 hover:bg-purple-900/30 transition cursor-pointer">
+                            <div class="w-8 h-8 rounded-full bg-purple-800 mx-auto mb-1 flex items-center justify-center font-bold text-white shadow-lg shadow-purple-600/30">GC</div>
+                            <div class="font-bold text-purple-300 truncate">Cantor</div>
+                            <div class="text-[10px] text-purple-400/80">Polvere</div>
+                        </div>
+
+                        <div id="head-card-julia" onclick="triggerHeadAction('julia')" class="p-2 rounded-lg border border-pink-900/40 bg-pink-950/20 hover:bg-pink-900/30 transition cursor-pointer">
+                            <div class="w-8 h-8 rounded-full bg-pink-700 mx-auto mb-1 flex items-center justify-center font-bold text-white shadow-lg shadow-pink-600/30">GJ</div>
+                            <div class="font-bold text-pink-300 truncate">Julia</div>
+                            <div class="text-[10px] text-pink-400/80">Conigli</div>
+                        </div>
+
+                        <div id="head-card-lorenz" onclick="triggerHeadAction('lorenz')" class="p-2 rounded-lg border border-cyan-900/40 bg-cyan-950/20 hover:bg-cyan-900/30 transition cursor-pointer">
+                            <div class="w-8 h-8 rounded-full bg-cyan-700 mx-auto mb-1 flex items-center justify-center font-bold text-white shadow-lg shadow-cyan-600/30">EL</div>
+                            <div class="font-bold text-cyan-300 truncate">Lorenz</div>
+                            <div class="text-[10px] text-cyan-400/80">Ombrello</div>
+                        </div>
+
+                        <div id="head-card-poincare" onclick="triggerHeadAction('poincare')" class="p-2 rounded-lg border border-amber-900/40 bg-amber-950/20 hover:bg-amber-900/30 transition cursor-pointer">
+                            <div class="w-8 h-8 rounded-full bg-amber-600 mx-auto mb-1 flex items-center justify-center font-bold text-white shadow-lg shadow-amber-600/30">HP</div>
+                            <div class="font-bold text-amber-300 truncate">Poincaré</div>
+                            <div class="text-[10px] text-amber-400/80">Sezione</div>
+                        </div>
+
+                        <div id="head-card-chua" onclick="triggerHeadAction('chua')" class="p-2 rounded-lg border border-red-900/40 bg-red-950/20 hover:bg-red-900/30 transition cursor-pointer">
+                            <div class="w-8 h-8 rounded-full bg-zenRed mx-auto mb-1 flex items-center justify-center font-bold text-white shadow-lg shadow-red-600/30">LC</div>
+                            <div class="font-bold text-red-300 truncate">Chua &amp; Mats.</div>
+                            <div class="text-[10px] text-red-400/80">Tokyo</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Interactive Dialogue & Karaoke Control Panel -->
+                <div class="lg:col-span-12 xl:col-span-5 flex flex-col space-y-4">
+                    <div class="bg-zenLacquer p-5 rounded-xl border border-slate-800 flex-grow flex flex-col justify-between shadow-xl">
+                        <div>
+                            <!-- Header & Timeline Progress Bar -->
+                            <div class="space-y-2 pb-3 border-b border-slate-800">
+                                <div class="flex items-center justify-between">
+                                    <span id="speaker-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-purple-900/40 text-purple-300 border border-purple-500/40 flex items-center gap-1.5">
+                                        <i data-lucide="user" class="w-3.5 h-3.5"></i> Narratore Spettrale
+                                    </span>
+                                    <span id="dialogue-counter" class="text-xs font-mono text-zenGold">Battuta 1 / 11</span>
+                                </div>
+
+                                <!-- Progress Bar -->
+                                <div class="w-full bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-800">
+                                    <div id="timeline-progress" class="bg-gradient-to-r from-purple-500 via-pink-500 to-amber-500 h-full w-0 transition-all duration-300"></div>
+                                </div>
+                            </div>
+
+                            <!-- Synchronized Karaoke Display Box -->
+                            <div class="mt-4 space-y-4">
+                                <div id="karaoke-text-container" class="min-h-[160px] p-4 rounded-xl bg-black/80 border border-slate-800 text-slate-200 text-sm md:text-base leading-relaxed font-serif italic shadow-inner flex flex-wrap items-center align-middle">
+                                    <!-- Karaoke words injected via JS -->
+                                </div>
+
+                                <!-- Stage Note Box -->
+                                <div class="text-xs text-amber-300/90 bg-amber-950/30 p-3 rounded-lg border border-amber-800/40 flex items-start gap-2">
+                                    <i data-lucide="clapperboard" class="w-4 h-4 text-amber-400 shrink-0 mt-0.5"></i>
+                                    <div>
+                                        <span class="font-bold text-amber-400 block mb-0.5">Note di Regia:</span>
+                                        <span id="stage-note-text">Le quattro figure matematiche emergono dai fumi del circuito di Lorenz.</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dialogue Player Controller Bar -->
+                        <div class="mt-6 pt-4 border-t border-slate-800 space-y-3">
+                            <div class="grid grid-cols-4 gap-2">
+                                <button onclick="prevDialogue()" class="px-3 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition flex items-center justify-center gap-1">
+                                    <i data-lucide="chevron-left" class="w-4 h-4"></i> Indietro
+                                </button>
+                                <button id="btn-play-pause" onclick="togglePlayPause()" class="col-span-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-zenGold to-amber-600 hover:from-amber-500 hover:to-amber-700 text-black font-bold text-xs transition flex items-center justify-center gap-2 shadow-lg shadow-amber-900/30">
+                                    <i data-lucide="play" id="play-icon" class="w-4 h-4 fill-black"></i>
+                                    <span id="play-text">Riproduci Battuta</span>
+                                </button>
+                                <button onclick="nextDialogue()" class="px-3 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition flex items-center justify-center gap-1">
+                                    Avanti <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+
+                            <div class="flex items-center justify-between text-xs text-slate-400 pt-1">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" id="chk-speech-api" checked class="rounded bg-slate-900 border-slate-700 text-zenGold focus:ring-zenGold">
+                                    <span>Voce Italiana Web Speech</span>
+                                </label>
+                                <button onclick="resetDialogue()" class="text-slate-500 hover:text-slate-300 transition flex items-center gap-1">
+                                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Ricomincia
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 2: MATHEMATICIANS' LAB ================= -->
+        <section id="tab-lab" class="tab-content hidden space-y-6">
+            <div class="bg-zenLacquer p-4 rounded-xl border border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i data-lucide="flask-conical" class="text-mathJulia w-5 h-5"></i>
+                        Laboratorio Sperimentale dei Quattro Visionari
+                    </h2>
+                    <p class="text-sm text-slate-400 mt-1">
+                        Esplora direttamente le quattro scoperte matematiche che hanno spianato la strada al circuito di Chua.
+                    </p>
+                </div>
+            </div>
+
+            <!-- 2x2 Grid of Interactive Simulators -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                <!-- 1. CANTOR: DUSTING & TOLERANCE SIMULATOR -->
+                <div class="bg-slate-950 p-5 rounded-xl border border-purple-900/50 space-y-4 shadow-xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center border-b border-purple-900/40 pb-3">
+                            <h3 class="text-sm font-bold text-purple-300 flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-mathCantor"></span>
+                                1. Cantor: Polvere delle Precisioni &amp; Tollrenza Hardware
+                            </h3>
+                            <span class="text-[11px] font-mono text-purple-400 bg-purple-950/60 px-2 py-0.5 rounded border border-purple-800">
+                                Usa il pennello sull'immagine
+                            </span>
+                        </div>
+
+                        <!-- Dust Wipe Canvas -->
+                        <div class="relative mt-3 aspect-[16/9] bg-slate-900 rounded-lg overflow-hidden border border-purple-950">
+                            <!-- Background Math Formula revealed upon wipe -->
+                            <div class="absolute inset-0 flex flex-col items-center justify-center text-center p-4 bg-gradient-to-br from-purple-950/60 to-slate-950 text-purple-200">
+                                <span class="text-xs text-purple-400 font-mono">Insieme Ternario di Cantor (1883)</span>
+                                <span class="text-lg md:text-xl font-mono font-bold text-purple-300 my-2">C = &bigcap;<sub>n=0</sub><sup>&infty;</sup> E<sub>n</sub></span>
+                                <p class="text-xs text-slate-300 max-w-xs">
+                                    "La precisione infinita è solo un'illusione della mente. L'hardware reale ha sempre dei buchi numerici!"
+                                </p>
+                            </div>
+                            <canvas id="cantor-canvas" class="relative z-10 w-full h-full cursor-crosshair"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Component Tolerance Slider -->
+                    <div class="space-y-2 bg-slate-900/80 p-3 rounded-lg border border-slate-800 text-xs">
+                        <div class="flex justify-between">
+                            <label class="font-semibold text-slate-300">Tolleranza Componenti Hardware (Resistenze):</label>
+                            <span id="lbl-tolerance" class="font-mono text-purple-400">1.0% (Standard 1983)</span>
+                        </div>
+                        <input type="range" id="param-tolerance" min="0.01" max="5.0" step="0.1" value="1.0" class="w-full accent-purple-500 bg-slate-950">
+                        <div class="flex justify-between text-[10px] text-slate-400">
+                            <span>Esattezza Teorica (0.01%)</span>
+                            <span>Deriva Reale (5%)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. JULIA: DOUADY RABBIT FRACTAL & HOPPING RABBITS -->
+                <div class="bg-slate-950 p-5 rounded-xl border border-pink-900/50 space-y-4 shadow-xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center border-b border-pink-900/40 pb-3">
+                            <h3 class="text-sm font-bold text-pink-300 flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-mathJulia"></span>
+                                2. Julia: I Conigli di Douady &amp; Frattalizzazione
+                            </h3>
+                            <button onclick="setDouadyRabbitPreset()" class="text-xs bg-pink-900/50 hover:bg-pink-800 text-pink-200 px-2.5 py-1 rounded border border-pink-700/60 font-mono transition">
+                                Preset: Coniglio di Douady
+                            </button>
+                        </div>
+
+                        <!-- Julia Canvas with Hopping Rabbits -->
+                        <div class="relative mt-3 aspect-[16/9] bg-black rounded-lg overflow-hidden border border-pink-950">
+                            <canvas id="julia-canvas" class="w-full h-full block cursor-pointer"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Julia Complex Constant Control (c_real & c_imag) -->
+                    <div class="grid grid-cols-2 gap-3 text-xs">
+                        <div class="space-y-1 bg-slate-900/80 p-2.5 rounded border border-slate-800">
+                            <div class="flex justify-between text-slate-300">
+                                <span>Parte Reale c<sub>r</sub>:</span>
+                                <span id="lbl-cr" class="font-mono text-pink-400">-0.123</span>
+                            </div>
+                            <input type="range" id="param-cr" min="-1.5" max="0.5" step="0.005" value="-0.123" class="w-full accent-pink-500 bg-slate-950">
+                        </div>
+                        <div class="space-y-1 bg-slate-900/80 p-2.5 rounded border border-slate-800">
+                            <div class="flex justify-between text-slate-300">
+                                <span>Parte Immaginaria c<sub>i</sub>:</span>
+                                <span id="lbl-ci" class="font-mono text-pink-400">0.745</span>
+                            </div>
+                            <input type="range" id="param-ci" min="-1.0" max="1.0" step="0.005" value="0.745" class="w-full accent-pink-500 bg-slate-950">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. LORENZ: CHAOTIC RAIN & UMBRELLA SENSITIVITY -->
+                <div class="bg-slate-950 p-5 rounded-xl border border-cyan-900/50 space-y-4 shadow-xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center border-b border-cyan-900/40 pb-3">
+                            <h3 class="text-sm font-bold text-cyan-300 flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-mathLorenz"></span>
+                                3. Lorenz: L'Ombrello della Pioggia &amp; Sensibilità Iniziale
+                            </h3>
+                            <button id="btn-umbrella-toggle" onclick="toggleUmbrella()" class="text-xs bg-cyan-900/50 hover:bg-cyan-800 text-cyan-200 px-3 py-1 rounded border border-cyan-700/60 font-mono transition flex items-center gap-1">
+                                <i data-lucide="umbrella" class="w-3.5 h-3.5"></i>
+                                <span id="lbl-umbrella-state">Apri Ombrello</span>
+                            </button>
+                        </div>
+
+                        <!-- Lorenz Umbrella Canvas -->
+                        <div class="relative mt-3 aspect-[16/9] bg-black rounded-lg overflow-hidden border border-cyan-950">
+                            <canvas id="lorenz-umbrella-canvas" class="w-full h-full block cursor-crosshair"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Initial Conditions Sensitivity Controller -->
+                    <div class="space-y-2 bg-slate-900/80 p-3 rounded-lg border border-slate-800 text-xs">
+                        <div class="flex justify-between">
+                            <label class="font-semibold text-slate-300">Scostamento Condizioni Iniziali (&delta;x):</label>
+                            <span id="lbl-delta-x" class="font-mono text-cyan-400">0.000001 (1 micro-volt)</span>
+                        </div>
+                        <input type="range" id="param-delta-x" min="0.000001" max="0.01" step="0.0001" value="0.000001" class="w-full accent-cyan-500 bg-slate-950">
+                        <p class="text-[11px] text-slate-400">
+                            Due traiettorie nate quasi identiche si separano esponenzialmente nell'atmosfera di Lorenz!
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 4. POINCARÉ: POINCARÉ SECTION CUTTING PLANE -->
+                <div class="bg-slate-950 p-5 rounded-xl border border-amber-900/50 space-y-4 shadow-xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center border-b border-amber-900/40 pb-3">
+                            <h3 class="text-sm font-bold text-amber-300 flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-mathPoincare"></span>
+                                4. Poincaré: La Sezione dell'Attesa (Taglio Trasverso)
+                            </h3>
+                            <span id="poincare-intersections" class="text-xs font-mono text-amber-400 bg-amber-950/60 px-2 py-0.5 rounded border border-amber-800">
+                                Intersezioni: 0
+                            </span>
+                        </div>
+
+                        <!-- Poincaré Section Canvas -->
+                        <div class="relative mt-3 aspect-[16/9] bg-black rounded-lg overflow-hidden border border-amber-950">
+                            <canvas id="poincare-canvas" class="w-full h-full block"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Cutting Plane Location Control -->
+                    <div class="space-y-2 bg-slate-900/80 p-3 rounded-lg border border-slate-800 text-xs">
+                        <div class="flex justify-between">
+                            <label class="font-semibold text-slate-300">Posizione Piano Trasverso (Z-Section Cut):</label>
+                            <span id="lbl-plane-z" class="font-mono text-amber-400">Z = 27.0</span>
+                        </div>
+                        <input type="range" id="param-plane-z" min="10.0" max="40.0" step="0.5" value="27.0" class="w-full accent-amber-500 bg-slate-950">
+                        <p class="text-[11px] text-slate-400">
+                            Riduce una dinamica 3D continua a un mappa discreta 2D per rivelare l'ordine nascosto nel caos.
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ================= TAB 3: CONCEPTUAL ANALYSIS & FULL SCRIPT ================= -->
+        <section id="tab-script" class="tab-content hidden space-y-6">
+            <div class="bg-zenLacquer p-6 rounded-xl border border-slate-800 shadow-xl space-y-6">
+                <div class="border-b border-slate-800 pb-4 flex flex-col md:flex-row justify-between md:items-center gap-4">
+                    <div>
+                        <span class="text-xs font-mono text-zenGold uppercase tracking-widest">Testo Teatrale Integrale &amp; Sguardo Epistemologico</span>
+                        <h2 class="text-2xl font-bold text-white mt-1">
+                            Scena III: L'Iper-Spazio dei Quattro Matematici
+                        </h2>
+                    </div>
+                    <button onclick="printOrSaveScript()" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono flex items-center gap-1.5 transition self-start md:self-auto">
+                        <i data-lucide="printer" class="w-4 h-4"></i> Stampa / Salva Copione
+                    </button>
+                </div>
+
+                <!-- Epistemological Commentary Box -->
+                <div class="p-4 bg-purple-950/20 border border-purple-800/40 rounded-lg text-xs md:text-sm text-purple-200 space-y-2">
+                    <h3 class="font-bold text-purple-300 text-sm flex items-center gap-1.5">
+                        <i data-lucide="brain" class="w-4 h-4"></i> Il Significato Epistemologico della Scena III
+                    </h3>
+                    <p class="leading-relaxed">
+                        La Scena III rappresenta il momento di transizione dal <strong>fallimento ingegneristico</strong> di Matsumoto alla <strong>sintesi teorica</strong> di Chua. Nel teatro drammatico, le quattro grandi ombre della matematica (Cantor, Julia, Lorenz, Poincaré) non sono semplici spettatori, ma simboleggiano i tasselli concettuali mancanti: la discrezione dell'insieme di Cantor, la geometria frattale di Julia, la sensibilità atmosferica di Lorenz e la riduzione dimensionale della Sezione di Poincaré.
+                    </p>
+                </div>
+
+                <!-- Full Script Accordion / Text Display -->
+                <div class="space-y-4 text-xs md:text-sm" id="full-script-container">
+                    <!-- Script entries generated dynamically via JS -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        /* ================= WEB AUDIO SYNTHESIZER ENGINE ================= */
+        let audioCtx = null;
+        let isAmbientPlaying = false;
+        let isSfxEnabled = true;
+        let rainNode = null;
+        let rainGain = null;
+
+        function initAudioEngine() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+        }
+
+        function toggleAmbientSound() {
+            initAudioEngine();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            isAmbientPlaying = !isAmbientPlaying;
+            const btnText = document.getElementById('ambient-sound-text');
+
+            if (isAmbientPlaying) {
+                // Synthesize rain / spectral wind background
+                const bufferSize = audioCtx.sampleRate * 2;
+                const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const output = noiseBuffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    output[i] = Math.random() * 2 - 1;
+                }
+
+                const whiteNoise = audioCtx.createBufferSource();
+                whiteNoise.buffer = noiseBuffer;
+                whiteNoise.loop = true;
+
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(450, audioCtx.currentTime);
+
+                rainGain = audioCtx.createGain();
+                rainGain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+
+                whiteNoise.connect(filter);
+                filter.connect(rainGain);
+                rainGain.connect(audioCtx.destination);
+
+                whiteNoise.start();
+                rainNode = whiteNoise;
+                btnText.textContent = "Sfondo Spettrale: ON";
+            } else {
+                if (rainNode) {
+                    rainNode.stop();
+                    rainNode.disconnect();
+                }
+                btnText.textContent = "Sfondo Spettrale: OFF";
+            }
+        }
+
+        function toggleSFX() {
+            isSfxEnabled = !isSfxEnabled;
+            document.getElementById('sfx-text').textContent = isSfxEnabled ? "Effetti: ON" : "Effetti: OFF";
+            document.getElementById('sfx-icon').setAttribute('data-lucide', isSfxEnabled ? "volume-2" : "volume-x");
+            lucide.createIcons();
+        }
+
+        function playSynthTone(freq, type = 'sine', duration = 0.15, vol = 0.08) {
+            if (!isSfxEnabled) return;
+            initAudioEngine();
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch(e){}
+        }
+
+        function playThunderBurst() {
+            if (!isSfxEnabled) return;
+            initAudioEngine();
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(80, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(20, audioCtx.currentTime + 1.2);
+                gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 1.2);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 1.2);
+            } catch(e){}
+        }
+
+        function playDusterRustle() {
+            if (!isSfxEnabled) return;
+            initAudioEngine();
+            try {
+                const bufferSize = audioCtx.sampleRate * 0.1;
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+                const noise = audioCtx.createBufferSource();
+                noise.buffer = buffer;
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.value = 1200;
+
+                const gain = audioCtx.createGain();
+                gain.gain.value = 0.1;
+
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(audioCtx.destination);
+                noise.start();
+            } catch(e){}
+        }
+
+        /* ================= SCENE III SCRIPT DATA & KARAOKE ENGINE ================= */
+        const scriptScene3 = [
+            {
+                id: 1,
+                speaker: "Narratore Spettrale",
+                badgeClass: "bg-purple-950/60 text-purple-300 border-purple-700",
+                headId: "chua",
+                action: "Nuvola del Collasso su Tokyo",
+                voicePitch: 1.0, voiceRate: 1.0,
+                text: "Nel laboratorio di Tokyo, dopo il collasso del circuito di Lorenz, il silenzio è denso. Ma sopra la testa di Leon Chua, nell'aria satura di ozono, il soffitto sembra dissolversi in un iper-spazio spettrale.",
+                note: "I quattro grandi matematici compaiono come figure eteree fluttuanti sopra la brezza di Tokyo.",
+                sfxFreq: 300
+            },
+            {
+                id: 2,
+                speaker: "Georg Cantor",
+                badgeClass: "bg-purple-950 text-purple-300 border-purple-600",
+                headId: "cantor",
+                action: "Cantor spolvera la polvere di precisione",
+                voicePitch: 0.7, voiceRate: 0.9,
+                text: "Osservate questi ingegneri... Cercano la precisione infinita con i loro potenziometri! Non capiscono che la continuità pura è un'illusione. Tra ogni punto esiste la polvere, il vuoto ternario!",
+                note: "Cantor spolvera con un panno di lino e polvere di stelle sulla testa di Matsumoto.",
+                sfxFreq: 520
+            },
+            {
+                id: 3,
+                speaker: "Prof. Matsumoto",
+                badgeClass: "bg-red-950 text-red-300 border-red-700",
+                headId: "chua",
+                action: "Matsumoto alza lo sguardo costernato",
+                voicePitch: 1.1, voiceRate: 1.1,
+                text: "Chi parla?! Maestro Cantor? Ma noi abbiamo regolato le resistenze allo zero virgola uno per cento di tolleranza!",
+                note: "Matsumoto si guarda intorno smarrito tenendo in mano un tester analogico.",
+                sfxFreq: 400
+            },
+            {
+                id: 4,
+                speaker: "Gaston Julia",
+                badgeClass: "bg-pink-950 text-pink-300 border-pink-600",
+                headId: "julia",
+                action: "Julia accarezza i conigli frattali",
+                voicePitch: 1.3, voiceRate: 1.0,
+                text: "La tolleranza non vi salverà! Guardate i miei conigli: basta variare di un milionesimo la costante complessa c per trasformare un contorno morbido in un'esplosione di spine frattali!",
+                note: "Gaston Julia tiene in grembo un coniglio di Douady che si scompone in punti complessi.",
+                sfxFreq: 680
+            },
+            {
+                id: 5,
+                speaker: "Edward Lorenz",
+                badgeClass: "bg-cyan-950 text-cyan-300 border-cyan-600",
+                headId: "lorenz",
+                action: "Lorenz apre il suo ombrello sgargiante",
+                voicePitch: 0.95, voiceRate: 1.15,
+                text: "Avete tentato di imprigionare le mie equazioni atmosferiche nei vostri chip di silicio! Ma il mio attrattore richiede due moltiplicatori continui. Nel mondo fisico reale, il loro offset fa sempre piovere la saturazione!",
+                note: "Lorenz apre un grande ombrello rosso mentre una pioggia di elettroni cade sul laboratorio.",
+                sfxFreq: 'thunder'
+            },
+            {
+                id: 6,
+                speaker: "Henri Poincaré",
+                badgeClass: "bg-amber-950 text-amber-300 border-amber-600",
+                headId: "poincare",
+                action: "Poincaré traccia la Sezione sul vetro",
+                voicePitch: 0.85, voiceRate: 0.95,
+                text: "Silenzio, colleghi! Non derideteli. Matsumoto ha cercato di seguire la traiettoria continua nel tempo. Ma la vera intuizione consiste nel tagliarla! Trovate la Sezione trasversa!",
+                note: "Poincaré mostra un foglio di vetro trasparente tagliando l'orbita tridimensionale.",
+                sfxFreq: 750
+            },
+            {
+                id: 7,
+                speaker: "Leon O. Chua",
+                badgeClass: "bg-zenRed/40 text-zenRed border-zenRed",
+                headId: "chua",
+                action: "Chua unisce i punti concettuali",
+                voicePitch: 1.05, voiceRate: 1.0,
+                text: "Un momento... La Sezione di Poincaré! La non-linearità a tratti di Cantor e Julia... E la geometria dell'attrattore di Lorenz! Non ci serve un moltiplicatore continuo x·y!",
+                note: "Leon Chua ha un'illuminazione provvidenziale. Si alza di scatto verso la lavagna.",
+                sfxFreq: 880
+            },
+            {
+                id: 8,
+                speaker: "Georg Cantor",
+                badgeClass: "bg-purple-950 text-purple-300 border-purple-600",
+                headId: "cantor",
+                action: "Cantor sorride approvando",
+                voicePitch: 0.7, voiceRate: 0.9,
+                text: "Sì, Chua! Spezza la curva! Sostituisci la parabola liscia con tre rette congiunte. Discontinuità di pendenza!",
+                note: "Cantor soffia via l'ultima nube di polvere.",
+                sfxFreq: 520
+            },
+            {
+                id: 9,
+                speaker: "Edward Lorenz",
+                badgeClass: "bg-cyan-950 text-cyan-300 border-cyan-600",
+                headId: "lorenz",
+                action: "Lorenz chiude l'ombrello",
+                voicePitch: 0.95, voiceRate: 1.15,
+                text: "Tre regioni lineari separate da diodi... Se funziona, avrai domato il Caos senza bisogno dei miei costosi moltiplicatori!",
+                note: "Lorenz chiude l'ombrello e la pioggia cessa improvvisamente.",
+                sfxFreq: 440
+            },
+            {
+                id: 10,
+                speaker: "Henri Poincaré",
+                badgeClass: "bg-amber-950 text-amber-300 border-amber-600",
+                headId: "poincare",
+                action: "Poincaré firma la Sezione di Luce",
+                voicePitch: 0.85, voiceRate: 0.95,
+                text: "Sarà il primo circuito della storia in cui il caos è dimostrato non per via numerica, ma con il rigore della geometria analitica.",
+                note: "Poincaré annuisce solennemente e scivola verso l'alto insieme agli altri matematici.",
+                sfxFreq: 900
+            },
+            {
+                id: 11,
+                speaker: "Narratore Spettrale",
+                badgeClass: "bg-purple-950/60 text-purple-300 border-purple-700",
+                headId: "chua",
+                action: "Sintesi della Scena III",
+                voicePitch: 1.0, voiceRate: 1.0,
+                text: "L'Iper-Spazio si richiude. Nelle mani di Chua è nato il concetto del Resistore di Chua (Chua's Diode). La strada verso la sintesi hardware del Caos è ora spianata.",
+                note: "Fine della Scena III. Passa al Laboratorio dei 4 Matematici per testare i simulatori individuali.",
+                sfxFreq: 350
+            }
+        ];
+
+        let currentDialogueIdx = 0;
+        let playSpeed = 1.0;
+        let isPlayingAuto = false;
+        let speechUtterance = null;
+        let karaokeInterval = null;
+
+        function setSpeed(speed) {
+            playSpeed = speed;
+            document.querySelectorAll('.speed-btn').forEach(btn => {
+                btn.classList.remove('bg-zenGold', 'text-black', 'font-bold');
+                btn.classList.add('bg-slate-800', 'text-slate-300');
+            });
+            event.target.classList.remove('bg-slate-800', 'text-slate-300');
+            event.target.classList.add('bg-zenGold', 'text-black', 'font-bold');
+        }
+
+        function renderKaraokeText(dialogue) {
+            const container = document.getElementById('karaoke-text-container');
+            container.innerHTML = '';
+
+            const words = dialogue.text.split(' ');
+            words.forEach((word, idx) => {
+                const span = document.createElement('span');
+                span.className = 'karaoke-word';
+                span.id = `kword-${idx}`;
+                span.textContent = word + ' ';
+                container.appendChild(span);
+            });
+        }
+
+        function highlightKaraokeProgress(progressRatio) {
+            const dialogue = scriptScene3[currentDialogueIdx];
+            const words = dialogue.text.split(' ');
+            const activeIdx = Math.floor(progressRatio * words.length);
+
+            words.forEach((_, idx) => {
+                const el = document.getElementById(`kword-${idx}`);
+                if (el) {
+                    if (idx === activeIdx) {
+                        el.classList.add('active');
+                    } else {
+                        el.classList.remove('active');
+                    }
+                }
+            });
+        }
+
+        function updateDialogueUI() {
+            const dialogue = scriptScene3[currentDialogueIdx];
+
+            // Badge & Info
+            const badge = document.getElementById('speaker-badge');
+            badge.className = `px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5 ${dialogue.badgeClass}`;
+            badge.innerHTML = `<i data-lucide="user" class="w-3.5 h-3.5"></i> ${dialogue.speaker}`;
+
+            document.getElementById('dialogue-counter').textContent = `Battuta ${dialogue.id} / ${scriptScene3.length}`;
+            document.getElementById('stage-note-text').textContent = dialogue.note;
+            document.getElementById('stage-action-indicator').textContent = `Azione: ${dialogue.action}`;
+
+            // Timeline progress bar
+            const prog = ((currentDialogueIdx + 1) / scriptScene3.length) * 100;
+            document.getElementById('timeline-progress').style.width = `${prog}%`;
+
+            renderKaraokeText(dialogue);
+
+            // Highlight corresponding head card
+            document.querySelectorAll('[id^="head-card-"]').forEach(card => card.classList.remove('ring-2', 'ring-zenGold', 'bg-slate-800'));
+            const activeHeadCard = document.getElementById(`head-card-${dialogue.headId}`);
+            if (activeHeadCard) activeHeadCard.classList.add('ring-2', 'ring-zenGold', 'bg-slate-800');
+
+            // Trigger audio FX
+            if (dialogue.sfxFreq === 'thunder') {
+                playThunderBurst();
+            } else if (typeof dialogue.sfxFreq === 'number') {
+                playSynthTone(dialogue.sfxFreq, 'sine', 0.15, 0.08);
+            }
+
+            lucide.createIcons();
+        }
+
+        function playCurrentSpeech() {
+            if (speechSynthesis.speaking) speechSynthesis.cancel();
+            if (karaokeInterval) clearInterval(karaokeInterval);
+
+            const dialogue = scriptScene3[currentDialogueIdx];
+            const isSpeechEnabled = document.getElementById('chk-speech-api').checked;
+
+            let durationEstimate = (dialogue.text.length * 60) / (playSpeed * 1000); // in seconds
+            let startTime = Date.now();
+
+            if (isSpeechEnabled && 'speechSynthesis' in window) {
+                speechUtterance = new SpeechSynthesisUtterance(dialogue.text);
+                speechUtterance.lang = 'it-IT';
+                speechUtterance.pitch = dialogue.voicePitch;
+                speechUtterance.rate = dialogue.voiceRate * playSpeed;
+
+                speechUtterance.onboundary = function(event) {
+                    if (event.name === 'word') {
+                        const words = dialogue.text.substring(0, event.charIndex).trim().split(' ');
+                        const ratio = words.length / dialogue.text.split(' ').length;
+                        highlightKaraokeProgress(ratio);
+                    }
+                };
+
+                speechUtterance.onend = function() {
+                    highlightKaraokeProgress(1.0);
+                    if (isPlayingAuto && currentDialogueIdx < scriptScene3.length - 1) {
+                        setTimeout(() => nextDialogue(), 800);
+                    } else if (currentDialogueIdx === scriptScene3.length - 1) {
+                        stopAutoPlay();
+                    }
+                };
+
+                window.speechSynthesis.speak(speechUtterance);
+            } else {
+                // Fallback simulated timer for karaoke
+                karaokeInterval = setInterval(() => {
+                    let elapsed = (Date.now() - startTime) / 1000;
+                    let ratio = Math.min(1.0, elapsed / durationEstimate);
+                    highlightKaraokeProgress(ratio);
+
+                    if (ratio >= 1.0) {
+                        clearInterval(karaokeInterval);
+                        if (isPlayingAuto && currentDialogueIdx < scriptScene3.length - 1) {
+                            setTimeout(() => nextDialogue(), 800);
+                        } else if (currentDialogueIdx === scriptScene3.length - 1) {
+                            stopAutoPlay();
+                        }
+                    }
+                }, 100);
+            }
+        }
+
+        function togglePlayPause() {
+            isPlayingAuto = !isPlayingAuto;
+            const playText = document.getElementById('play-text');
+            const playIcon = document.getElementById('play-icon');
+
+            if (isPlayingAuto) {
+                playText.textContent = "Pausa";
+                playIcon.setAttribute('data-lucide', 'pause');
+                playCurrentSpeech();
+            } else {
+                stopAutoPlay();
+            }
+            lucide.createIcons();
+        }
+
+        function stopAutoPlay() {
+            isPlayingAuto = false;
+            if (window.speechSynthesis) window.speechSynthesis.cancel();
+            if (karaokeInterval) clearInterval(karaokeInterval);
+            document.getElementById('play-text').textContent = "Riproduci Battuta";
+            document.getElementById('play-icon').setAttribute('data-lucide', 'play');
+            lucide.createIcons();
+        }
+
+        function nextDialogue() {
+            if (currentDialogueIdx < scriptScene3.length - 1) {
+                currentDialogueIdx++;
+                updateDialogueUI();
+                if (isPlayingAuto) playCurrentSpeech();
+            } else {
+                stopAutoPlay();
+            }
+        }
+
+        function prevDialogue() {
+            if (currentDialogueIdx > 0) {
+                currentDialogueIdx--;
+                updateDialogueUI();
+                if (isPlayingAuto) playCurrentSpeech();
+            }
+        }
+
+        function resetDialogue() {
+            currentDialogueIdx = 0;
+            stopAutoPlay();
+            updateDialogueUI();
+        }
+
+        function triggerHeadAction(headId) {
+            playSynthTone(600, 'triangle', 0.1, 0.1);
+            const foundIdx = scriptScene3.findIndex(d => d.headId === headId);
+            if (foundIdx !== -1) {
+                currentDialogueIdx = foundIdx;
+                updateDialogueUI();
+                playCurrentSpeech();
+            }
+        }
+
+        /* ================= TABS NAVIGATION ================= */
+        function switchTab(tabId) {
+            playSynthTone(500, 'sine', 0.05, 0.05);
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+            document.getElementById(tabId).classList.remove('hidden');
+            document.getElementById(`tab-btn-${tabId.replace('tab-', '')}`).classList.add('active');
+
+            if (tabId === 'tab-stage') resizeStageCanvas();
+            if (tabId === 'tab-lab') resizeLabCanvases();
+        }
+
+        /* ================= CANVAS STAGE VIEWPORT (SCENA 3) ================= */
+        const stageCanvas = document.getElementById('stage-canvas');
+        const stageCtx = stageCanvas.getContext('2d');
+
+        let stageParticles = [];
+
+        function resizeStageCanvas() {
+            stageCanvas.width = stageCanvas.parentElement.clientWidth;
+            stageCanvas.height = stageCanvas.parentElement.clientHeight;
+        }
+
+        function initStageParticles() {
+            stageParticles = [];
+            for (let i = 0; i < 60; i++) {
+                stageParticles.push({
+                    x: Math.random(),
+                    y: Math.random(),
+                    r: 1 + Math.random() * 3,
+                    vy: -(0.0005 + Math.random() * 0.001),
+                    alpha: Math.random()
+                });
+            }
+        }
+
+        function drawStageCanvas() {
+            if (document.getElementById('tab-stage').classList.contains('hidden')) return;
+
+            const w = stageCanvas.width;
+            const h = stageCanvas.height;
+            if (!w || !h) return;
+
+            // Deep Space / Hyperspace Gradient
+            const grad = stageCtx.createRadialGradient(w/2, h/2, 20, w/2, h/2, w*0.8);
+            grad.addColorStop(0, '#1a0b2e');
+            grad.addColorStop(0.5, '#0d071a');
+            grad.addColorStop(1, '#05030a');
+            stageCtx.fillStyle = grad;
+            stageCtx.fillRect(0, 0, w, h);
+
+            // Render Particles
+            stageParticles.forEach(p => {
+                p.y += p.vy;
+                if (p.y < 0) p.y = 1;
+                stageCtx.fillStyle = `rgba(212, 175, 55, ${p.alpha})`;
+                stageCtx.beginPath();
+                stageCtx.arc(p.x * w, p.y * h, p.r, 0, Math.PI * 2);
+                stageCtx.fill();
+            });
+
+            // Heads Coordinates (Cantor, Julia, Lorenz, Poincaré)
+            const activeDialogue = scriptScene3[currentDialogueIdx];
+            const heads = [
+                { id: 'cantor', label: 'Georg Cantor', color: '#9333ea', x: w * 0.2, y: h * 0.3, symbol: 'C' },
+                { id: 'julia', label: 'Gaston Julia', color: '#ec4899', x: w * 0.4, y: h * 0.25, symbol: 'J' },
+                { id: 'lorenz', label: 'Edward Lorenz', color: '#06b6d4', x: w * 0.6, y: h * 0.25, symbol: 'L' },
+                { id: 'poincare', label: 'Henri Poincaré', color: '#eab308', x: w * 0.8, y: h * 0.3, symbol: 'P' }
+            ];
+
+            heads.forEach(head => {
+                const isActive = activeDialogue.headId === head.id;
+                const radius = isActive ? 32 : 24;
+
+                // Glowing Halo
+                if (isActive) {
+                    const haloGrad = stageCtx.createRadialGradient(head.x, head.y, radius*0.5, head.x, head.y, radius*2.5);
+                    haloGrad.addColorStop(0, head.color + 'aa');
+                    haloGrad.addColorStop(1, 'transparent');
+                    stageCtx.fillStyle = haloGrad;
+                    stageCtx.beginPath();
+                    stageCtx.arc(head.x, head.y, radius * 2.5, 0, Math.PI * 2);
+                    stageCtx.fill();
+                }
+
+                // Head Sphere
+                stageCtx.fillStyle = head.color;
+                stageCtx.beginPath();
+                stageCtx.arc(head.x, head.y, radius, 0, Math.PI * 2);
+                stageCtx.fill();
+
+                // Initial Letter
+                stageCtx.fillStyle = '#ffffff';
+                stageCtx.font = `bold ${radius * 0.9}px sans-serif`;
+                stageCtx.textAlign = 'center';
+                stageCtx.textBaseline = 'middle';
+                stageCtx.fillText(head.symbol, head.x, head.y);
+
+                // Label below
+                stageCtx.fillStyle = isActive ? '#ffd700' : '#94a3b8';
+                stageCtx.font = `${isActive ? 'bold' : 'normal'} 11px sans-serif`;
+                stageCtx.fillText(head.label, head.x, head.y + radius + 14);
+            });
+
+            // Tokyo Lab Silhouette & Cloud at Bottom
+            const cloudY = h * 0.75;
+            const cloudGrad = stageCtx.createLinearGradient(0, cloudY, 0, h);
+            cloudGrad.addColorStop(0, '#18002e00');
+            cloudGrad.addColorStop(0.5, '#1e002ae0');
+            cloudGrad.addColorStop(1, '#000000');
+            stageCtx.fillStyle = cloudGrad;
+            stageCtx.fillRect(0, cloudY, w, h - cloudY);
+
+            // Chua & Matsumoto Silhouettes
+            stageCtx.fillStyle = '#0f0814';
+            stageCtx.fillRect(w * 0.42, h * 0.82, w * 0.16, h * 0.18);
+            stageCtx.fillStyle = '#d9381e';
+            stageCtx.font = '10px monospace';
+            stageCtx.fillText("Tokyo Lab 1983", w * 0.5, h * 0.92);
+        }
+
+        /* ================= 4 MATRICES LAB SIMULATORS ================= */
+
+        // 1. CANTOR DUST CANVAS
+        const cantorCanvas = document.getElementById('cantor-canvas');
+        const cantorCtx = cantorCanvas.getContext('2d');
+        let isDusting = false;
+
+        function initCantorDust() {
+            cantorCanvas.width = cantorCanvas.parentElement.clientWidth;
+            cantorCanvas.height = cantorCanvas.parentElement.clientHeight;
+
+            // Fill with grey dust pixels
+            cantorCtx.fillStyle = '#3a3d4a';
+            cantorCtx.fillRect(0, 0, cantorCanvas.width, cantorCanvas.height);
+
+            // Add dust grain texture
+            for (let i = 0; i < 2000; i++) {
+                cantorCtx.fillStyle = Math.random() > 0.5 ? '#555a6d' : '#222530';
+                cantorCtx.fillRect(Math.random() * cantorCanvas.width, Math.random() * cantorCanvas.height, 2, 2);
+            }
+        }
+
+        function wipeDust(x, y) {
+            cantorCtx.globalCompositeOperation = 'destination-out';
+            cantorCtx.beginPath();
+            cantorCtx.arc(x, y, 25, 0, Math.PI * 2);
+            cantorCtx.fill();
+            cantorCtx.globalCompositeOperation = 'source-over';
+            playDusterRustle();
+        }
+
+        cantorCanvas.addEventListener('mousedown', (e) => {
+            isDusting = true;
+            const rect = cantorCanvas.getBoundingClientRect();
+            wipeDust(e.clientX - rect.left, e.clientY - rect.top);
+        });
+        cantorCanvas.addEventListener('mousemove', (e) => {
+            if (isDusting) {
+                const rect = cantorCanvas.getBoundingClientRect();
+                wipeDust(e.clientX - rect.left, e.clientY - rect.top);
+            }
+        });
+        window.addEventListener('mouseup', () => isDusting = false);
+
+        document.getElementById('param-tolerance').addEventListener('input', (e) => {
+            document.getElementById('lbl-tolerance').textContent = `${parseFloat(e.target.value).toFixed(2)}% (Drift)`;
+        });
+
+        // 2. JULIA SET & HOPPING RABBITS
+        const juliaCanvas = document.getElementById('julia-canvas');
+        const juliaCtx = juliaCanvas.getContext('2d');
+        let rabbitHops = [];
+
+        function setDouadyRabbitPreset() {
+            document.getElementById('param-cr').value = -0.123;
+            document.getElementById('param-ci').value = 0.745;
+            document.getElementById('lbl-cr').textContent = "-0.123";
+            document.getElementById('lbl-ci').textContent = "0.745";
+            renderJuliaSet();
+        }
+
+        function renderJuliaSet() {
+            if (document.getElementById('tab-lab').classList.contains('hidden')) return;
+
+            const w = juliaCanvas.width = juliaCanvas.parentElement.clientWidth;
+            const h = juliaCanvas.height = juliaCanvas.parentElement.clientHeight;
+            if (!w || !h) return;
+
+            const cr = parseFloat(document.getElementById('param-cr').value);
+            const ci = parseFloat(document.getElementById('param-ci').value);
+            document.getElementById('lbl-cr').textContent = cr.toFixed(3);
+            document.getElementById('lbl-ci').textContent = ci.toFixed(3);
+
+            const imgData = juliaCtx.createImageData(w, h);
+            const data = imgData.data;
+
+            const maxIter = 30;
+            const zoom = 1.3;
+
+            for (let x = 0; x < w; x += 2) {
+                for (let y = 0; y < h; y += 2) {
+                    let zx = (x - w / 2) / (0.5 * zoom * w);
+                    let zy = (y - h / 2) / (0.5 * zoom * h);
+                    let i = maxIter;
+
+                    while (zx * zx + zy * zy < 4 && i > 0) {
+                        let tmp = zx * zx - zy * zy + cr;
+                        zy = 2.0 * zx * zy + ci;
+                        zx = tmp;
+                        i--;
+                    }
+
+                    const color = i === 0 ? 0 : (i / maxIter) * 255;
+                    const pixelIdx = (y * w + x) * 4;
+
+                    data[pixelIdx] = color * 0.9;     // R
+                    data[pixelIdx + 1] = color * 0.2; // G
+                    data[pixelIdx + 2] = color * 0.6; // B
+                    data[pixelIdx + 3] = 255;         // Alpha
+                }
+            }
+            juliaCtx.putImageData(imgData, 0, 0);
+
+            // Render Hopping Rabbits
+            rabbitHops.forEach(r => {
+                r.y -= r.vy;
+                r.vy -= 0.3; // Gravity
+                if (r.y > r.baseY) {
+                    r.y = r.baseY;
+                    r.vy = 0;
+                }
+                juliaCtx.fillStyle = '#ffffff';
+                juliaCtx.beginPath();
+                juliaCtx.arc(r.x, r.y, 8, 0, Math.PI * 2);
+                juliaCtx.fill();
+                // Ears
+                juliaCtx.fillRect(r.x - 4, r.y - 14, 3, 8);
+                juliaCtx.fillRect(r.x + 1, r.y - 14, 3, 8);
+            });
+        }
+
+        juliaCanvas.addEventListener('click', (e) => {
+            const rect = juliaCanvas.getBoundingClientRect();
+            rabbitHops.push({
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top,
+                baseY: e.clientY - rect.top,
+                vy: 6
+            });
+            playSynthTone(750, 'sine', 0.1, 0.08);
+        });
+
+        document.getElementById('param-cr').addEventListener('input', renderJuliaSet);
+        document.getElementById('param-ci').addEventListener('input', renderJuliaSet);
+
+        // 3. LORENZ UMBRELLA & SENSITIVITY
+        const lorenzUmbrellaCanvas = document.getElementById('lorenz-umbrella-canvas');
+        const lorenzUmbrellaCtx = lorenzUmbrellaCanvas.getContext('2d');
+        let isUmbrellaOpen = false;
+        let rainDrops = [];
+
+        function toggleUmbrella() {
+            isUmbrellaOpen = !isUmbrellaOpen;
+            document.getElementById('lbl-umbrella-state').textContent = isUmbrellaOpen ? "Chiudi Ombrello" : "Apri Ombrello";
+            if (isUmbrellaOpen) playThunderBurst();
+        }
+
+        function renderLorenzUmbrella() {
+            if (document.getElementById('tab-lab').classList.contains('hidden')) return;
+
+            const w = lorenzUmbrellaCanvas.width = lorenzUmbrellaCanvas.parentElement.clientWidth;
+            const h = lorenzUmbrellaCanvas.height = lorenzUmbrellaCanvas.parentElement.clientHeight;
+
+            lorenzUmbrellaCtx.fillStyle = '#080c14';
+            lorenzUmbrellaCtx.fillRect(0, 0, w, h);
+
+            // Rain Simulation
+            if (Math.random() < 0.6) {
+                rainDrops.push({ x: Math.random() * w, y: 0, speed: 6 + Math.random() * 8 });
+            }
+
+            lorenzUmbrellaCtx.strokeStyle = '#06b6d488';
+            lorenzUmbrellaCtx.lineWidth = 1.5;
+            rainDrops.forEach(d => {
+                d.y += d.speed;
+                lorenzUmbrellaCtx.beginPath();
+                lorenzUmbrellaCtx.moveTo(d.x, d.y);
+                lorenzUmbrellaCtx.lineTo(d.x - 2, d.y + 10);
+                lorenzUmbrellaCtx.stroke();
+            });
+            rainDrops = rainDrops.filter(d => d.y < h);
+
+            // Umbrella Graphic
+            if (isUmbrellaOpen) {
+                const umbX = w * 0.5;
+                const umbY = h * 0.55;
+
+                lorenzUmbrellaCtx.fillStyle = '#d9381e';
+                lorenzUmbrellaCtx.beginPath();
+                lorenzUmbrellaCtx.arc(umbX, umbY, 70, Math.PI, 0);
+                lorenzUmbrellaCtx.fill();
+
+                lorenzUmbrellaCtx.strokeStyle = '#ffffff';
+                lorenzUmbrellaCtx.lineWidth = 3;
+                lorenzUmbrellaCtx.beginPath();
+                lorenzUmbrellaCtx.moveTo(umbX, umbY);
+                lorenzUmbrellaCtx.lineTo(umbX, umbY + 60);
+                lorenzUmbrellaCtx.stroke();
+            }
+        }
+
+        document.getElementById('param-delta-x').addEventListener('input', (e) => {
+            document.getElementById('lbl-delta-x').textContent = `${parseFloat(e.target.value).toFixed(6)} V`;
+        });
+
+        // 4. POINCARÉ SECTION SIMULATOR
+        const poincareCanvas = document.getElementById('poincare-canvas');
+        const poincareCtx = poincareCanvas.getContext('2d');
+        let poincareAngle = 0;
+        let intersectionCount = 0;
+
+        function renderPoincareSection() {
+            if (document.getElementById('tab-lab').classList.contains('hidden')) return;
+
+            const w = poincareCanvas.width = poincareCanvas.parentElement.clientWidth;
+            const h = poincareCanvas.height = poincareCanvas.parentElement.clientHeight;
+
+            poincareCtx.fillStyle = '#0a0a0f';
+            poincareCtx.fillRect(0, 0, w, h);
+
+            const planeZ = parseFloat(document.getElementById('param-plane-z').value);
+            document.getElementById('lbl-plane-z').textContent = `Z = ${planeZ.toFixed(1)}`;
+
+            // Draw Cutting Plane Line (Red glowing transverse cut)
+            const cutY = h * 0.5 - (planeZ - 25) * 4;
+            poincareCtx.strokeStyle = '#eab308';
+            poincareCtx.lineWidth = 2;
+            poincareCtx.beginPath();
+            poincareCtx.moveTo(w * 0.1, cutY);
+            poincareCtx.lineTo(w * 0.9, cutY);
+            poincareCtx.stroke();
+
+            // Rotating 3D Orbit preview crossing plane
+            poincareAngle += 0.03;
+            const cx = w * 0.5;
+            const cy = h * 0.5;
+
+            poincareCtx.strokeStyle = '#06b6d4aa';
+            poincareCtx.lineWidth = 1.5;
+            poincareCtx.beginPath();
+
+            for (let i = 0; i < 200; i++) {
+                const t = i * 0.1 + poincareAngle;
+                const rx = Math.sin(t * 1.2) * (w * 0.3);
+                const ry = Math.cos(t * 0.8) * (h * 0.3);
+
+                if (i === 0) poincareCtx.moveTo(cx + rx, cy + ry);
+                else poincareCtx.lineTo(cx + rx, cy + ry);
+
+                // Check intersection with plane line
+                if (Math.abs((cy + ry) - cutY) < 2) {
+                    intersectionCount++;
+                    poincareCtx.fillStyle = '#ff0055';
+                    poincareCtx.fillRect(cx + rx - 3, cutY - 3, 6, 6);
+                }
+            }
+            poincareCtx.stroke();
+
+            document.getElementById('poincare-intersections').textContent = `Intersezioni: ${intersectionCount}`;
+        }
+
+        document.getElementById('param-plane-z').addEventListener('input', () => intersectionCount = 0);
+
+        function resizeLabCanvases() {
+            initCantorDust();
+            renderJuliaSet();
+        }
+
+        /* ================= POPULATE FULL SCRIPT IN TAB 3 ================= */
+        function populateFullScript() {
+            const container = document.getElementById('full-script-container');
+            container.innerHTML = '';
+
+            scriptScene3.forEach((d) => {
+                const item = document.createElement('div');
+                item.className = 'p-4 rounded-lg bg-slate-900/90 border border-slate-800 space-y-2';
+                item.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold border ${d.badgeClass}">
+                            ${d.speaker}
+                        </span>
+                        <span class="text-xs font-mono text-slate-500">Battuta #${d.id}</span>
+                    </div>
+                    <p class="text-slate-200 font-serif italic text-sm md:text-base leading-relaxed">"${d.text}"</p>
+                    <div class="text-xs text-amber-400/80 bg-amber-950/20 p-2 rounded border border-amber-900/30">
+                        <strong>Azione / Nota:</strong> ${d.note}
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function printOrSaveScript() {
+            window.print();
+        }
+
+        /* ================= INITIALIZATION & MAIN LOOP ================= */
+        window.onload = function() {
+            lucide.createIcons();
+            updateDialogueUI();
+            initStageParticles();
+            initCantorDust();
+            setDouadyRabbitPreset();
+            populateFullScript();
+
+            function animationLoop() {
+                drawStageCanvas();
+                renderJuliaSet();
+                renderLorenzUmbrella();
+                renderPoincareSection();
+                requestAnimationFrame(animationLoop);
+            }
+            animationLoop();
+        };
+
+        window.addEventListener('resize', () => {
+            resizeStageCanvas();
+            resizeLabCanvases();
+        });
+    </script>
+</body>
+</html>
+`
